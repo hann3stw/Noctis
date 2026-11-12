@@ -1,0 +1,105 @@
+/* Base layout. Every size in the UI is a multiple of --u, which follows the
+   screen height (360 px phone -> 3.6 px, tablet -> up to 6.5 px). --btn scales
+   the touch buttons and can be changed in the settings later. */
+:root {
+  --u: clamp(3.4px, 1vh, 6.5px);
+  --btn: 1;
+  --violet: #8a4dff;
+  --violet-light: #b48cff;
+  --ink: #0d0a16;
+  --panel: rgba(16, 11, 28, 0.78);
+  --text: #efeaff;
+  --sl: env(safe-area-inset-left, 0px);
+  --sr: env(safe-area-inset-right, 0px);
+  --st: env(safe-area-inset-top, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+}
+@supports (height: 1dvh) {
+  :root {
+    --u: clamp(3.4px, 1dvh, 6.5px);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: calc(var(--u) * 3.6);
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* "Please rotate your device" – only on touch devices held upright */
+#rotate {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: var(--ink);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5vw;
+  text-align: center;
+  padding: 8vw;
+  font-size: 4.2vw;
+}
+#rotate b {
+  font-size: 6vw;
+  color: var(--violet-light);
+  text-shadow: 0 0 4vw var(--violet);
+}
+#rotate small {
+  opacity: 0.7;
+}
+#rotate .phone {
+  width: 16vw;
+  height: 28vw;
+  border: 1vw solid var(--violet-light);
+  border-radius: 2.5vw;
+  box-shadow: 0 0 6vw var(--violet);
+  animation: rotate-hint 2.2s ease-in-out infinite;
+  margin-bottom: 6vw;
+}
+@keyframes rotate-hint {
+  0%,
+  25% {
+    transform: rotate(0);
+  }
+  60%,
+  100% {
+    transform: rotate(-90deg);
+  }
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate {
+    display: flex;
+  }
+}

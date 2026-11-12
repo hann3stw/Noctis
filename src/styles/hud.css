@@ -1,0 +1,306 @@
+#touch-layer,
+#fx-layer,
+#vignette,
+#hud {
+  position: absolute;
+  inset: 0;
+}
+#fx-layer,
+#vignette,
+#hud {
+  pointer-events: none;
+}
+
+#vignette {
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(200, 20, 50, 0.75) 100%);
+}
+
+/* floating damage numbers */
+.dmg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  font-weight: 800;
+  font-size: calc(var(--u) * 4.6);
+  color: #fff;
+  text-shadow: 0 0 0.5em var(--violet), 0 0.08em 0 #000;
+  will-change: transform, opacity;
+}
+.dmg.hurt {
+  color: #ff6070;
+  text-shadow: 0 0.08em 0 #000;
+}
+
+/* small health + charge bar above the player */
+#overhead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--u) * 13);
+  pointer-events: none;
+  will-change: transform;
+}
+.oh-hp {
+  height: calc(var(--u) * 1.3);
+  background: rgba(10, 6, 18, 0.8);
+  border-radius: var(--u);
+  overflow: hidden;
+}
+.oh-hp i {
+  display: block;
+  height: 100%;
+  background: #4be07a;
+  transform-origin: left;
+}
+.oh-ammo {
+  display: flex;
+  gap: calc(var(--u) * 0.5);
+  margin-top: calc(var(--u) * 0.5);
+}
+.oh-ammo i,
+.ammo i {
+  flex: 1;
+  height: calc(var(--u) * 1);
+  border-radius: var(--u);
+  background: #ffb347;
+  opacity: 0.55;
+  transform-origin: left;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.oh-ammo i.full,
+.ammo i.full {
+  opacity: 1;
+  background: #ffd24a;
+}
+
+/* ---- HUD panels -------------------------------------------------------- */
+.panel-player {
+  position: absolute;
+  left: calc(var(--sl) + var(--u) * 3);
+  top: calc(var(--st) + var(--u) * 3);
+  width: calc(var(--u) * 46);
+}
+.bar {
+  position: relative;
+  height: calc(var(--u) * 5);
+  background: var(--panel);
+  border: 1px solid rgba(180, 140, 255, 0.35);
+  border-radius: calc(var(--u) * 1.4);
+  overflow: hidden;
+}
+.bar i {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  transition: transform 0.12s linear;
+}
+.bar.hp i {
+  background: linear-gradient(#5cf08a, #2fb85e);
+}
+.bar span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: calc(var(--u) * 3.1);
+  text-shadow: 0 1px 2px #000;
+}
+
+.zone {
+  position: absolute;
+  top: calc(var(--st) + var(--u) * 3);
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  padding: calc(var(--u) * 1) calc(var(--u) * 4);
+  background: var(--panel);
+  border-radius: calc(var(--u) * 2);
+  border: 1px solid rgba(180, 140, 255, 0.25);
+  white-space: nowrap;
+}
+.zone b {
+  display: block;
+  font-size: calc(var(--u) * 3.6);
+  letter-spacing: 0.04em;
+}
+.zone small {
+  display: block;
+  font-size: calc(var(--u) * 2.8);
+  opacity: 0.75;
+}
+#hud.safe .zone small {
+  color: #7df0a0;
+  opacity: 1;
+}
+
+.fps {
+  position: absolute;
+  right: calc(var(--sr) + var(--u) * 3);
+  top: calc(var(--st) + var(--u) * 3);
+  font-size: calc(var(--u) * 2.8);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- movement joystick (appears under the finger) ----------------------- */
+#joy {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--u) * 28 * var(--btn));
+  height: calc(var(--u) * 28 * var(--btn));
+  margin: calc(var(--u) * -14 * var(--btn)) 0 0 calc(var(--u) * -14 * var(--btn));
+  border-radius: 50%;
+  background: rgba(20, 14, 34, 0.35);
+  border: calc(var(--u) * 0.4) solid rgba(180, 140, 255, 0.45);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+#joy.on {
+  opacity: 1;
+}
+#joy .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42%;
+  height: 42%;
+  margin: -21% 0 0 -21%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #cdb4ff, var(--violet));
+  box-shadow: 0 0 calc(var(--u) * 3) var(--violet);
+}
+
+/* ---- action buttons ---------------------------------------------------- */
+.actions {
+  position: absolute;
+  right: calc(var(--sr) + var(--u) * 6);
+  bottom: calc(var(--sb) + var(--u) * 7);
+  width: calc(var(--u) * 26 * var(--btn));
+  height: calc(var(--u) * 26 * var(--btn));
+}
+#hud.swap .actions {
+  right: auto;
+  left: calc(var(--sl) + var(--u) * 6);
+}
+.btn {
+  pointer-events: auto;
+  touch-action: none;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.btn.round {
+  border-radius: 50%;
+  background: rgba(20, 14, 34, 0.55);
+  border: calc(var(--u) * 0.45) solid rgba(180, 140, 255, 0.6);
+}
+.btn svg {
+  width: 52%;
+  height: 52%;
+  pointer-events: none;
+}
+
+#btn-attack {
+  inset: 0;
+}
+#btn-attack .knob {
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #d43a55);
+  box-shadow: 0 0 calc(var(--u) * 3) rgba(255, 80, 110, 0.7);
+  pointer-events: none;
+}
+#btn-attack.held {
+  border-color: #fff;
+}
+#btn-attack.empty {
+  animation: shake 0.25s;
+}
+#btn-attack.empty .knob {
+  filter: grayscale(0.8);
+}
+#btn-attack .ammo {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: calc(var(--u) * -3.2);
+  display: flex;
+  gap: calc(var(--u) * 0.8);
+  pointer-events: none;
+}
+#btn-attack .ammo i {
+  height: calc(var(--u) * 1.5);
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-4%);
+  }
+  75% {
+    transform: translateX(4%);
+  }
+}
+
+#btn-dodge {
+  width: 54%;
+  height: 54%;
+  right: 104%;
+  bottom: -14%;
+  background: rgba(30, 60, 90, 0.6);
+  border-color: rgba(120, 200, 255, 0.7);
+  overflow: hidden;
+}
+#hud.swap #btn-dodge {
+  right: auto;
+  left: 104%;
+}
+#btn-dodge.held {
+  border-color: #fff;
+}
+#btn-dodge.cooling svg {
+  opacity: 0.35;
+}
+#btn-dodge .cd {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba(0, 0, 0, 0.6) var(--p, 0%), transparent 0);
+  pointer-events: none;
+}
+
+/* ---- death overlay ----------------------------------------------------- */
+.death {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 2);
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: rgba(13, 10, 22, 0.45);
+}
+.death.on {
+  opacity: 1;
+}
+.death b {
+  font-size: calc(var(--u) * 9);
+  letter-spacing: 0.08em;
+  color: var(--violet-light);
+  text-shadow: 0 0 calc(var(--u) * 5) var(--violet);
+}
+.death small {
+  font-size: calc(var(--u) * 3.8);
+  opacity: 0.8;
+}
