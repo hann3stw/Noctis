@@ -11,20 +11,15 @@ export const CONFIG = {
     voidWidth: 70, // dark ground beyond the last zone
     groundTile: 120, // the ground is drawn in square tiles of this size
     groundCell: 8, // colour resolution of the ground
-    // Ring shaped zones from the camp outwards. Every zone is a big step up:
-    //   level      item level of drops (and the level you should have there)
-    //   gateLevel  recommended level for the gate boss
-    //   hp, dmg, xp  multipliers for every enemy of the zone: x10 per rank, so
-    //              enemies two ranks above you kill you with one hit, and
-    //              they give 10x the XP
-    //   power      health and damage of shadows raised there
+    // Ring shaped zones from the camp outwards, one per rank (E, D, C, B, A, S).
+    // Their levels come from levels.rankLevels (see below).
     //   packs, champions, chests  how many of each the zone gets
     //   decor      average decoration pieces per chunk
     //   light      sky, ground and sun colour while the player is in the zone
     zones: [
       {
-        id: 'meadow', rank: 'E', level: 1, gateLevel: 7, inner: 20, outer: 280,
-        hp: 1, dmg: 1, xp: 1, power: 1, packs: 80, champions: 6, chests: 22,
+        id: 'meadow', rank: 'E', inner: 20, outer: 280,
+        packs: 80, champions: 6, chests: 22,
         groundColors: [0x3c7a3a, 0x4a8c42, 0x58963c],
         decor: { grass: 34, flower: 9, bush: 3, rock: 1.6, tree: 2.2 },
         enemyTypes: ['gloomfang', 'thornspitter', 'tuskboar'],
@@ -32,8 +27,8 @@ export const CONFIG = {
         light: { sky: 0xb9c4ff, ground: 0x2a2238, sun: 0xfff0d8, sky_i: 1.5 },
       },
       {
-        id: 'forest', rank: 'D', level: 9, gateLevel: 15, inner: 280, outer: 520,
-        hp: 10, dmg: 10, xp: 10, power: 10, packs: 170, champions: 10, chests: 36,
+        id: 'forest', rank: 'D', inner: 280, outer: 520,
+        packs: 170, champions: 10, chests: 36,
         groundColors: [0x2c5e2e, 0x356a32, 0x2a5428],
         decor: { grass: 16, fern: 9, mushroom: 2, bush: 3, rock: 1.2, tree: 3, pine: 6 },
         enemyTypes: ['mossback', 'hollowArcher', 'antlerstag'],
@@ -41,8 +36,8 @@ export const CONFIG = {
         light: { sky: 0xa8d0b0, ground: 0x1e2a1e, sun: 0xf0f0c8, sky_i: 1.35 },
       },
       {
-        id: 'swamp', rank: 'C', level: 17, gateLevel: 23, inner: 520, outer: 760,
-        hp: 100, dmg: 100, xp: 100, power: 100, packs: 240, champions: 13, chests: 48,
+        id: 'swamp', rank: 'C', inner: 520, outer: 760,
+        packs: 240, champions: 13, chests: 48,
         groundColors: [0x3e4a2c, 0x46512e, 0x35402a, 0x4a4630],
         decor: { reed: 16, puddle: 3, deadTree: 2.5, glowShroom: 3, bush: 1.5, rock: 0.8 },
         enemyTypes: ['bogshambler', 'sporemother', 'mirecrawler'],
@@ -50,8 +45,8 @@ export const CONFIG = {
         light: { sky: 0xa0b890, ground: 0x24281a, sun: 0xd8e0b0, sky_i: 1.25 },
       },
       {
-        id: 'ruins', rank: 'B', level: 25, gateLevel: 31, inner: 760, outer: 1000,
-        hp: 1000, dmg: 1000, xp: 1000, power: 1000, packs: 300, champions: 15, chests: 56,
+        id: 'ruins', rank: 'B', inner: 760, outer: 1000,
+        packs: 300, champions: 15, chests: 56,
         groundColors: [0x8a7d62, 0x7c7058, 0x948468],
         decor: { dryGrass: 18, rubble: 5, pillar: 1.6, wall: 1.1, rock: 1.2, deadTree: 0.8 },
         enemyTypes: ['sentinel', 'acolyte', 'ruinhound'],
@@ -59,8 +54,8 @@ export const CONFIG = {
         light: { sky: 0xffd8b0, ground: 0x3a2a24, sun: 0xffc890, sky_i: 1.4 },
       },
       {
-        id: 'ice', rank: 'A', level: 33, gateLevel: 39, inner: 1000, outer: 1240,
-        hp: 10000, dmg: 10000, xp: 10000, power: 10000, packs: 350, champions: 17, chests: 64,
+        id: 'ice', rank: 'A', inner: 1000, outer: 1240,
+        packs: 350, champions: 17, chests: 64,
         groundColors: [0xd8e4ee, 0xc4d6e6, 0xe6eef6],
         decor: { snowMound: 6, snowPine: 4, crystal: 2, iceRock: 1.6 },
         enemyTypes: ['frostTroll', 'iceWisp', 'snowram'],
@@ -68,8 +63,8 @@ export const CONFIG = {
         light: { sky: 0xc8e0ff, ground: 0x506070, sun: 0xffffff, sky_i: 1.1 },
       },
       {
-        id: 'volcano', rank: 'S', level: 41, gateLevel: 47, inner: 1240, outer: 1480,
-        hp: 100000, dmg: 100000, xp: 100000, power: 100000, packs: 400, champions: 19, chests: 70,
+        id: 'volcano', rank: 'S', inner: 1240, outer: 1480,
+        packs: 400, champions: 19, chests: 70,
         groundColors: [0x463634, 0x523c34, 0x3c302e, 0x5c4034],
         decor: { ash: 8, basalt: 2.2, lavaPool: 1.6, charredTree: 1.8, emberCrystal: 1.2 },
         enemyTypes: ['magmaBrute', 'emberImp', 'cinderhound'],
@@ -138,20 +133,28 @@ export const CONFIG = {
     knockback: 0.9, // units an enemy is pushed per hit
   },
 
-  // ---- levels and stat points ---------------------------------------------
+  // ---- levels, ranks and power ---------------------------------------------
+  // The rank comes from the level and every rank is one zone:
+  //   E = level 1-9, D = 10-24, C = 25-49, B = 50-99, A = 100-199, S = 200-300.
+  // Inside a zone the enemy level rises from the inner to the outer edge.
+  levels: {
+    rankLevels: [1, 10, 25, 50, 100, 200], // first level of rank E, D, C, B, A, S
+    maxLevel: 300,
+    enemyRank: 10, // enemies (health, damage, XP) and their shadows: x10 per rank
+    zoneSpread: 0.5, // inside a zone enemies grow up to x10^0.5 (about x3) towards the outer edge
+    playerRank: 6, // the hunter's health and damage from levels alone: x6 per rank (gear, stats and the army close the gap)
+    itemRank: 1.27, // damage / defence of items: x1.27 per rank of the item level
+    tierLevel: [0, 0.1, 0.2, 0.4], // extra levels of elites, champions, bosses (share of the zone's levels)
+  },
+
+  // ---- experience and stat points -------------------------------------------
   progression: {
-    // Every level makes the hunter x levelGrowth stronger (health and damage):
-    // 8 levels per zone = x10, the same step as the enemies of the next rank.
-    levelGrowth: 1.25, // x6 over the 8 levels of a zone: gear, stats and the army must close the gap to x10
-    // XP for the next level = xpBase * xpGrowth ^ (level - 1). Enemies one rank
-    // higher give 10x the XP, so fighting above your rank levels you fast.
-    xpBase: 120,
-    xpGrowth: 1.334,
-    maxLevel: 60,
-    pointsPerLevel: 3,
-    // The rank comes from the level: reaching the level of the next zone makes
-    // you that rank (D at 9, C at 17 ...). Every new rank gives rankPoints.
-    rankLevels: [1, 9, 17, 25, 33, 41],
+    // XP for the next level = xpBase * enemy power at your level * (1 + xpPerLevel * (level - 1)):
+    // about 14 kills of enemies at your level early on, about 28 at level 200.
+    // Enemies above your level give more, a higher rank gives 10x.
+    xpBase: 150,
+    xpPerLevel: 0.005,
+    pointsPerLevel: [3, 2, 1, 1, 0.5, 0.5], // stat points per level in rank E, D, C, B, A, S (0.5 = one every second level)
     rankPoints: [0, 10, 12, 15, 18, 20], // stat points for reaching rank D, C, B, A, S
     armyKillXp: 0.5, // share of the XP you get when one of your shadows lands the kill
     // What one stat point does. The stats decide the play style:
@@ -165,7 +168,7 @@ export const CONFIG = {
       agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
       vit: { hp: 0.04, regen: 0.0005 }, // x1.04 health per point (multiplies), regenerates 0.05 % of max health per second
       int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004 }, // +1 army slot per 2 points, +0.4 % arise chance
-      per: { crit: 0.008, critDamage: 0.015, drop: 0.02 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops
+      per: { crit: 0.008, critDamage: 0.015, drop: 0.02, armyRange: 0.25 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops, +0.25 army hunt range
     },
     baseCrit: 0.05,
     critDamage: 1.8,
@@ -189,7 +192,6 @@ export const CONFIG = {
     // Rarity counts much more than the item level: a rarer item is nearly
     // always better than a more common one from the next zone.
     rarityStat: [1, 2, 4, 8], // stat factor per rarity
-    levelGrowth: 1.03, // damage and defence x1.03 per item level (x1.27 per zone)
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
     upgradeCost: [2, 4, 8, 16], // essence per rarity, times (upgrade + 1)
@@ -329,12 +331,11 @@ export const CONFIG = {
   arise: {
     cost: [10, 25, 45, 80], // mana per try: normal, elite, champion, boss
     // Chance that a try works. Every soul allows a few tries, then it fades.
-    // enemy level = zone level + tierLevel. Enemies below your level always
-    // rise. Otherwise: chance[tier] * levelFalloff ^ (enemy level - your level),
-    // so the level difference matters most (one rank = 8 levels above you).
+    // Enemies below your level always rise. Otherwise:
+    // chance[tier] * rankFalloff ^ (ranks the enemy is above you), so one
+    // rank above you (e.g. level 10 vs 25) leaves only 7 %.
     chance: [0.9, 0.8, 0.7, 0.6], // at the same level: normal, elite, champion, boss
-    tierLevel: [0, 2, 4, 6],
-    levelFalloff: 0.72, // per level above you (8 levels: x0.07)
+    rankFalloff: 0.07,
     minChance: 0.01,
     tries: 3,
   },
@@ -352,7 +353,8 @@ export const CONFIG = {
     combatSpeedFactor: 1.25, // relative to the enemy's own speed
     teleportDist: 30, // shadows this far from the player are pulled back
 
-    attackRange: 24, // "Attack": hunts enemies this far around the player
+    attackRange: 14, // "Attack": hunts enemies this far around the player (+ Perception, see progression.stats.per)
+    attackRangeMax: 26,
     guardRange: 9, // "Protect": only fights enemies this close to the player
 
     riseTime: 0.8,
@@ -445,3 +447,12 @@ export const CONFIG = {
     aura: 0x8a4dff,
   },
 };
+
+// Every zone covers the levels of its rank; the gate boss sits at the level of
+// a boss of that zone.
+CONFIG.world.zones.forEach((z, i) => {
+  const L = CONFIG.levels;
+  z.level = L.rankLevels[i];
+  z.levelTo = (L.rankLevels[i + 1] || L.maxLevel + 1) - 1;
+  z.gateLevel = z.level + Math.round(L.tierLevel[3] * (z.levelTo - z.level + 1));
+});

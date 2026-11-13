@@ -4,6 +4,7 @@
 // either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { enemyPower } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
@@ -70,7 +71,7 @@ export class Army {
     for (const u of this.units) {
       if (!u) continue;
       units.push({
-        type: u.type, role: u.role, tier: u.tier, zone: u.zone, level: u.level, xp: u.xp, totalXp: u.totalXp,
+        type: u.type, role: u.role, tier: u.tier, zone: u.zone, plv: u.plv, level: u.level, xp: u.xp, totalXp: u.totalXp,
         stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
       });
     }
@@ -87,6 +88,7 @@ export class Army {
       if (slot >= MAX_UNITS || !CONFIG.enemies.types[d.type]) continue;
       const u = {
         slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier, zone: d.zone || 0,
+        plv: d.plv || (CONFIG.world.zones[d.zone || 0] || CONFIG.world.zones[0]).level,
         abT: 2, tauntT: 0,
         level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
@@ -104,6 +106,12 @@ export class Army {
   }
 
   // ---- roster ---------------------------------------------------------------
+  // how far around the player "Attack" hunts: grows with Perception
+  huntRange() {
+    const S = CONFIG.shadows;
+    return Math.min(S.attackRangeMax, S.attackRange + this.game.player.stats.per * CONFIG.progression.stats.per.armyRange);
+  }
+
   maxDeployed() {
     // Intelligence decides how big the army can be
     const P = this.game.player, S = CONFIG.shadows;
@@ -128,11 +136,11 @@ export class Army {
   recalc(u) {
     const S = CONFIG.shadows, role = S.roles[u.role];
     const def = CONFIG.enemies.types[u.type];
-    const zone = CONFIG.world.zones[u.zone] || CONFIG.world.zones[0];
     const tier = S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus);
-    // shadows are as strong as the zone they were raised in
-    const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * zone.power;
-    const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * zone.power;
+    // shadows are as strong as the enemy they were raised from
+    const pw = enemyPower(u.plv);
+    const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * pw;
+    const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * pw;
     const lv = Math.pow(S.levelGrowth, u.level - 1);
     u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + this.game.player.armyHp));
     u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv;
@@ -247,7 +255,7 @@ export class Army {
   }
 
   // Creates a shadow. Returns the unit, or null when there is no room at all.
-  add(type, tier, x, z, role, zone = 0) {
+  add(type, tier, x, z, role, zone = 0, plv = 0) {
     const S = CONFIG.shadows;
     let slot = -1;
     for (let i = 0; i < MAX_UNITS; i++) if (!this.units[i]) { slot = i; break; }
@@ -255,7 +263,7 @@ export class Army {
     const u = {
       slot, type, ti: this.game.enemies.typeIndex[type],
       role: role || CONFIG.enemies.types[type].shadowRole,
-      tier, zone, level: 1, xp: 0, totalXp: 0, stage: 0,
+      tier, zone, plv: plv || CONFIG.world.zones[zone].level, level: 1, xp: 0, totalXp: 0, stage: 0,
       abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
@@ -396,8 +404,8 @@ export class Army {
   // ---- experience -----------------------------------------------------------
   xpNeed(level, u) {
     const S = CONFIG.shadows;
-    const zone = CONFIG.world.zones[(u && u.zone) || 0];
-    return Math.round(S.xpBase * zone.power * Math.pow(S.xpGrowth, level - 1));
+    const pw = enemyPower(u ? u.plv : 1);
+    return Math.round(S.xpBase * pw * Math.pow(S.xpGrowth, level - 1));
   }
 
   // killer = slot of the shadow that landed the kill (-1 = the player)
@@ -435,6 +443,7 @@ export class Army {
     const S = CONFIG.shadows, roles = S.roles;
     const D = this.deployed;
     const tele2 = S.teleportDist * S.teleportDist;
+    const huntRange = this.huntRange();
     const variance = CONFIG.combat.damageVariance;
     if (this.buffT > 0) this.buffT -= dt;
     const dmgMult = 1 + P.armyDamage + (this.buffT > 0 ? this.buffDamage : 0);
@@ -473,7 +482,7 @@ export class Army {
 
       const role = roles[u.role];
       const ax = P.x, az = P.z;
-      const range = this.behavior === B_ATTACK ? S.attackRange : S.guardRange;
+      const range = this.behavior === B_ATTACK ? huntRange : S.guardRange;
 
       // never get lost: shadows far behind are pulled to the player
       const fxd = u.x - P.x, fzd = u.z - P.z;

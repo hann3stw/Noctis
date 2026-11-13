@@ -2,6 +2,7 @@
 // frame loop.
 import * as THREE from 'three';
 import { CONFIG } from './config.js';
+import { rankOf, rankProgress, tierLevels, levelAt } from './core/levels.js';
 import { input, resetInput, clearEvents } from './input/input.js';
 import { initTouch } from './input/touch.js';
 import { FollowCamera } from './render/camera.js';
@@ -146,7 +147,7 @@ export class Game {
   // ---- saving ---------------------------------------------------------------
   serialize() {
     return {
-      version: 1,
+      version: 2,
       name: this.name,
       seed: this.seed,
       created: this.created,
@@ -174,10 +175,7 @@ export class Game {
 
   // rank that belongs to the player's level
   rankForLevel(level) {
-    const L = CONFIG.progression.rankLevels;
-    let r = 0;
-    for (let i = 0; i < L.length; i++) if (level >= L[i]) r = i;
-    return r;
+    return rankOf(level);
   }
 
   // Called after a level up: a new rank gives lots of stat points.
@@ -369,7 +367,7 @@ export class Game {
     // the chest opens
     for (let k = 0; k < C.chestItems; k++) {
       const a = (k / C.chestItems) * Math.PI * 2;
-      this.loot.drop(s.x + 0.5 + Math.cos(a) * 1.8, s.z - 3 + Math.sin(a) * 1.8, rollLoot(zone.level, P.drop + 0.8, P.known, C.chestMinRarity));
+      this.loot.drop(s.x + 0.5 + Math.cos(a) * 1.8, s.z - 3 + Math.sin(a) * 1.8, rollLoot(levelAt(Math.hypot(s.x, s.z)), P.drop + 0.8, P.known, C.chestMinRarity));
     }
     this.effects.burst(s.x, 1, s.z, 50, 0x8a4dff, 8, 0.26, 0.9);
     this.hud.banner(t('toast.outpostCaptured'), this.safeName(si));
@@ -503,9 +501,9 @@ export class Game {
   // for enemies above the player's level, higher with Intelligence.
   chanceFor(i) {
     const A = CONFIG.arise, souls = this.souls, P = this.player;
-    const over = souls.level[i] - P.level;
-    if (over < 0) return 1; // weaker than you: always rises
-    const c = A.chance[souls.tier[i]] * Math.pow(A.levelFalloff, over) + P.stats.int * CONFIG.progression.stats.int.arise
+    if (souls.level[i] < P.level) return 1; // weaker than you: always rises
+    const ranks = rankProgress(souls.level[i]) - rankProgress(P.level);
+    const c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + P.stats.int * CONFIG.progression.stats.int.arise
       + (souls.gate[i] ? CONFIG.gates.ariseBonus : 0);
     return Math.max(A.minChance, Math.min(1, c));
   }
@@ -516,13 +514,12 @@ export class Game {
     const i = souls.nearest(P.x, P.z, CONFIG.souls.ariseRange);
     if (i < 0) return;
     const cost = CONFIG.arise.cost[souls.tier[i]];
-    if (P.mana < cost) { this.hud.toast(t('toast.noMana')); return; }
     if (!army.hasRoom()) {
-      // army full: open the army list so a weaker shadow can make room
-      const name = t('enemy.' + this.enemies.types[souls.type[i]].id);
-      this.menu.open('army', t('army.fullHint', { name }));
+      // army full: a weaker shadow has to be dismissed in the menu first
+      this.hud.armyNote(t('arise.full'), 'bad');
       return;
     }
+    if (P.mana < cost) { this.hud.armyNote(t('toast.noMana'), 'bad'); return; }
     P.mana -= cost;
     if (Math.random() >= this.chanceFor(i)) {
       // the shadow resists
@@ -530,21 +527,21 @@ export class Game {
       this.effects.burst(souls.x[i], 1, souls.z[i], 12, 0x707080, 3, 0.18, 0.5);
       if (souls.tries[i] <= 0) {
         souls.remove(i);
-        this.hud.toast(t('toast.soulFaded'));
+        this.hud.armyNote(t('toast.soulFaded'), 'bad');
       } else {
-        this.hud.toast(t('toast.ariseFailed', { n: souls.tries[i] }));
+        this.hud.armyNote(t('toast.ariseFailed', { n: souls.tries[i] }), 'bad');
       }
       play('hurt');
       return;
     }
-    const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i], undefined, souls.zone[i]);
+    const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i], undefined, souls.zone[i], souls.plv[i]);
     if (!u) return;
     souls.remove(i);
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
     this.effects.ring(u.x, u.z, 0.5, 4, this.appearance.aura, 0.55);
     this.effects.ring(u.x, u.z, 3.5, 0.3, 0xffffff, 0.5, 0.05);
-    if (!army.out) this.hud.toast(t('toast.joinsArmy', { name: army.name(u) }));
+    this.hud.armyNote(t('toast.joinsArmy', { name: army.name(u) }), 'good');
   }
 
   setPaused(paused) {
@@ -558,13 +555,13 @@ export class Game {
     this.kills++;
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
-    const level = CONFIG.world.zones[zi].level + CONFIG.arise.tierLevel[tier];
-    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0);
+    const level = E.lvl[i] + tierLevels(zi, tier);
+    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]);
     this.army.grantXp(src, xp);
     // kills of the army count only partly for the hunter
     this.player.addXp(src < 0 ? xp : xp * CONFIG.progression.armyKillXp);
     if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
-    else this.loot.enemyDrop(E.x[i], E.z[i], CONFIG.world.zones[zi].level, tier);
+    else this.loot.enemyDrop(E.x[i], E.z[i], level, tier);
   }
 
   onPlayerRespawn() {

@@ -5,6 +5,7 @@
 // use reserved slots that only come alive inside their arena.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { enemyPower, levelAt } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
@@ -31,6 +32,7 @@ export class Enemies {
     this.type = new Uint8Array(N);
     this.tier = new Uint8Array(N);
     this.zone = new Uint8Array(N);
+    this.lvl = new Uint16Array(N); // level (from where the pack lives; gates: the zone's first level)
     this.arena = new Uint8Array(N); // gate index + 1 for boss and helper slots
     this.state = new Uint8Array(N);
     this.pack = new Uint16Array(N);
@@ -220,7 +222,6 @@ export class Enemies {
     const def = this.types[this.type[i]].def;
     const tier = this.tier[i];
     const T = CONFIG.enemies.tiers[tier];
-    const zm = CONFIG.world.zones[this.zone[i]];
     const p = this.pack[i];
     if (x === undefined) {
       const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 3.5;
@@ -233,10 +234,13 @@ export class Enemies {
     this.tz[i] = z;
     this.yaw[i] = Math.random() * 6.28;
     const D = CONFIG.difficulty;
-    this.maxHp[i] = Math.round(def.hp * zm.hp * T.hp * D.enemyHp);
+    const lv = this.arena[i] ? CONFIG.world.zones[this.zone[i]].level : levelAt(Math.hypot(this.packX[p], this.packZ[p]));
+    this.lvl[i] = lv;
+    const pw = enemyPower(lv);
+    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp);
     this.hp[i] = this.maxHp[i];
-    this.dmg[i] = def.damage * zm.dmg * T.dmg * D.enemyDamage;
-    this.xpv[i] = Math.round(def.xp * zm.xp * T.xp);
+    this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage;
+    this.xpv[i] = Math.round(def.xp * pw * T.xp);
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];
     this.state[i] = ST_IDLE;

@@ -102,12 +102,17 @@ HTTPS (or localhost) for offline mode and installing.
   (D), Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera
   (S). Every rank multiplies enemy health, damage and XP by 10: enemies two
   ranks above you kill you with one hit, but they also give 10x the XP.
-- The hunter grows x1.25 per level (health and damage), x6 over the 8 levels
-  of a zone. The rest of the step to the next zone must come from better gear,
-  stat points and the army. A global difficulty setting (enemy health x1.5,
-  damage x1.75) sits in `src/config.js` -> `difficulty`.
-- The rank comes from the level: rank D at level 9, C at 17, B at 25, A at 33,
-  S at 41. Every new rank gives many stat points (10, 12, 15, 18, 20).
+- The rank comes from the level: E = level 1-9, D = 10-24, C = 25-49,
+  B = 50-99, A = 100-199, S = 200-300. Every zone covers the levels of its
+  rank; enemies get higher levels (up to about x3 stronger) towards the outer
+  edge of their zone. Every new rank gives many stat points (10, 12, 15, 18,
+  20); levels give 3 points in E, 2 in D, 1 in C and B, and one every second
+  level in A and S.
+- The hunter grows x6 per rank from levels alone. The rest of the step to the
+  next zone must come from better gear, stat points and the army. A global
+  difficulty setting (enemy health x1.5, damage x1.75) sits in
+  `src/config.js` -> `difficulty`; all level values in `levels`.
+  Old saves are moved to the new levels automatically.
 - Kills of your shadows give you half the XP.
 - Every zone has three enemy types (melee, ranged, charger). Elites (gold
   ring) and champions (red ring, with two escorts) are much stronger and always
@@ -126,13 +131,14 @@ HTTPS (or localhost) for offline mode and installing.
 ## Shadow army
 
 - Raise defeated enemies with Arise. Enemies below your level always rise;
-  above it the chance falls fast with every level (one rank above you: about
-  7 %). Elites, champions and bosses are a bit harder. Every soul allows 3
-  tries, each costs mana.
+  above it the chance falls fast (one rank above you: about 7 %). Elites,
+  champions and bosses are a bit harder. Every soul allows 3 tries, each costs
+  mana. The chance and every result show as a small note above the army.
 - Summon the whole army or send it back into the shadows to fight alone.
   Summoned, it either attacks on its own or protects you.
 - Army size comes from Intelligence (5 slots + 1 per 2 points, plus the
-  Gravecaller set). Shadows grow with their own levels and evolve.
+  Gravecaller set). On "Attack" the army hunts enemies 14 units around you,
+  +0.25 per Perception point (up to 26). Shadows grow with their own levels and evolve.
 - The army can be managed anywhere. When it is full and you press Arise, the
   army list opens so you can dismiss a weaker shadow and raise the strong one
   (the game is paused meanwhile, so the soul does not fade).

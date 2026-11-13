@@ -9,6 +9,7 @@ import { TAB_ICONS, SKILL_ICONS } from './icons.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
+import { RANKS } from '../world/gates.js';
 import { skillDef } from '../combat/skills.js';
 import {
   EQUIP_SLOTS, RARITY_CSS, itemName, weaponDamage, armorDefense, armorBonus, bonusText,
@@ -59,8 +60,11 @@ export class Menu {
     this.army.locked = false; // the army can be changed anywhere
     this.army.reset();
     this.army.hint = hint || '';
+    // open where something new waits
     if (tab) this.tab = tab;
     else if (P.points > 0) this.tab = 'stats';
+    else if (P.inventory.some((it) => it.n)) this.tab = 'gear';
+    else if (P.newSkills.length) this.tab = 'skills';
     this.selItem = null;
     this.selSkill = null;
     this.confirmId = 0;
@@ -69,7 +73,15 @@ export class Menu {
     this.render();
   }
 
+  // what was shown in a tab is not new any more once the player leaves it
+  markSeen(tab) {
+    const P = this.game.player;
+    if (tab === 'gear') for (const it of P.inventory) delete it.n;
+    if (tab === 'skills') P.newSkills.length = 0;
+  }
+
   close() {
+    this.markSeen(this.tab);
     this.isOpen = false;
     this.el.classList.remove('on');
     this.game.hud.syncSkills();
@@ -99,6 +111,7 @@ export class Menu {
     const item = this.selItem;
     if (act !== 'dismantle') this.confirmId = 0;
     if (act === 'tab') {
+      if (target.dataset.tab !== this.tab) this.markSeen(this.tab);
       this.tab = target.dataset.tab;
     } else if (act === 'item') {
       this.selItem = this.findItem(Number(target.dataset.id));
@@ -125,8 +138,14 @@ export class Menu {
   }
 
   render() {
+    const P = this.game.player;
+    const news = {
+      stats: P.points > 0 ? P.points : '',
+      gear: P.inventory.some((it) => it.n) ? '!' : '',
+      skills: P.newSkills.length ? '!' : '',
+    };
     const tabs = TABS.map((id) => {
-      const badge = id === 'stats' && this.game.player.points > 0 ? `<i>${this.game.player.points}</i>` : '';
+      const badge = news[id] ? `<i>${news[id]}</i>` : '';
       return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
@@ -153,8 +172,8 @@ export class Menu {
     const P = this.game.player;
     const cur = P.equip[slotOf(item)];
     const better = cur !== item && (!cur || itemPower(item) > itemPower(cur));
-    return `<div class="tile r${item.rarity}${this.selItem === item ? ' sel' : ''}${extra}" data-act="item" data-id="${item.id}" style="--rc:${RARITY_CSS[item.rarity]}">
-      ${iconOf(item)}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}</div>`;
+    return `<div class="tile r${item.rarity}${this.selItem === item ? ' sel' : ''}${item.n ? ' new' : ''}${extra}" data-act="item" data-id="${item.id}" style="--rc:${RARITY_CSS[item.rarity]}">
+      ${iconOf(item)}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}${item.n ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
   }
 
   mainStat(item) {
@@ -233,11 +252,17 @@ export class Menu {
       ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
       ['damage', fmt(P.power())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
       ['reduction', pct(1 - P.takenFactor())], ['speed', P.speed.toFixed(1)], ['reload', P.reloadTime.toFixed(2) + 's'],
-      ['drop', '+' + pct(P.drop)], ['slots', this.game.army.maxDeployed()],
+      ['drop', '+' + pct(P.drop)], ['slots', this.game.army.maxDeployed()], ['armyRange', Math.round(this.game.army.huntRange())],
     ].map(([k, v]) => `<div class="row"><span>${t('derived.' + k)}</span><b>${v}</b></div>`).join('');
+    // the rank and when the next one comes
+    const L = CONFIG.levels.rankLevels, r = this.game.rankIndex;
+    const rank = r + 1 < L.length
+      ? t('stats.nextRank', { rank: RANKS[r], next: RANKS[r + 1], level: L[r + 1] })
+      : t('stats.maxRank', { rank: RANKS[r] });
     return `<div class="stats">
       <div class="s-left" data-scroll="stats">
-        <div class="s-head"><b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: Math.floor(P.xp), need: P.xpNeed() })}</span>
+        <div class="s-head"><b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: fmt(Math.floor(P.xp)), need: fmt(P.xpNeed()) })}</span>
+          <small class="s-rank">${rank}</small>
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
   }
@@ -260,7 +285,7 @@ export class Menu {
     const meta = !known ? t('skills.locked') : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: def.cooldown });
     const badge = used >= 0 ? `<em>${used === 2 ? 'U' : used + 1}</em>` : '';
     return `<div class="k-card ${cls}${ult ? ' ult' : ''}${known ? '' : ' locked'}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
-      <i>${known ? SKILL_ICONS[id] : LOCK}</i><div><b>${t('skill.' + id)}</b><small>${meta}</small></div>${badge}</div>`;
+      <i>${known ? SKILL_ICONS[id] : LOCK}</i><div><b>${t('skill.' + id)}</b><small>${meta}</small></div>${badge}${P.newSkills.includes(id) ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
   }
 
   skillStats(id) {

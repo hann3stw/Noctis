@@ -1,6 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
+import { playerPower, enemyPower, rankOf } from '../core/levels.js';
 import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
@@ -34,6 +35,7 @@ export class Player {
     this.stats = { str: 0, agi: 0, vit: 0, int: 0, per: 0 };
     this.essence = 0; // upgrade material from dismantled items
     this.inventory = [];
+    this.newSkills = []; // skills found but not looked at yet
     this.equip = { weapon: makeWeapon(c.startWeapon, 0, 1), helmet: null, chest: null, gloves: null, boots: null };
     this.known = [...c.startSkills, c.startUltimate]; // learned skills and ultimates
     this.slots = [c.startSkills[0] || null, c.startSkills[1] || null, c.startUltimate]; // skill 1, skill 2, ultimate
@@ -111,7 +113,7 @@ export class Player {
       level: this.level, xp: this.xp, points: this.points, stats: { ...this.stats }, essence: this.essence,
       inventory: this.inventory.map((it) => ({ ...it })),
       equip: Object.fromEntries(Object.entries(this.equip).map(([k, v]) => [k, v ? { ...v } : null])),
-      known: [...this.known], slots: [...this.slots],
+      known: [...this.known], slots: [...this.slots], newSkills: [...this.newSkills],
     };
   }
 
@@ -131,6 +133,7 @@ export class Player {
     const valid = (id) => CONFIG.skills[id] || CONFIG.ultimates[id];
     if (d.known) this.known = d.known.filter(valid);
     if (d.slots) this.slots = d.slots.map((id) => (id && valid(id) ? id : null));
+    this.newSkills = (d.newSkills || []).filter(valid);
     this.ult = d.ult || 0;
     this.recalc();
     // the camp is safe: start there when the saved spot is unknown
@@ -175,7 +178,7 @@ export class Player {
     }
     const oldMax = this.maxHp;
     // every level and every Vitality point multiply the health
-    this.levelMult = Math.pow(G.levelGrowth, this.level - 1);
+    this.levelMult = playerPower(this.level);
     this.maxHp = Math.round(c.baseHp * this.levelMult * Math.pow(1 + S.vit.hp, st.vit) * (1 + b.hp));
     this.hpRegen = st.vit * S.vit.regen * this.maxHp;
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
@@ -203,7 +206,7 @@ export class Player {
   // (K grows with the zone's power), so new zones need new armour.
   takenFactor() {
     const zi = Math.max(0, this.game.curZone);
-    const K = CONFIG.progression.defenseK * Math.pow(CONFIG.items.levelGrowth, CONFIG.world.zones[zi].level - 1);
+    const K = CONFIG.progression.defenseK * Math.pow(CONFIG.levels.itemRank, zi);
     return (K / (K + this.defense)) * this.takenBonus;
   }
 
@@ -217,28 +220,33 @@ export class Player {
   // ---- levels ---------------------------------------------------------------
   xpNeed() {
     const G = CONFIG.progression;
-    return Math.round(G.xpBase * Math.pow(G.xpGrowth, this.level - 1));
+    return Math.round(G.xpBase * enemyPower(this.level) * (1 + G.xpPerLevel * (this.level - 1)));
   }
 
   addXp(amount) {
     const G = CONFIG.progression;
-    if (this.level >= G.maxLevel) return;
+    const max = CONFIG.levels.maxLevel;
+    if (this.level >= max) return;
     this.xp += amount;
-    let gained = 0;
-    while (this.level < G.maxLevel && this.xp >= this.xpNeed()) {
+    let gained = 0, ups = 0;
+    while (this.level < max && this.xp >= this.xpNeed()) {
       this.xp -= this.xpNeed();
       this.level++;
-      this.points += G.pointsPerLevel;
-      gained += G.pointsPerLevel;
+      ups++;
+      // points per level depend on the rank (0.5 = one every second level)
+      const rate = G.pointsPerLevel[rankOf(this.level - 1)];
+      const pts = Math.floor(this.level * rate) - Math.floor((this.level - 1) * rate);
+      this.points += pts;
+      gained += pts;
     }
-    if (!gained) return;
+    if (!ups) return;
     this.recalc();
     if (!this.dead) { this.hp = this.maxHp; this.mana = this.maxMana; }
     this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
     this.game.effects.ring(this.x, this.z, 0.5, 5, 0xffd24a, 0.6);
     this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
     play('levelup');
-    this.game.hud.toast(t('toast.levelUp', { level: this.level, points: gained }));
+    this.game.hud.toast(gained ? t('toast.levelUp', { level: this.level, points: gained }) : t('toast.levelUpNoPts', { level: this.level }));
     this.game.checkRank();
   }
 
@@ -252,6 +260,13 @@ export class Player {
 
   // ---- items ----------------------------------------------------------------
   // Takes a dropped item. Skills are learned at once. False = inventory full.
+  // something new to look at in the menu?
+  hasNews() {
+    if (this.points > 0 || this.newSkills.length) return true;
+    for (let i = 0; i < this.inventory.length; i++) if (this.inventory[i].n) return true;
+    return false;
+  }
+
   addItem(item) {
     const hud = this.game.hud;
     if (item.kind === 'skill') {
@@ -260,11 +275,13 @@ export class Player {
         hud.toast(t('toast.essence', { n: 5 }));
       } else {
         this.learn(item.type);
+        if (!this.newSkills.includes(item.type)) this.newSkills.push(item.type);
         hud.toast(t('toast.learned', { name: itemName(item) }));
       }
       return true;
     }
     if (this.inventory.length >= CONFIG.items.inventorySize) return false;
+    item.n = 1; // new: marked in the menu until it was seen
     this.inventory.push(item);
     hud.toast(t('toast.found', { name: t('rarity.' + item.rarity) + ' ' + itemName(item) }));
     return true;

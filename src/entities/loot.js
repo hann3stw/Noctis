@@ -2,6 +2,7 @@
 // the ground. Walking into a chest opens it, walking over a pickup takes it.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { levelAt } from '../core/levels.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { box, merge, flatMaterial } from '../render/geo.js';
 import { rollLoot, RARITY_COLORS } from '../core/items.js';
@@ -62,14 +63,14 @@ export class Loot {
           if (dx * dx + dz * dz < 400) { ok = false; break; }
         }
         if (!ok) continue;
-        xs.push(x); zs.push(z); levels.push(zone.level);
+        xs.push(x); zs.push(z); levels.push(levelAt(r));
         placed++;
       }
     }
     this.chestCount = xs.length;
     this.cx = Float32Array.from(xs);
     this.cz = Float32Array.from(zs);
-    this.cLevel = Uint8Array.from(levels);
+    this.cLevel = Uint16Array.from(levels);
     this.cYaw = new Float32Array(this.chestCount);
     this.cT = new Float32Array(this.chestCount); // > 0: opened, seconds until it is back
     for (let i = 0; i < this.chestCount; i++) this.cYaw[i] = rng() * 6.28;

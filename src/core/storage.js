@@ -1,5 +1,7 @@
 // Save games: IndexedDB, with localStorage as a fallback when IndexedDB is
 // not available (some private browser modes). One record per slot.
+import { migrateSave } from './levels.js';
+
 const DB_NAME = 'noctis';
 const STORE = 'saves';
 const LS_KEY = 'noctis.save.';
@@ -47,9 +49,9 @@ function lsGet(slot) {
 export async function loadSlot(slot) {
   const db = await openDb();
   if (db) {
-    try { return (await request(db, 'readonly', (s) => s.get(slot))) || null; } catch (_) { /* fall back */ }
+    try { return migrateSave((await request(db, 'readonly', (s) => s.get(slot))) || null); } catch (_) { /* fall back */ }
   }
-  return lsGet(slot);
+  return migrateSave(lsGet(slot));
 }
 
 export async function saveSlot(slot, data) {

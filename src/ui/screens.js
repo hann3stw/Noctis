@@ -263,18 +263,37 @@ export class Screens {
   travel() {
     const g = this.app.game;
     if (!g) return '';
+    // One row per zone: rank, name and levels on the left, the four outposts
+    // (north, east, south, west) on the right. Zones not found yet stay hidden.
     const here = g.player.safeIndex;
-    const btn = (si) => `<button class="sbtn${si === here ? ' ghost' : ''}" data-act="travel" data-v="${si}"${si === here ? ' disabled' : ''}>${esc(g.safeName(si))}</button>`;
-    const groups = [`<div class="tv-zone"><b>${t('zone.camp')}</b><div class="scr-row">${btn(0)}</div></div>`];
+    const op = (si, label) => {
+      const s = g.world.safes[si];
+      const isHere = si === here, open = si === 0 || g.discovered.has(si);
+      const cls = isHere ? 'here' : open ? 'open' : 'locked';
+      const sub = isHere ? t('travel.here') : open ? (si === g.respawnIndex ? t('travel.respawn') : t('travel.go')) : t('travel.locked');
+      const tag = open && !isHere ? `button data-act="travel" data-v="${si}"` : 'div';
+      return `<${tag} class="tv-op ${cls}${si === g.respawnIndex ? ' rs' : ''}"><b>${label || t('dir.' + s.dir)}</b><small>${sub}</small></${tag.split(' ')[0]}>`;
+    };
+    let captured = 0, total = 0;
+    const rows = [`<div class="tv-zone camp"><div class="tv-zh"><em>⌂</em><div><b>${t('zone.camp')}</b><small>${t('zone.camp.sub')}</small></div></div>
+      <div class="tv-ops one">${op(0, t('zone.camp'))}</div></div>`];
+    let unknown = 0;
     CONFIG.world.zones.forEach((zone, zi) => {
-      const list = [];
-      g.world.safes.forEach((s, si) => { if (s.zone === zi && g.discovered.has(si)) list.push(si); });
-      const body = list.length ? list.map(btn).join('') : `<small>${t('travel.none')}</small>`;
-      groups.push(`<div class="tv-zone"><b>${t('zone.' + zone.id)} · ${t('zone.sub', { rank: zone.rank, level: zone.level })}</b><div class="scr-row">${body}</div></div>`);
+      const ids = [];
+      g.world.safes.forEach((s, si) => { if (s.zone === zi) ids.push(si); });
+      ids.sort((a, b) => g.world.safes[a].dir - g.world.safes[b].dir);
+      const n = ids.filter((si) => g.discovered.has(si)).length;
+      captured += n; total += ids.length;
+      if (!g.knownZones.has(zi)) { unknown++; return; }
+      rows.push(`<div class="tv-zone" style="--zc:${hex(zone.gateColor)}">
+        <div class="tv-zh"><em>${zone.rank}</em><div><b>${t('zone.' + zone.id)}</b><small>${t('travel.levels', { level: zone.level, to: zone.levelTo })} · ${n}/${ids.length}</small></div></div>
+        <div class="tv-ops">${ids.map((si) => op(si)).join('')}</div></div>`);
     });
-    return `<div class="scr-modal"><div class="scr-box travel-box"><h2>${t('travel.title')}</h2>
-      <div class="tv-list" data-scroll="tv">${groups.join('')}</div>
-      <button class="sbtn ghost" data-act="resume">${t('confirm.cancel')}</button></div></div>`;
+    if (unknown) rows.push(`<div class="tv-zone unknown"><div class="tv-zh"><em>?</em><div><b>${t('travel.unknown', { n: unknown })}</b><small>${t('travel.unknownSub')}</small></div></div></div>`);
+    return `<div class="scr-modal"><div class="scr-box travel-box">
+      <div class="tv-head"><h2>${t('travel.title')}</h2><small>${t('travel.count', { n: captured, max: total })}</small></div>
+      <div class="tv-list" data-scroll="tv">${rows.join('')}</div>
+      <button class="sbtn ghost" data-act="resume">${t('menu.close')}</button></div></div>`;
   }
 
   // ---- skin editor -----------------------------------------------------------

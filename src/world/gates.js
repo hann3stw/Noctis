@@ -194,7 +194,7 @@ export class Gates {
     const zone = CONFIG.world.zones[gi];
     for (let k = 0; k < G.rewardItems; k++) {
       const a = (k / G.rewardItems) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.level, P.drop + G.rewardLuck, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.gateLevel, P.drop + G.rewardLuck, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {

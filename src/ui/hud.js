@@ -70,13 +70,14 @@ export class Hud {
           <div id="btn-pause" class="btn pill" aria-label="${t('hud.pause')}"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg></div>
         </div>
         <div class="squads">
+          <div class="sq-note"></div>
           <div class="squad"><div class="sq-revive btn"></div>
             <div class="sq-row"><div class="sq-summon btn"><span></span></div><div class="sq-chip btn"><b>${t('hud.army')}</b><span></span><small></small></div></div>
           </div>
         </div>
         <div id="joy"><div class="knob"></div></div>
         <div class="actions">
-          <div id="btn-arise" class="btn round" aria-label="${t('hud.arise')}">${ICON_ARISE}<small></small><em></em></div>
+          <div id="btn-arise" class="btn round" aria-label="${t('hud.arise')}">${ICON_ARISE}<small></small></div>
           <div id="btn-dodge" class="btn round" aria-label="${t('hud.dodge')}">${ICON_DASH}<div class="cd"></div></div>
           ${skillBtn('btn-skill0', '')}
           ${skillBtn('btn-skill1', '')}
@@ -158,7 +159,9 @@ export class Hud {
     this.toastT = 0;
     this.btnArise = $('#btn-arise');
     this.ariseCost = $('#btn-arise small');
-    this.ariseInfo = $('#btn-arise em');
+    this.noteEl = $('.sq-note');
+    this.noteT = 0; // > 0: a notification is shown above the army
+    this.vNote = null;
     {
       const el = $('.squad'), chip = el.querySelector('.sq-chip'), revive = el.querySelector('.sq-revive');
       const summon = el.querySelector('.sq-summon');
@@ -193,7 +196,7 @@ export class Hud {
     this.vMaxMp = -1;
     this.vXp = -1;
     this.vLevel = -1;
-    this.vPoints = -1;
+    this.vPoints = null;
     this.vArise = -2;
     this.vAriseCant = null;
     this.vEclipse = null;
@@ -273,6 +276,14 @@ export class Hud {
     this.savingT = 1.4;
   }
 
+  // short message above the army (arise results, army full)
+  armyNote(text, kind = '') {
+    this.noteEl.textContent = text;
+    this.noteEl.className = 'sq-note on ' + kind;
+    this.noteT = 2.6;
+    this.vNote = text;
+  }
+
   toast(text) {
     this.toastEl.textContent = text;
     this.toastEl.classList.add('on');
@@ -343,14 +354,22 @@ export class Hud {
 
     // Arise button: only while a soul is in reach
     const cost = game.soulNear >= 0 ? game.ariseCost : -1;
-    const info = cost >= 0 ? cost * 10000 + Math.round(game.ariseChance * 100) * 10 + game.ariseTries : -1;
-    if (info !== this.vArise) {
-      this.vArise = info;
+    if (cost !== this.vArise) {
+      this.vArise = cost;
       this.btnArise.classList.toggle('on', cost >= 0);
-      if (cost >= 0) {
-        this.ariseCost.textContent = cost;
-        // chance and the tries that are left (dots)
-        this.ariseInfo.textContent = Math.round(game.ariseChance * 100) + '% ' + '•'.repeat(game.ariseTries);
+      if (cost >= 0) this.ariseCost.textContent = cost;
+    }
+    // above the army: a notification, or the chance of the soul in reach
+    if (this.noteT > 0) {
+      this.noteT -= dt;
+      if (this.noteT <= 0) this.vNote = null;
+    }
+    if (this.noteT <= 0) {
+      const text = cost >= 0 ? t('arise.chance', { p: Math.round(game.ariseChance * 100), n: game.ariseTries }) : '';
+      if (text !== this.vNote) {
+        this.vNote = text;
+        this.noteEl.textContent = text;
+        this.noteEl.className = 'sq-note' + (text ? ' on info' : '');
       }
     }
     const cant = cost >= 0 && P.mana < cost;
@@ -446,9 +465,11 @@ export class Hud {
       this.xpLabel.textContent = P.level;
       this.rankLabel.textContent = t('hud.rankShort', { rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
     }
-    if (P.points !== this.vPoints) {
-      this.vPoints = P.points;
-      this.menuBadge.textContent = P.points > 0 ? P.points : '';
+    // "!" on the menu when there is something new (points, items, skills)
+    const news = P.hasNews();
+    if (news !== this.vPoints) {
+      this.vPoints = news;
+      this.menuBadge.textContent = news ? '!' : '';
     }
 
     // attack charges (each pip fills while it reloads)
@@ -498,14 +519,14 @@ export class Hud {
         if (zone !== this.lastZoneCard) {
           if (this.lastZoneCard) {
             this.zoneCard.querySelector('b').textContent = t('zone.' + zone);
-            this.zoneCard.querySelector('small').textContent = t('zone.sub', { rank: zd.rank, level: zd.level });
+            this.zoneCard.querySelector('small').textContent = t('zone.sub', { rank: zd.rank, level: zd.level, to: zd.levelTo });
             this.zoneCard.classList.remove('on');
             void this.zoneCard.offsetWidth;
             this.zoneCard.classList.add('on');
           }
           this.lastZoneCard = zone;
         }
-        this.zoneSub.textContent = t('zone.sub', { rank: zd.rank, level: zd.level });
+        this.zoneSub.textContent = t('zone.sub', { rank: zd.rank, level: zd.level, to: zd.levelTo });
       }
       this.hud.classList.toggle('safe', P.inCamp);
     }

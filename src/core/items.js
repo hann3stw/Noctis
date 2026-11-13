@@ -4,6 +4,7 @@
 //   armour: { id, kind: 'armor', type: 'helmet', set: 'stalker', bonus: 'hp', rarity, level, up }
 // Skills drop as { kind: 'skill', type: 'shadowStep' } and are learned at once.
 import { CONFIG } from '../config.js';
+import { itemLevelPower, rankProgress } from './levels.js';
 import { t } from '../strings.js';
 
 export const RARITY_COLORS = [0xb8b8c8, 0x4aa3ff, 0xb45cff, 0xffb02e];
@@ -68,7 +69,7 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false) {
 // ---- stats ------------------------------------------------------------------
 function factor(item) {
   const I = CONFIG.items;
-  return Math.pow(I.levelGrowth, item.level - 1) * I.rarityStat[item.rarity] * (1 + I.upgradeBonus * item.up);
+  return itemLevelPower(item.level) * I.rarityStat[item.rarity] * (1 + I.upgradeBonus * item.up);
 }
 
 export function weaponDamage(item) {
@@ -91,7 +92,7 @@ export function upgradeCost(item) {
 }
 
 export function dismantleValue(item) {
-  return Math.round(CONFIG.items.dismantle[item.rarity] * (1 + 0.5 * item.up) * (1 + 0.15 * (item.level - 1)));
+  return Math.round(CONFIG.items.dismantle[item.rarity] * (1 + 0.5 * item.up) * (1 + 1.2 * rankProgress(item.level)));
 }
 
 // rough single number to compare two items of the same slot
