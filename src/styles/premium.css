@@ -974,3 +974,10 @@ button,
 [data-act] {
   touch-action: manipulation;
 }
+/* in the game itself no touch may become a browser gesture */
+#ui #hud,
+#ui #hud .btn,
+#touch-layer,
+#game {
+  touch-action: none;
+}
