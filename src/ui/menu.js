@@ -5,7 +5,9 @@ import { CONFIG } from '../config.js';
 import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
-import { TAB_ICONS } from './icons.js';
+import { TAB_ICONS, SKILL_ICONS } from './icons.js';
+
+const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
 import { skillDef } from '../combat/skills.js';
 import {
@@ -248,28 +250,87 @@ export class Menu {
   }
 
   // ---- skills -----------------------------------------------------------------
+  // Left: the three equipped slots. Middle: every skill and ultimate (the ones
+  // not found yet are shown locked). Right: details and where to equip it.
+  skillCard(id, cls) {
+    const P = this.game.player;
+    const known = P.known.includes(id);
+    const used = P.slots.indexOf(id);
+    const def = skillDef(id), ult = !!CONFIG.ultimates[id];
+    const meta = !known ? t('skills.locked') : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: def.cooldown });
+    const badge = used >= 0 ? `<em>${used === 2 ? 'U' : used + 1}</em>` : '';
+    return `<div class="k-card ${cls}${ult ? ' ult' : ''}${known ? '' : ' locked'}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
+      <i>${known ? SKILL_ICONS[id] : LOCK}</i><div><b>${t('skill.' + id)}</b><small>${meta}</small></div>${badge}</div>`;
+  }
+
+  skillStats(id) {
+    const def = skillDef(id), ult = !!CONFIG.ultimates[id];
+    const rows = [];
+    const row = (k, v) => rows.push(`<div class="row"><span>${t('ks.' + k)}</span><b>${v}</b></div>`);
+    if (ult) row('charge', t('skills.ultCost'));
+    else { row('mana', def.mana); row('cooldown', def.cooldown + 's'); }
+    if (def.power) row('damage', t('ks.damageV', { v: def.power }) + (def.ticks ? ' × ' + def.ticks : ''));
+    if (def.range) row('range', def.range);
+    if (def.radius) row('radius', def.radius);
+    if (def.arcDeg) row('cone', def.arcDeg + '°');
+    if (def.width) row('width', def.width);
+    if (def.stun) row('stun', def.stun + 's');
+    if (def.shield) row('shield', Math.round(def.shield * 100) + '%');
+    if (def.heal) row('heal', Math.round(def.heal * 100) + '%');
+    if (def.armyDamage) row('army', '+' + Math.round(def.armyDamage * 100) + '%');
+    if (def.damage && ult) row('damageUp', '+' + Math.round(def.damage * 100) + '%');
+    if (def.duration) row('duration', def.duration + 's');
+    return rows.join('');
+  }
+
   skills() {
     const P = this.game.player;
-    const slots = [0, 1, 2].map((k) => `<div class="k-slot${k === 2 ? ' ult' : ''}"><small>${t('skills.slot' + k)}</small><b>${P.slots[k] ? t('skill.' + P.slots[k]) : t('skills.none')}</b></div>`).join('');
-    const list = P.known.map((id) => {
-      const ult = !!CONFIG.ultimates[id];
-      const used = P.slots.indexOf(id);
-      return `<div class="k-item${ult ? ' ult' : ''}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
-        <b>${t('skill.' + id)}</b><small>${used >= 0 ? t('skills.slot' + used) : ''}</small></div>`;
+    if (!this.selSkill) this.selSkill = P.slots[0] || P.known[0];
+    const slots = [0, 1, 2].map((k) => {
+      const id = P.slots[k];
+      if (!id) return `<div class="k-slot empty${k === 2 ? ' ult' : ''}"><i></i><div><small>${t('skills.slot' + k)}</small><b>${t('skills.none')}</b></div></div>`;
+      const def = skillDef(id);
+      const meta = k === 2 ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: def.cooldown });
+      return `<div class="k-slot${k === 2 ? ' ult' : ''}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
+        <i>${SKILL_ICONS[id]}</i><div><small>${t('skills.slot' + k)}</small><b>${t('skill.' + id)}</b><span>${meta}</span></div></div>`;
     }).join('');
+    const skillIds = Object.keys(CONFIG.skills), ultIds = Object.keys(CONFIG.ultimates);
+    const count = (ids) => ids.filter((id) => P.known.includes(id)).length;
+    // found ones first
+    const order = (ids) => [...ids].sort((x, y) => P.known.includes(y) - P.known.includes(x));
+    const list = `<h4>${t('skills.listSkills', { n: count(skillIds), max: skillIds.length })}</h4>
+      <div class="k-grid">${order(skillIds).map((id) => this.skillCard(id, '')).join('')}</div>
+      <h4>${t('skills.listUlts', { n: count(ultIds), max: ultIds.length })}</h4>
+      <div class="k-grid">${order(ultIds).map((id) => this.skillCard(id, '')).join('')}</div>`;
+
     let detail = `<div class="g-none">${t('skills.select')}</div>`;
-    if (this.selSkill) {
-      const id = this.selSkill, def = skillDef(id), ult = !!CONFIG.ultimates[id];
-      const off = this.locked ? ' disabled' : '';
-      const btns = ult
-        ? `<button class="ap-btn" data-act="slot" data-slot="2"${off}>${t('skills.to2')}</button>`
-        : `<button class="ap-btn" data-act="slot" data-slot="0"${off}>${t('skills.to0')}</button><button class="ap-btn" data-act="slot" data-slot="1"${off}>${t('skills.to1')}</button>`;
-      detail = `<h3>${t('skill.' + id)}</h3>
-        <small class="sub">${ult ? t('skills.ultCost') : t('skills.cost', { mana: def.mana, cd: def.cooldown })}</small>
-        <div class="d-rows"><p>${t('skill.' + id + '.desc')}</p></div><div class="d-btns">${btns}</div>`;
+    const id = this.selSkill;
+    if (id) {
+      const ult = !!CONFIG.ultimates[id], known = P.known.includes(id);
+      let btns = '';
+      if (!known) {
+        btns = `<p class="k-hint">${t('skills.findIt')}</p>`;
+      } else {
+        const targets = ult ? [2] : [0, 1];
+        btns = targets.map((k) => {
+          const cur = P.slots[k];
+          const here = cur === id;
+          const label = here ? t('skills.inSlot', { slot: t('skills.slot' + k) })
+            : cur ? t('skills.replace', { slot: t('skills.slot' + k), name: t('skill.' + cur) })
+              : t('skills.equipTo', { slot: t('skills.slot' + k) });
+          return `<button class="ap-btn${here ? ' ghost' : ''}" data-act="slot" data-slot="${k}"${here || this.locked ? ' disabled' : ''}>${label}</button>`;
+        }).join('');
+        if (this.locked) btns += `<p class="k-hint">${t('menu.campOnly')}</p>`;
+      }
+      detail = `<div class="k-head${ult ? ' ult' : ''}${known ? '' : ' locked'}"><i>${known ? SKILL_ICONS[id] : LOCK}</i>
+          <div><h3>${t('skill.' + id)}</h3><small class="sub">${ult ? t('skills.typeUlt') : t('skills.typeSkill')}</small></div></div>
+        <div class="d-rows" data-scroll="kd"><p>${t('skill.' + id + '.desc')}</p>${this.skillStats(id)}</div>
+        <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">
-      <div class="k-left"><div class="k-slots">${slots}</div><div class="k-list" data-scroll="skills">${list}</div></div>
+      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}</div>
+      <div class="k-mid" data-scroll="skills">${list}</div>
       <div class="g-right">${detail}</div></div>`;
   }
+
 }
