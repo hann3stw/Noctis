@@ -123,10 +123,17 @@ HTTPS (or localhost) for offline mode and installing.
   safe like the camp (healing, gear, army, look), opens its chest (3 items), is
   your respawn point after dying, and you can travel between all captured
   outposts.
-- One gate per zone leads into an arena with a boss (own attack patterns,
-  telegraphed with red circles). Gates are for loot and strong shadows: 4
-  items (at least epic, often legendary) plus essence, elite helpers, and
-  souls inside a gate are easier to raise (+20 %). Gates can be repeated.
+- Every zone always has three gates open: Normal, Hard and Deadly (boss level
+  at 20 %, 50 % and 85 % of the zone's levels; Hard and Deadly bosses also have
+  more health and damage, elite helpers and better loot: 3 / 4 / 5 items).
+  A gate leads into an arena with the zone's boss (own attack patterns,
+  telegraphed with red circles). It closes once you enter, win or lose, and
+  opens again 2.5-5 minutes later at another spot of the zone. Gates are for
+  loot and strong shadows: souls inside a gate are easier to raise (+20 %).
+  The minimap outlines gates in their difficulty colour (white, orange, red).
+- Bosses have 8x the health of their level: a boss of your level takes about
+  1.5-2 minutes alone with ordinary gear and still 10-30 seconds with the best
+  legendary gear, in every rank.
 
 ## Shadow army
 
@@ -150,11 +157,11 @@ HTTPS (or localhost) for offline mode and installing.
 
 | Stat | Effect |
 |---|---|
-| Strength | x1.04 damage per point (multiplies) |
+| Strength | +3 % damage per point |
 | Agility | speed, faster reload, shorter dodge cooldown |
-| Vitality | x1.04 health per point (multiplies), health regeneration |
+| Vitality | +4 % health per point, health regeneration |
 | Intelligence | +1 army slot per 2 points, mana, a little arise chance |
-| Perception | crit chance, crit damage, loot |
+| Perception | crit chance (up to 60 %), crit damage, loot, army hunt range |
 
 ## Saving
 
@@ -186,6 +193,6 @@ All six milestones are done:
 4. Title screen, 3 save slots, New World with skin editor, Load Game,
    autosave, pause menu, settings, sound effects
 5. Six big zones (x10 per rank), 18 enemy types, elites and champions, six
-   gates with arena bosses and rank ups, 24 outposts to capture, minimap
+   gates (three difficulties per zone) with arena bosses, 24 outposts to capture, minimap
 6. PWA (offline, installable, fullscreen landscape, icons drawn in code),
    automatic graphics preset, performance check, hosting and install guide

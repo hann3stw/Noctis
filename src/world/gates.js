@@ -1,6 +1,7 @@
-// Gates: one per zone. Entering a gate takes the player (and the deployed
-// shadows) into an enclosed arena far outside the world, where the zone's
-// boss waits. Beating a boss for the first time raises the hunter's rank.
+// Gates: every zone has one gate of each difficulty (normal, hard, deadly)
+// open somewhere. Entering a gate takes the player (and the deployed shadows)
+// into an enclosed arena far outside the world, where the zone's boss waits.
+// The gate closes behind the player and opens again later at another spot.
 // The boss brain (attack patterns) lives here too.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
@@ -8,6 +9,7 @@ import { flatMaterial } from '../render/geo.js';
 import { gateFrameGeometry, arenaPillarGeometry } from '../render/models/props.js';
 import { ST_IDLE, ST_CHASE, ST_WINDUP, ST_CHARGE } from '../entities/enemies.js';
 import { rollLoot } from '../core/items.js';
+import { hashSeed } from '../core/rng.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
@@ -29,9 +31,10 @@ function portalMesh(color, w, h) {
 }
 
 export class Gates {
-  constructor(game) {
+  // saved: [{ open, gen, t }] per gate from the save game
+  constructor(game, saved) {
     this.game = game;
-    this.list = game.world.gates; // { zone, x, z }
+    this.list = game.world.gates; // { zone, diff, level, x, z, open, gen, t }
     this.active = -1; // gate whose arena the player is in
     this.near = -1; // gate in reach of the Enter button
     this.cx = 0; // result of clamp()
@@ -44,20 +47,25 @@ export class Gates {
 
     // gates in the world
     const frameGeo = gateFrameGeometry();
+    // bigger gates and a coloured core for the harder ones
     this.portals = this.list.map((g) => {
-      const zone = CONFIG.world.zones[g.zone];
+      const zone = CONFIG.world.zones[g.zone], diff = CONFIG.gates.difficulties[g.diff];
       const grp = new THREE.Group();
       grp.add(new THREE.Mesh(frameGeo, flatMaterial));
       const portal = portalMesh(zone.gateColor, 1.9, 2.4);
       portal.position.y = 2.55;
-      const core = portalMesh(0xffffff, 1.0, 1.4);
+      const core = portalMesh(diff.color, 1.0, 1.4);
       core.material.opacity = 0.35;
       core.position.set(0, 2.55, 0.02);
       grp.add(portal, core);
-      grp.position.set(g.x, 0, g.z);
-      grp.rotation.y = Math.atan2(-g.x, -g.z); // faces the camp
+      grp.scale.setScalar(1 + g.diff * 0.18);
       game.scene.add(grp);
       return { grp, portal, core };
+    });
+    this.list.forEach((g, gi) => {
+      const s = saved && saved[gi];
+      if (s) { g.open = !!s.open; g.gen = s.gen || 0; g.t = s.t || 0; }
+      this.place(gi);
     });
 
     this.arenas = [];
@@ -71,10 +79,38 @@ export class Gates {
     game.scene.add(this.exit);
   }
 
+  // ---- where the gates stand ----------------------------------------------------------
+  // Puts gate gi on a site of its zone that the other gates of the zone do not
+  // use. Which one depends on the world seed and how often it opened (gen).
+  place(gi) {
+    const g = this.list[gi], world = this.game.world;
+    const sites = world.gateSites.filter((s) => s.zone === g.zone);
+    const taken = (s) => this.list.some((o, oi) => oi !== gi && o.zone === g.zone && o.open && o.x === s.x && o.z === s.z);
+    let k = hashSeed(this.game.seed, 900 + gi, g.gen) % sites.length;
+    for (let n = 0; n < sites.length && taken(sites[k]); n++) k = (k + 1) % sites.length;
+    g.x = sites[k].x;
+    g.z = sites[k].z;
+    const p = this.portals[gi];
+    p.grp.position.set(g.x, 0, g.z);
+    p.grp.rotation.y = Math.atan2(-g.x, -g.z); // faces the camp
+    p.grp.visible = g.open;
+  }
+
+  close(gi) {
+    const g = this.list[gi], R = CONFIG.gates.respawn;
+    g.open = false;
+    g.t = R[0] + Math.random() * (R[1] - R[0]);
+    this.portals[gi].grp.visible = false;
+  }
+
+  serialize() {
+    return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t) }));
+  }
+
   // ---- arena ---------------------------------------------------------------------
   buildArena(gi) {
     if (this.arenas[gi]) return this.arenas[gi];
-    const zone = CONFIG.world.zones[gi];
+    const zone = CONFIG.world.zones[this.list[gi].zone];
     const c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
     const grp = new THREE.Group();
     const flat = (geo, mat, y) => {
@@ -125,8 +161,9 @@ export class Gates {
 
   enter(gi) {
     const game = this.game, P = game.player, E = game.enemies;
-    if (this.active >= 0 || P.dead || gi < 0) return;
+    if (this.active >= 0 || P.dead || gi < 0 || !this.list[gi].open) return;
     const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
+    this.close(gi); // one try: the gate is gone afterwards
     this.buildArena(gi).visible = true;
     // come back in front of the gate, on the camp side
     const d = Math.hypot(g.x, g.z) || 1;
@@ -162,7 +199,7 @@ export class Gates {
     game.army.relocate(P.x, P.z);
     game.cam.snap(P.x, P.z);
     game.world.update(P.x, P.z, true);
-    game.hud.toast(t('gate.entered', { boss: t('enemy.' + CONFIG.world.zones[gi].boss) }));
+    game.hud.toast(t('gate.entered', { boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
     play('arise');
   }
 
@@ -190,11 +227,11 @@ export class Gates {
   }
 
   onBossKilled(gi, x, z) {
-    const game = this.game, P = game.player, E = game.enemies, G = CONFIG.gates;
-    const zone = CONFIG.world.zones[gi];
-    for (let k = 0; k < G.rewardItems; k++) {
-      const a = (k / G.rewardItems) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.gateLevel, P.drop + G.rewardLuck, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
+    const game = this.game, P = game.player, E = game.enemies;
+    const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = CONFIG.gates.difficulties[gate.diff];
+    for (let k = 0; k < D.items; k++) {
+      const a = (k / D.items) * Math.PI * 2;
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.drop + D.luck, P.known, D.minRarity, k < D.items - 1));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -204,7 +241,7 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
-    const ess = 10 * (gi + 1);
+    const ess = 10 * (gate.zone + 1) * (gate.diff + 1);
     P.essence += ess;
     game.hud.toast(t('toast.essence', { n: ess }));
     if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
@@ -225,11 +262,27 @@ export class Gates {
       p.portal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
       p.core.material.opacity = 0.25 + Math.sin(this.time * 4.3) * 0.15;
     }
+    // closed gates open again later somewhere else in their zone
+    if (this.active < 0) {
+      for (let i = 0; i < this.list.length; i++) {
+        const g = this.list[i];
+        if (g.open) continue;
+        g.t -= dt;
+        if (g.t > 0) continue;
+        g.open = true;
+        g.gen++;
+        this.place(i);
+        if (game.knownZones.has(g.zone)) {
+          game.hud.toast(t('gate.opened', { diff: t('gate.diff.' + CONFIG.gates.difficulties[g.diff].id), zone: t('zone.' + CONFIG.world.zones[g.zone].id) }));
+        }
+      }
+    }
     if (this.active < 0) {
       this.near = -1;
       if (P.dead) return;
       const r2 = CONFIG.gates.enterRange * CONFIG.gates.enterRange;
       for (let i = 0; i < this.list.length; i++) {
+        if (!this.list[i].open) continue;
         const dx = this.list[i].x - P.x, dz = this.list[i].z - P.z;
         if (dx * dx + dz * dz < r2) { this.near = i; break; }
       }
@@ -324,7 +377,7 @@ export class Gates {
   act(i, def, dx, dz, dist, BP, enraged) {
     const game = this.game, E = game.enemies, b = this.b;
     const dmg = E.dmg[i], bx = E.x[i], bz = E.z[i];
-    const color = CONFIG.world.zones[E.arena[i] - 1].gateColor;
+    const color = CONFIG.world.zones[this.list[E.arena[i] - 1].zone].gateColor;
     const dirX = dist > 0.01 ? dx / dist : 0, dirZ = dist > 0.01 ? dz / dist : 1;
     const p = b.pattern;
     E.lunge[i] = 1;

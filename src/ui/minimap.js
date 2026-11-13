@@ -153,20 +153,19 @@ export class Minimap {
     // gates (always visible: on the edge when they are out of view)
     if (arena < 0) {
       for (const gt of gates.list) {
-        if (!game.knownZones.has(gt.zone)) continue;
+        if (!gt.open || !game.knownZones.has(gt.zone)) continue;
         const zone = CONFIG.world.zones[gt.zone];
         let x = X(gt.x), y = Y(gt.z);
         const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 14;
         const out = d > lim;
         if (out) { x = half + (dx / d) * lim; y = half + (dy / d) * lim; }
-        const cleared = game.defeatedGates.includes(zone.id);
-        const s = S / (out ? 24 : this.world ? 30 : 18);
+        const s = S / (out ? 24 : this.world ? 30 : 18) * (1 + gt.diff * 0.15);
         g.save();
         g.translate(x, y);
         g.rotate(Math.PI / 4);
         g.fillStyle = css(zone.gateColor);
-        g.strokeStyle = cleared ? '#ffffff' : '#120a20';
-        g.lineWidth = Math.max(1, S / 90);
+        g.strokeStyle = css(CONFIG.gates.difficulties[gt.diff].color);
+        g.lineWidth = Math.max(1.5, S / 70);
         g.fillRect(-s, -s, s * 2, s * 2);
         g.strokeRect(-s, -s, s * 2, s * 2);
         g.restore();

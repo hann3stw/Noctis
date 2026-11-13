@@ -8,6 +8,7 @@ import { flatMaterial } from '../render/geo.js';
 import { DECOR, FLOWER_COLORS } from '../render/models/props.js';
 import { buildCamp } from './camp.js';
 import { buildOutposts } from './outposts.js';
+import { gateLevel } from '../core/levels.js';
 
 const VOID_COLOR = 0x0d0a16;
 const MAX_CHUNK_COLLIDERS = 48;
@@ -68,12 +69,30 @@ export class World {
       });
     });
 
-    // one gate per zone, half way through the ring, between two outposts
+    // Gate sites: places in every zone where a gate can open. They are kept
+    // free of decoration, enemy packs and chests.
     const grng = mulberry32(hashSeed(seed, 777, 13));
-    this.gates = this.zones.map((zone, i) => {
-      const a = Math.PI / 4 + ((grng() * 4) | 0) * (Math.PI / 2) + (grng() - 0.5) * 0.5;
-      const r = (zone.inner + zone.outer) / 2;
-      return { zone: i, x: Math.cos(a) * r, z: Math.sin(a) * r };
+    const G = CONFIG.gates;
+    this.gateSites = [];
+    this.zones.forEach((zone, zi) => {
+      let n = 0, tries = 0;
+      while (n < G.sitesPerZone && tries++ < 600) {
+        const a = grng() * Math.PI * 2;
+        const r = zone.inner + 30 + grng() * (zone.outer - zone.inner - 60);
+        const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        if (this.nearSafe(x, z, 35)) continue;
+        if (this.gateSites.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 70 * 70)) continue;
+        this.gateSites.push({ zone: zi, x, z });
+        n++;
+      }
+    });
+    // The gates: one of each difficulty per zone. Where they stand and whether
+    // they are open is decided by Gates.
+    this.gates = [];
+    this.zones.forEach((zone, zi) => {
+      G.difficulties.forEach((d, di) => {
+        this.gates.push({ zone: zi, diff: di, level: gateLevel(zi, di), x: 0, z: 0, open: true, gen: 0, t: 0 });
+      });
     });
 
     this.buildGround();
@@ -131,8 +150,9 @@ export class World {
     this.rz = z;
   }
 
+  // near a place where a gate can open
   nearGate(x, z, dist) {
-    for (const g of this.gates) {
+    for (const g of this.gateSites) {
       const dx = g.x - x, dz = g.z - z;
       if (dx * dx + dz * dz < dist * dist) return true;
     }

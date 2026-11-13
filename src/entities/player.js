@@ -1,7 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
-import { playerPower, enemyPower, rankOf } from '../core/levels.js';
+import { playerPower, playerHpPower, enemyPower, rankOf } from '../core/levels.js';
 import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
@@ -177,9 +177,9 @@ export class Player {
       }
     }
     const oldMax = this.maxHp;
-    // every level and every Vitality point multiply the health
+    // levels multiply health and damage, Vitality and Strength add to them
     this.levelMult = playerPower(this.level);
-    this.maxHp = Math.round(c.baseHp * this.levelMult * Math.pow(1 + S.vit.hp, st.vit) * (1 + b.hp));
+    this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp));
     this.hpRegen = st.vit * S.vit.regen * this.maxHp;
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
@@ -188,11 +188,11 @@ export class Player {
     this.manaRegen = c.manaRegen + st.int * S.int.manaRegen;
     this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
-    this.crit = G.baseCrit + st.per * S.per.crit + b.crit;
+    this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit);
     this.critDmg = G.critDamage + st.per * S.per.critDamage;
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
     this.drop = st.per * S.per.drop;
-    this.damageMult = this.levelMult * Math.pow(1 + S.str.damage, st.str) * (1 + b.damage);
+    this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;
     this.armyDamage = b.armyDamage;

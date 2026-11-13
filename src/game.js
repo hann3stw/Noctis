@@ -85,7 +85,7 @@ export class Game {
     this.hud = new Hud(uiRoot, this);
     this.effects = new Effects(this.scene, this.cam.camera, this.hud.els.fx);
     this.world = new World(this.scene, this.seed);
-    this.gates = new Gates(this);
+    this.gates = new Gates(this, save && save.gates);
     setNextItemId(save ? save.nextItemId || 1 : 1);
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
@@ -157,6 +157,7 @@ export class Game {
       defeatedGates: [...this.defeatedGates],
       discovered: [...this.discovered],
       knownZones: [...this.knownZones],
+      gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
       appearance: { ...this.appearance },
@@ -300,7 +301,7 @@ export class Game {
     this.world.update(P.x, P.z, false);
     this.world.camp.update(dt);
 
-    const zi = this.gates.active >= 0 ? this.gates.active : this.world.zoneIndexAt(Math.sqrt(P.x * P.x + P.z * P.z));
+    const zi = this.gates.active >= 0 ? this.gates.list[this.gates.active].zone : this.world.zoneIndexAt(Math.sqrt(P.x * P.x + P.z * P.z));
     this.curZone = Math.max(0, zi);
     if (zi >= 0 && !this.knownZones.has(zi)) this.knownZones.add(zi);
     if (zi >= 0) {

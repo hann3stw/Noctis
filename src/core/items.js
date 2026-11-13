@@ -83,7 +83,7 @@ export function armorDefense(item) {
 // value of the armour bonus: flat for hp/mana, a fraction for the others
 export function armorBonus(item) {
   const I = CONFIG.items;
-  const base = I.bonuses[item.bonus] * I.rarityStat[item.rarity];
+  const base = I.bonuses[item.bonus] * (1 + I.bonusRarity * item.rarity);
   return base;
 }
 

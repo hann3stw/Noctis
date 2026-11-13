@@ -30,9 +30,19 @@ export function enemyPower(level) {
   return Math.pow(L.enemyRank, r + (p - r) * L.zoneSpread);
 }
 
-// the hunter's health and damage from the level alone
+// the hunter's damage and health from the level alone
 export function playerPower(level) {
   return Math.pow(L.playerRank, rankProgress(level));
+}
+
+export function playerHpPower(level) {
+  return Math.pow(L.playerHpRank, rankProgress(level));
+}
+
+// level of a gate boss: the zone's first level + a share of its levels
+export function gateLevel(zi, diff) {
+  const z = CONFIG.world.zones[zi];
+  return z.level + Math.round(CONFIG.gates.difficulties[diff].level * (z.levelTo - z.level + 1));
 }
 
 // damage / defence factor of an item of this level

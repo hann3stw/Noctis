@@ -195,10 +195,10 @@ export class Enemies {
     // reserved slots for the gate bosses and their helpers (asleep until used)
     const maxAdds = CONFIG.bossPatterns.summon.maxAdds;
     world.gates.forEach((g, gi) => {
-      const zone = CONFIG.world.zones[gi];
+      const zone = CONFIG.world.zones[g.zone];
       const c = arenaCenter(gi);
       const p = this.newPack(c.x, c.z);
-      const b = this.newEnemy(zone.boss, p, 3, gi, rng);
+      const b = this.newEnemy(zone.boss, p, 3, g.zone, rng);
       this.arena[b] = gi + 1;
       this.alive[b] = 0;
       this.respawnT[b] = Infinity;
@@ -206,7 +206,7 @@ export class Enemies {
       const adds = [];
       const addType = CONFIG.enemies.types[zone.boss].adds;
       for (let k = 0; k < maxAdds; k++) {
-        const i = this.newEnemy(addType, p, CONFIG.gates.eliteAdds ? 1 : 0, gi, rng);
+        const i = this.newEnemy(addType, p, CONFIG.gates.difficulties[g.diff].eliteAdds ? 1 : 0, g.zone, rng);
         if (i < 0) break;
         this.arena[i] = gi + 1;
         this.alive[i] = 0;
@@ -234,12 +234,21 @@ export class Enemies {
     this.tz[i] = z;
     this.yaw[i] = Math.random() * 6.28;
     const D = CONFIG.difficulty;
-    const lv = this.arena[i] ? CONFIG.world.zones[this.zone[i]].level : levelAt(Math.hypot(this.packX[p], this.packZ[p]));
+    // inside a gate: the gate's level and difficulty, bosses much tougher
+    let lv, hpM = 1, dmgM = 1;
+    if (this.arena[i]) {
+      const gate = this.game.world.gates[this.arena[i] - 1], gd = CONFIG.gates.difficulties[gate.diff];
+      lv = gate.level;
+      hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1);
+      dmgM = gd.damage;
+    } else {
+      lv = levelAt(Math.hypot(this.packX[p], this.packZ[p]));
+    }
     this.lvl[i] = lv;
     const pw = enemyPower(lv);
-    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp);
+    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM);
     this.hp[i] = this.maxHp[i];
-    this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage;
+    this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;
     this.xpv[i] = Math.round(def.xp * pw * T.xp);
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];

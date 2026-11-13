@@ -226,11 +226,11 @@ export class Hud {
       this.vGate = near;
       this.gatePanel.classList.toggle('on', near >= 0);
       if (near >= 0) {
-        const zone = CONFIG.world.zones[near];
-        const cleared = game.defeatedGates.includes(zone.id);
-        this.gateTitle.textContent = t('gate.title', { zone: t('zone.' + zone.id), rank: zone.rank });
-        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: zone.gateLevel })
-          + (cleared ? ' · ' + t('gate.cleared') : '');
+        const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
+        const diff = CONFIG.gates.difficulties[gate.diff];
+        this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
+        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level });
+        this.gatePanel.dataset.d = diff.id;
       }
     }
     // boss health

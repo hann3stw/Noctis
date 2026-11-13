@@ -1205,3 +1205,19 @@ button,
     grid-template-columns: 1fr;
   }
 }
+
+/* gate difficulty in the gate panel */
+.gate-panel[data-d='hard'] .gp-text b {
+  color: #ffb040;
+}
+.gate-panel[data-d='deadly'] .gp-text b {
+  color: #ff5068;
+}
+.gate-panel[data-d='hard'] {
+  border-color: #ffb040;
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(255, 176, 64, 0.35);
+}
+.gate-panel[data-d='deadly'] {
+  border-color: #ff3050;
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(255, 48, 80, 0.45);
+}

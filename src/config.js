@@ -142,7 +142,10 @@ export const CONFIG = {
     maxLevel: 300,
     enemyRank: 10, // enemies (health, damage, XP) and their shadows: x10 per rank
     zoneSpread: 0.5, // inside a zone enemies grow up to x10^0.5 (about x3) towards the outer edge
-    playerRank: 6, // the hunter's health and damage from levels alone: x6 per rank (gear, stats and the army close the gap)
+    // The hunter from levels alone: damage x6 and health x8 per rank. Enemies
+    // grow x10, so gear, stat points and the army must close the gap.
+    playerRank: 6,
+    playerHpRank: 8,
     itemRank: 1.27, // damage / defence of items: x1.27 per rank of the item level
     tierLevel: [0, 0.1, 0.2, 0.4], // extra levels of elites, champions, bosses (share of the zone's levels)
   },
@@ -164,13 +167,14 @@ export const CONFIG = {
     //   Intelligence  big army, lots of mana, better chance to raise shadows
     //   Perception    critical hits and loot
     stats: {
-      str: { damage: 0.04 }, // x1.04 damage per point (multiplies: 20 points = x2.2)
+      str: { damage: 0.03 }, // +3 % damage per point (adds up: 100 points = x4)
       agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
-      vit: { hp: 0.04, regen: 0.0005 }, // x1.04 health per point (multiplies), regenerates 0.05 % of max health per second
+      vit: { hp: 0.04, regen: 0.0005 }, // +4 % health per point (adds up), regenerates 0.05 % of max health per second
       int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004 }, // +1 army slot per 2 points, +0.4 % arise chance
       per: { crit: 0.008, critDamage: 0.015, drop: 0.02, armyRange: 0.25 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops, +0.25 army hunt range
     },
     baseCrit: 0.05,
+    critMax: 0.6, // crit chance never goes above 60 %
     critDamage: 1.8,
     defenseK: 90, // damage taken = K / (K + defence); K grows with the zone level like armour does
     ultCharge: { perHit: 3, max: 100 }, // every enemy hit charges the ultimate
@@ -189,17 +193,19 @@ export const CONFIG = {
   // ---- items ----------------------------------------------------------------
   items: {
     rarityWeights: [62, 27, 9, 2], // common, rare, epic, legendary
-    // Rarity counts much more than the item level: a rarer item is nearly
-    // always better than a more common one from the next zone.
-    rarityStat: [1, 2, 4, 8], // stat factor per rarity
+    // Rarity counts more than the item level: a rarer item is nearly always
+    // better than a more common one from the next zone.
+    rarityStat: [1, 1.5, 2.2, 3.2], // stat factor per rarity
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
     upgradeCost: [2, 4, 8, 16], // essence per rarity, times (upgrade + 1)
     dismantle: [1, 3, 8, 20], // essence per rarity
     inventorySize: 60,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
-    // one bonus per armour piece, value times the rarity factor
+    // one bonus per armour piece: value x (1 + bonusRarity x rarity), so a
+    // legendary piece has x2.5
     bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04 }, // all as shares (0.05 = +5 %)
+    bonusRarity: 0.5,
     sets: {
       stalker: { 2: { crit: 0.08 }, 4: { damage: 0.2 } },
       bulwark: { 2: { hp: 0.15 }, 4: { damageTaken: -0.15 } },
@@ -298,20 +304,33 @@ export const CONFIG = {
     summon: { count: 3, maxAdds: 6 },
   },
   boss: {
+    // Gate bosses have hp x boss.hp x their gate's difficulty. With good gear
+    // a boss of your level takes about 1-1.5 min alone with ordinary gear,
+    // 10-30 s with the best legendary gear; the army helps.
+    hp: 8,
     pause: 1.4, // seconds between two attacks
     enrageAt: 0.5, // below this share of health the boss gets faster
     enrageSpeed: 1.35,
     shotRadius: 0.5,
   },
 
+  // Gates are about loot and strong shadows. Every zone always has one gate
+  // of each difficulty open somewhere. A gate closes once you enter it (win or
+  // lose) and opens again later at another spot of the zone.
   gates: {
     enterRange: 4, // the Enter button appears within this distance
     arenaRadius: 26,
-    // Gates are about loot and strong shadows (the rank comes from the level):
-    rewardItems: 4, // loot of a gate boss
-    rewardMinRarity: 2, // at least epic
-    rewardLuck: 2.5, // higher = more legendaries
-    eliteAdds: true, // the boss's helpers are elites (elite shadows)
+    sitesPerZone: 8, // places per zone where a gate can open
+    respawn: [150, 300], // seconds of play until a closed gate opens again elsewhere
+    //   level        boss level: zone's first level + this share of its levels
+    //   hp, damage   extra for the boss and its helpers
+    //   items, minRarity, luck   the reward (luck: higher = more legendaries)
+    //   eliteAdds    the boss's helpers are elites (elite shadows)
+    difficulties: [
+      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 1, luck: 1.5, eliteAdds: false, color: 0xffffff },
+      { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 2.5, eliteAdds: true, color: 0xffb040 },
+      { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 2, luck: 4, eliteAdds: true, color: 0xff3050 },
+    ],
     ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
     exitRange: 3,
   },
@@ -448,11 +467,9 @@ export const CONFIG = {
   },
 };
 
-// Every zone covers the levels of its rank; the gate boss sits at the level of
-// a boss of that zone.
+// Every zone covers the levels of its rank.
 CONFIG.world.zones.forEach((z, i) => {
   const L = CONFIG.levels;
   z.level = L.rankLevels[i];
   z.levelTo = (L.rankLevels[i + 1] || L.maxLevel + 1) - 1;
-  z.gateLevel = z.level + Math.round(L.tierLevel[3] * (z.levelTo - z.level + 1));
 });
