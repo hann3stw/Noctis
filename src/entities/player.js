@@ -7,9 +7,7 @@ import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
 import { fireWeapon } from '../combat/weapons.js';
 import { castSkill, skillDef } from '../combat/skills.js';
-import {
-  makeWeapon, weaponDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS,
-} from '../core/items.js';
+import { makeWeapon, weaponDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower } from '../core/items.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
@@ -34,6 +32,7 @@ export class Player {
     this.points = 0;
     this.stats = { str: 0, agi: 0, vit: 0, int: 0, per: 0 };
     this.essence = 0; // upgrade material from dismantled items
+    this.autoSalvage = -1; // items up to this rarity are dismantled on pickup (-1 = off)
     this.inventory = [];
     this.newSkills = []; // skills found but not looked at yet
     this.equip = { weapon: makeWeapon(c.startWeapon, 0, 1), helmet: null, chest: null, gloves: null, boots: null };
@@ -110,7 +109,7 @@ export class Player {
   serialize() {
     return {
       x: this.x, z: this.z, hp: this.hp, mana: this.mana, ult: this.ult,
-      level: this.level, xp: this.xp, points: this.points, stats: { ...this.stats }, essence: this.essence,
+      level: this.level, xp: this.xp, points: this.points, stats: { ...this.stats }, essence: this.essence, autoSalvage: this.autoSalvage,
       inventory: this.inventory.map((it) => ({ ...it })),
       equip: Object.fromEntries(Object.entries(this.equip).map(([k, v]) => [k, v ? { ...v } : null])),
       known: [...this.known], slots: [...this.slots], newSkills: [...this.newSkills],
@@ -124,6 +123,7 @@ export class Player {
     this.points = d.points || 0;
     for (const k of STAT_KEYS) this.stats[k] = (d.stats && d.stats[k]) || 0;
     this.essence = d.essence || 0;
+    this.autoSalvage = typeof d.autoSalvage === 'number' ? d.autoSalvage : -1;
     this.inventory = (d.inventory || []).filter((it) => it && (it.kind !== 'weapon' || CONFIG.weapons[it.type]));
     for (const slot in this.equip) {
       const it = d.equip && d.equip[slot];
@@ -280,6 +280,13 @@ export class Player {
       }
       return true;
     }
+    // auto dismantle: weak rarities become essence at once (never upgrades)
+    if (item.rarity <= this.autoSalvage && !this.isUpgrade(item, true)) {
+      const n = dismantleValue(item);
+      this.essence += n;
+      hud.toast(t('toast.salvaged', { name: t('rarity.' + item.rarity) + ' ' + itemName(item), n }));
+      return true;
+    }
     if (this.inventory.length >= CONFIG.items.inventorySize) return false;
     item.n = 1; // new: marked in the menu until it was seen
     this.inventory.push(item);
@@ -326,6 +333,40 @@ export class Player {
     item.up++;
     this.recalc();
     return true;
+  }
+
+  // better than what is equipped in its slot? bag: also better than every
+  // item of that slot in the inventory
+  isUpgrade(item, bag = false) {
+    const sl = slotOf(item), cur = this.equip[sl];
+    if (cur && itemPower(item) <= itemPower(cur)) return false;
+    if (bag) for (const it of this.inventory) if (slotOf(it) === sl && itemPower(it) >= itemPower(item)) return false;
+    return true;
+  }
+
+  // Items of this rarity that "dismantle all" would take: never upgraded ones,
+  // and never the best item of a slot when it beats the equipped one.
+  bulkList(rarity) {
+    const best = {};
+    for (const it of this.inventory) {
+      const sl = slotOf(it);
+      if (!best[sl] || itemPower(it) > itemPower(best[sl])) best[sl] = it;
+    }
+    const keep = new Set();
+    for (const sl in best) if (this.isUpgrade(best[sl])) keep.add(best[sl]);
+    return this.inventory.filter((it) => it.rarity === rarity && !it.up && !keep.has(it));
+  }
+
+  dismantleMany(list) {
+    let n = 0;
+    for (const it of list) {
+      const i = this.inventory.indexOf(it);
+      if (i < 0) continue;
+      this.inventory.splice(i, 1);
+      n += dismantleValue(it);
+    }
+    this.essence += n;
+    return n;
   }
 
   dismantleItem(item) {

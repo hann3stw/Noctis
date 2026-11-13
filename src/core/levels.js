@@ -74,7 +74,8 @@ export function tierLevels(zi, tier) {
 // Saves from before the new rank levels (8 levels per rank) are moved to the
 // same place on the new scale: same rank, same share of it.
 export function migrateSave(s) {
-  if (!s || (s.version || 1) >= 2) return s;
+  if (!s || (s.version || 1) >= 3) return s;
+  if (s.version === 2) return migrateRarity(s);
   const map = (lv) => levelFromProgress(((lv || 1) - 1) / 8);
   const items = [];
   if (s.player) {
@@ -86,5 +87,23 @@ export function migrateSave(s) {
   }
   for (const it of items) if (it && it.level) it.level = map(it.level);
   s.version = 2;
+  return migrateRarity(s);
+}
+
+function playerItems(s) {
+  const items = [];
+  if (s.player) {
+    items.push(...(s.player.inventory || []));
+    for (const k in s.player.equip || {}) if (s.player.equip[k]) items.push(s.player.equip[k]);
+  }
+  return items;
+}
+
+// Four rarities became six (uncommon and mythic are new): common stays,
+// rare, epic and legendary move up.
+function migrateRarity(s) {
+  const map = [0, 2, 3, 4];
+  for (const it of playerItems(s)) if (it && typeof it.rarity === 'number') it.rarity = map[it.rarity] ?? it.rarity;
+  s.version = 3;
   return s;
 }

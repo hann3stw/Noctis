@@ -4,11 +4,13 @@
 //   armour: { id, kind: 'armor', type: 'helmet', set: 'stalker', bonus: 'hp', rarity, level, up }
 // Skills drop as { kind: 'skill', type: 'shadowStep' } and are learned at once.
 import { CONFIG } from '../config.js';
-import { itemLevelPower, rankProgress } from './levels.js';
+import { itemLevelPower, rankProgress, rankOf } from './levels.js';
 import { t } from '../strings.js';
 
-export const RARITY_COLORS = [0xb8b8c8, 0x4aa3ff, 0xb45cff, 0xffb02e];
-export const RARITY_CSS = ['#b8b8c8', '#4aa3ff', '#c07cff', '#ffb02e'];
+// common, uncommon, rare, epic, legendary, mythic
+export const RARITY_COLORS = [0xb8b8c8, 0x5cd65c, 0x4aa3ff, 0xb45cff, 0xffb02e, 0xff4a6e];
+export const RARITY_CSS = ['#b8b8c8', '#6ee06e', '#4aa3ff', '#c07cff', '#ffb02e', '#ff5a7a'];
+export const RARITIES = RARITY_CSS.length;
 export const ARMOR_SLOTS = ['helmet', 'chest', 'gloves', 'boots'];
 export const EQUIP_SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots'];
 
@@ -35,12 +37,18 @@ function weighted(weights) {
   return weights.length - 1;
 }
 
-// luck (0..) shifts the roll towards better rarities
-export function rollRarity(luck = 0, min = 0) {
-  const w = CONFIG.items.rarityWeights;
-  const k = 1 + luck;
-  const r = weighted([w[0], w[1] * k, w[2] * k * k, w[3] * k * k]);
-  return r < min ? min : r;
+// The rank of the item level decides which rarities can drop; luck (0..)
+// shifts the roll towards the better ones. min never goes above the best
+// rarity of the rank.
+export function rollRarity(luck = 0, min = 0, level = 1) {
+  const I = CONFIG.items;
+  const base = I.rarityWeights[Math.min(I.rarityWeights.length - 1, rankOf(level))];
+  const k = 1 + Math.max(0, luck);
+  const w = base.map((v, r) => v * Math.pow(k, r * I.luckStep));
+  let top = 0;
+  for (let r = 0; r < base.length; r++) if (base[r] > 0) top = r;
+  const r = weighted(w);
+  return Math.max(r, Math.min(min, top));
 }
 
 export function makeWeapon(type, rarity, level) {
@@ -59,9 +67,9 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false) {
     const open = [];
     for (const id in CONFIG.skills) if (!known.includes(id)) open.push(id);
     for (const id in CONFIG.ultimates) if (!known.includes(id)) open.push(id);
-    if (open.length) return { kind: 'skill', type: pick(open), rarity: 2 };
+    if (open.length) return { kind: 'skill', type: pick(open), rarity: 3 };
   }
-  const rarity = rollRarity(luck, minRarity);
+  const rarity = rollRarity(luck, minRarity, level);
   if (kind === 0) return makeWeapon(pick(Object.keys(CONFIG.weapons)), rarity, level);
   return makeArmor(pick(ARMOR_SLOTS), pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), rarity, level);
 }

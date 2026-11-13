@@ -147,7 +147,7 @@ export class Game {
   // ---- saving ---------------------------------------------------------------
   serialize() {
     return {
-      version: 2,
+      version: 3,
       name: this.name,
       seed: this.seed,
       created: this.created,

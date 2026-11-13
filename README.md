@@ -152,8 +152,15 @@ HTTPS (or localhost) for offline mode and installing.
 
 ## Items and stats
 
-- Rarity counts much more than the item level: Common x1, Rare x2, Epic x4,
-  Legendary x8; the level adds only 3 % per level.
+- Six rarities: Common x1, Uncommon x1.2, Rare x1.5, Epic x2, Legendary x2.7,
+  Mythic x3.6; the item level adds x1.27 per rank. Which rarities drop
+  depends on the rank: rank E gives at most Epic, Legendary starts in D,
+  Mythic in B, and the better ones get more common in every later rank.
+  Elites, chests, Perception and gates (Deadly: at least Epic) raise the luck.
+- Inventory (80 slots): best items first. "Dismantle…" turns all items of
+  one rarity into essence at once (it keeps upgraded items and the best item
+  of each slot if it beats what you wear). Auto-dismantle turns weak drops
+  (up to Common, Uncommon or Rare) into essence as soon as you pick them up.
 
 | Stat | Effect |
 |---|---|

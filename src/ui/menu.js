@@ -47,6 +47,9 @@ export class Menu {
     this.selItem = null; // selected item (inventory or equipped)
     this.selSkill = null;
     this.confirmId = 0; // item waiting for a second tap on "Dismantle"
+    this.bulk = false; // the "dismantle all" panel is shown
+    this.bulkConfirm = -1; // rarity waiting for a second tap
+    this.bulkDone = '';
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
@@ -68,6 +71,8 @@ export class Menu {
     this.selItem = null;
     this.selSkill = null;
     this.confirmId = 0;
+    this.bulk = false;
+    this.bulkDone = '';
     this.game.setPaused(true);
     this.el.classList.add('on');
     this.render();
@@ -110,17 +115,35 @@ export class Menu {
     if (this.army.el.contains(target)) return; // handled by the army tab itself
     const item = this.selItem;
     if (act !== 'dismantle') this.confirmId = 0;
+    if (act !== 'bulkGo') this.bulkConfirm = -1;
     if (act === 'tab') {
       if (target.dataset.tab !== this.tab) this.markSeen(this.tab);
       this.tab = target.dataset.tab;
     } else if (act === 'item') {
       this.selItem = this.findItem(Number(target.dataset.id));
+      this.bulk = false;
+    } else if (act === 'bulk') {
+      this.bulk = !this.bulk;
+      this.bulkDone = '';
+    } else if (act === 'bulkGo') {
+      // epic and better: a second tap confirms
+      const r = Number(target.dataset.r), list = P.bulkList(r);
+      if (r >= 3 && this.bulkConfirm !== r) {
+        this.bulkConfirm = r;
+      } else if (list.length) {
+        const e = P.dismantleMany(list);
+        if (this.selItem && !P.inventory.includes(this.selItem)) this.selItem = null;
+        this.bulkDone = t('gear.bulkDone', { n: list.length, e });
+        this.bulkConfirm = -1;
+      }
+    } else if (act === 'auto') {
+      P.autoSalvage = Number(target.dataset.r);
     } else if (act === 'equip' && item && !this.locked) {
       P.equipItem(item);
     } else if (act === 'upgrade' && item) {
       P.upgradeItem(item);
     } else if (act === 'dismantle' && item) {
-      if (item.rarity >= 2 && this.confirmId !== item.id) {
+      if (item.rarity >= 3 && this.confirmId !== item.id) {
         this.confirmId = item.id;
       } else {
         P.dismantleItem(item);
@@ -233,14 +256,38 @@ export class Menu {
       return `<div class="g-slot${this.selItem === it ? ' sel' : ''}" data-act="item" data-id="${it.id}">${this.tile(it)}
         <div><b style="color:${RARITY_CSS[it.rarity]}">${itemName(it)}</b><small>${t(it.kind === 'weapon' ? 'item.damage' : 'item.defense')} ${this.mainStat(it)}</small></div></div>`;
     }).join('');
-    const inv = P.inventory.length
-      ? P.inventory.map((it) => this.tile(it)).join('')
+    // best first: rarity, then item level
+    const sorted = [...P.inventory].sort((a, b) => b.rarity - a.rarity || b.level - a.level || b.id - a.id);
+    const inv = sorted.length
+      ? sorted.map((it) => this.tile(it)).join('')
       : `<div class="g-none">${t('gear.empty')}</div>`;
-    const detail = this.selItem ? this.detail(this.selItem) : `<div class="g-none">${t('item.select')}</div>`;
+    const detail = this.bulk ? this.bulkPanel()
+      : this.selItem ? this.detail(this.selItem) : `<div class="g-none">${t('item.select')}</div>`;
+    const full = P.inventory.length >= CONFIG.items.inventorySize;
     return `<div class="gear">
       <div class="g-left" data-scroll="eq">${slots}<div class="g-ess">${t('gear.essence', { n: P.essence })}</div></div>
-      <div class="g-mid"><h3>${t('gear.bag', { n: P.inventory.length, max: CONFIG.items.inventorySize })}</h3><div class="g-grid" data-scroll="inv">${inv}</div></div>
+      <div class="g-mid"><div class="g-head"><h3 class="${full ? 'full' : ''}">${t('gear.bag', { n: P.inventory.length, max: CONFIG.items.inventorySize })}</h3>
+        <button class="ap-btn small${this.bulk ? ' on' : ''}" data-act="bulk">${this.bulk ? t('gear.back') : t('gear.bulk')}</button></div>
+        <div class="g-grid" data-scroll="inv">${inv}</div></div>
       <div class="g-right">${detail}</div></div>`;
+  }
+
+  // dismantle every item of one rarity at once, and the auto-dismantle setting
+  bulkPanel() {
+    const P = this.game.player;
+    const rows = RARITY_CSS.map((c, r) => {
+      const list = P.bulkList(r);
+      const e = list.reduce((s, it) => s + dismantleValue(it), 0);
+      const label = this.bulkConfirm === r ? t('gear.confirm') : t('gear.bulkGo');
+      return `<div class="bk-row" style="--rc:${c}"><i></i><div><b>${t('rarity.' + r)}</b><small>${list.length ? t(list.length === 1 ? 'gear.bulkRow1' : 'gear.bulkRow', { n: list.length, e }) : t('gear.bulkNone')}</small></div>
+        <button class="ap-btn danger small" data-act="bulkGo" data-r="${r}"${list.length ? '' : ' disabled'}>${label}</button></div>`;
+    }).join('');
+    const autos = [-1, 0, 1, 2].map((r) => `<button class="seg${P.autoSalvage === r ? ' on' : ''}" data-act="auto" data-r="${r}"
+      ${r >= 0 ? `style="--rc:${RARITY_CSS[r]}"` : ''}>${r < 0 ? t('gear.autoOff') : t('rarity.' + r)}</button>`).join('');
+    return `<h3>${t('gear.bulkTitle')}</h3>
+      <div class="d-rows" data-scroll="bulk"><p class="bk-hint">${t('gear.bulkHint')}</p>${rows}
+        <p class="bk-done">${this.bulkDone || ''}</p>
+        <h4 class="bk-auto">${t('gear.auto')}</h4><div class="segs bk-segs">${autos}</div></div>`;
   }
 
   // ---- stats ------------------------------------------------------------------

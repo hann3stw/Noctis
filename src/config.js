@@ -86,7 +86,7 @@ export const CONFIG = {
     captureTime: 12,
     guards: 5, // enemies guarding an outpost (the first one is an elite)
     chestItems: 3,
-    chestMinRarity: 1, // at least rare
+    chestMinRarity: 2, // at least rare
   },
 
   // Global difficulty: every enemy (bosses too) gets this much more health
@@ -192,20 +192,34 @@ export const CONFIG = {
 
   // ---- items ----------------------------------------------------------------
   items: {
-    rarityWeights: [62, 27, 9, 2], // common, rare, epic, legendary
+    // Six rarities: common, uncommon, rare, epic, legendary, mythic.
+    // Which ones drop depends on the rank of the item level: early ranks give
+    // mostly common and uncommon items, legendary items start in rank D,
+    // mythic ones in rank B. A 0 means: not in this rank.
+    rarityWeights: [
+      [60, 30, 9, 1, 0, 0], // E
+      [42, 34, 17, 6, 1, 0], // D
+      [30, 32, 23, 11, 4, 0], // C
+      [20, 27, 26, 17, 8, 2], // B
+      [12, 21, 27, 22, 13, 5], // A
+      [7, 15, 24, 27, 18, 9], // S
+    ],
+    // luck (elites, chests, gates, Perception) multiplies the weight of
+    // rarity r by (1 + luck) ^ (r * luckStep)
+    luckStep: 0.6,
     // Rarity counts more than the item level: a rarer item is nearly always
     // better than a more common one from the next zone.
-    rarityStat: [1, 1.5, 2.2, 3.2], // stat factor per rarity
+    rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6], // stat factor per rarity
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
-    upgradeCost: [2, 4, 8, 16], // essence per rarity, times (upgrade + 1)
-    dismantle: [1, 3, 8, 20], // essence per rarity
-    inventorySize: 60,
+    upgradeCost: [2, 3, 5, 8, 14, 24], // essence per rarity, times (upgrade + 1)
+    dismantle: [1, 2, 4, 8, 18, 40], // essence per rarity
+    inventorySize: 80,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
     // one bonus per armour piece: value x (1 + bonusRarity x rarity), so a
-    // legendary piece has x2.5
+    // legendary piece has x2.6, a mythic one x3
     bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04 }, // all as shares (0.05 = +5 %)
-    bonusRarity: 0.5,
+    bonusRarity: 0.4,
     sets: {
       stalker: { 2: { crit: 0.08 }, 4: { damage: 0.2 } },
       bulwark: { 2: { hp: 0.15 }, 4: { damageTaken: -0.15 } },
@@ -327,9 +341,10 @@ export const CONFIG = {
     //   items, minRarity, luck   the reward (luck: higher = more legendaries)
     //   eliteAdds    the boss's helpers are elites (elite shadows)
     difficulties: [
-      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 1, luck: 1.5, eliteAdds: false, color: 0xffffff },
-      { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 2.5, eliteAdds: true, color: 0xffb040 },
-      { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 2, luck: 4, eliteAdds: true, color: 0xff3050 },
+      // minRarity: 2 = rare, 3 = epic (never above what the rank can drop)
+      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 2, luck: 1, eliteAdds: false, color: 0xffffff },
+      { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 1.8, eliteAdds: true, color: 0xffb040 },
+      { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 3, luck: 3, eliteAdds: true, color: 0xff3050 },
     ],
     ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
     exitRange: 3,
