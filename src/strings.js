@@ -65,6 +65,7 @@ const STRINGS = {
     'tier.1': 'Elite {name}',
     'tier.2': 'Champion {name}',
     'hud.levelRank': 'Lv {level} · Rank {rank}',
+    'hud.rankShort': 'Rank {rank}',
     'gate.title': '{zone} Gate · Rank {rank}',
     'gate.info': 'Boss: {boss} · Recommended level {level}',
     'gate.cleared': 'Cleared',

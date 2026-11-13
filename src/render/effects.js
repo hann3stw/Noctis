@@ -293,7 +293,8 @@ export class Effects {
       if (nm.life <= 0) { nm.el.style.opacity = '0'; continue; }
       nm.y += dt * 2.2;
       this.project(nm.x, nm.y, nm.z);
-      nm.el.style.transform = 'translate3d(' + _v.x.toFixed(1) + 'px,' + _v.y.toFixed(1) + 'px,0) translate(-50%,-50%)';
+      const pop = nm.life > 0.55 ? 1 + (nm.life - 0.55) * 4 : 1;
+      nm.el.style.transform = 'translate3d(' + _v.x.toFixed(1) + 'px,' + _v.y.toFixed(1) + 'px,0) translate(-50%,-50%) scale(' + pop.toFixed(2) + ')';
       if (nm.life < 0.25) nm.el.style.opacity = (nm.life * 4).toFixed(2);
     }
   }

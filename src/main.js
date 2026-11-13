@@ -1,9 +1,15 @@
+import '@fontsource/cinzel/latin-700.css';
+import '@fontsource/cinzel/latin-900.css';
+import '@fontsource/exo-2/latin-500.css';
+import '@fontsource/exo-2/latin-700.css';
+import '@fontsource/exo-2/latin-800.css';
 import './styles/base.css';
 import './styles/hud.css';
 import './styles/army.css';
 import './styles/menu.css';
 import './styles/screens.css';
 import './styles/world.css';
+import './styles/premium.css';
 import { App } from './app.js';
 import { t } from './strings.js';
 

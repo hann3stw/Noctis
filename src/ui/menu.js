@@ -5,6 +5,7 @@ import { CONFIG } from '../config.js';
 import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
+import { TAB_ICONS } from './icons.js';
 import { STAT_KEYS } from '../entities/player.js';
 import { skillDef } from '../combat/skills.js';
 import {
@@ -124,7 +125,7 @@ export class Menu {
   render() {
     const tabs = TABS.map((id) => {
       const badge = id === 'stats' && this.game.player.points > 0 ? `<i>${this.game.player.points}</i>` : '';
-      return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${t('menu.' + id)}${badge}</button>`;
+      return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     this.el.innerHTML = `
@@ -150,7 +151,7 @@ export class Menu {
     const P = this.game.player;
     const cur = P.equip[slotOf(item)];
     const better = cur !== item && (!cur || itemPower(item) > itemPower(cur));
-    return `<div class="tile${this.selItem === item ? ' sel' : ''}${extra}" data-act="item" data-id="${item.id}" style="--rc:${RARITY_CSS[item.rarity]}">
+    return `<div class="tile r${item.rarity}${this.selItem === item ? ' sel' : ''}${extra}" data-act="item" data-id="${item.id}" style="--rc:${RARITY_CSS[item.rarity]}">
       ${iconOf(item)}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}</div>`;
   }
 

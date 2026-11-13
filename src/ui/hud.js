@@ -7,6 +7,7 @@ import { BEHAVIORS } from '../entities/army.js';
 import { skillDef } from '../combat/skills.js';
 import { RANKS } from '../world/gates.js';
 import { fmt } from '../core/format.js';
+import { SKILL_ICONS, UI_ICONS } from './icons.js';
 
 const ICON_SWORD =
   '<svg viewBox="0 0 48 48"><path d="M36 6l6 0 0 6-20 20-6-6z" fill="currentColor"/><path d="M12 26l10 10-4 4-4-4-6 6-4-4 6-6-4-4z" fill="currentColor" opacity=".8"/></svg>';
@@ -27,11 +28,15 @@ export class Hud {
       <div id="overhead"><div class="oh-hp"><i></i></div><div class="oh-ammo"><i></i><i></i><i></i></div></div>
       <div id="hud">
         <div class="panel-player">
-          <div class="bar hp"><i></i><span></span></div>
-          <div class="bar mp"><i></i><span></span></div>
-          <div class="xp"><b></b><div class="bar"><i></i></div></div>
+          <div class="lvl-badge"><b></b><small></small></div>
+          <div class="pp-bars">
+            <div class="bar hp"><em></em><i></i><span></span></div>
+            <div class="bar mp"><i></i><span></span></div>
+            <div class="xp"><div class="bar"><i></i></div></div>
+          </div>
         </div>
         <div class="zone"><b></b><small></small></div>
+        <div class="zone-card"><small></small><b></b><i></i></div>
         <div class="boss-bar"><b></b><div class="bar"><i></i><span></span></div></div>
         <div class="capture"><b></b><div class="bar"><i></i></div></div>
         <canvas class="minimap"></canvas>
@@ -41,13 +46,13 @@ export class Hud {
         <div class="toast"></div>
         <div class="top-right">
           <div class="saving">${t('hud.saving')}</div>
-          <div id="btn-travel" class="btn pill">${t('hud.travel')}</div>
-          <div id="btn-menu" class="btn pill">${t('hud.menu')}<i></i></div>
+          <div id="btn-travel" class="btn pill">${UI_ICONS.travel}<span>${t('hud.travel')}</span></div>
+          <div id="btn-menu" class="btn pill">${UI_ICONS.menu}<span>${t('hud.menu')}</span><i></i></div>
           <div id="btn-pause" class="btn pill" aria-label="${t('hud.pause')}"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg></div>
         </div>
         <div class="squads">
           <div class="squad"><div class="sq-revive btn"></div>
-            <div class="sq-row"><div class="sq-summon btn"></div><div class="sq-chip btn"><b>${t('hud.army')}</b><span></span><small></small></div></div>
+            <div class="sq-row"><div class="sq-summon btn"><span></span></div><div class="sq-chip btn"><b>${t('hud.army')}</b><span></span><small></small></div></div>
           </div>
         </div>
         <div id="joy"><div class="knob"></div></div>
@@ -123,7 +128,12 @@ export class Hud {
     this.mpFill = $('.bar.mp i');
     this.mpText = $('.bar.mp span');
     this.xpFill = $('.xp .bar i');
-    this.xpLabel = $('.xp b');
+    this.xpLabel = $('.lvl-badge b');
+    this.rankLabel = $('.lvl-badge small');
+    this.hpTrail = $('.bar.hp em');
+    this.zoneCard = $('.zone-card');
+    this.zoneCardT = 0;
+    this.lastZoneCard = '';
     this.menuBadge = $('#btn-menu i');
     this.toastEl = $('.toast');
     this.toastT = 0;
@@ -254,7 +264,8 @@ export class Hud {
     for (let k = 0; k < 3; k++) {
       const s = this.skillEls[k], id = P.slots[k];
       s.btn.classList.toggle('none', !id);
-      s.label.textContent = id ? t('skill.' + id) : '';
+      s.label.innerHTML = id ? SKILL_ICONS[id] || '' : '';
+      s.btn.setAttribute('aria-label', id ? t('skill.' + id) : '');
       s.cost.textContent = id && k < 2 ? skillDef(id).mana : '';
       s.vP = -1;
       s.vLow = null;
@@ -344,7 +355,7 @@ export class Hud {
       }
       if (army.out !== h.vOut) {
         h.vOut = army.out;
-        h.summon.textContent = army.out ? t('army.recall') : t('army.summon');
+        h.summon.firstChild.textContent = army.out ? t('army.recall') : t('army.summon');
         h.el.classList.toggle('resting', !army.out);
       }
       // revive button: cost when shadows are ready, countdown while they are not
@@ -386,6 +397,7 @@ export class Hud {
       this.vMaxHp = P.maxHp;
       const f = Math.max(0, P.hp / P.maxHp);
       this.hpFill.style.transform = 'scaleX(' + f.toFixed(3) + ')';
+      this.hpTrail.style.transform = 'scaleX(' + f.toFixed(3) + ')'; // lags behind (CSS transition)
       this.ohHp.style.transform = 'scaleX(' + f.toFixed(3) + ')';
       this.hpText.textContent = fmt(hp) + ' / ' + fmt(P.maxHp);
     }
@@ -410,7 +422,8 @@ export class Hud {
     if (P.level !== this.vLevel || game.rankIndex !== this.vRank) {
       this.vLevel = P.level;
       this.vRank = game.rankIndex;
-      this.xpLabel.textContent = t('hud.levelRank', { level: P.level, rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
+      this.xpLabel.textContent = P.level;
+      this.rankLabel.textContent = t('hud.rankShort', { rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
     }
     if (P.points !== this.vPoints) {
       this.vPoints = P.points;
@@ -460,6 +473,17 @@ export class Hud {
       } else {
         const zd = CONFIG.world.zones[game.curZone];
         this.zoneName.textContent = t('zone.' + zone);
+        // big title card when a new zone is entered
+        if (zone !== this.lastZoneCard) {
+          if (this.lastZoneCard) {
+            this.zoneCard.querySelector('b').textContent = t('zone.' + zone);
+            this.zoneCard.querySelector('small').textContent = t('zone.sub', { rank: zd.rank, level: zd.level });
+            this.zoneCard.classList.remove('on');
+            void this.zoneCard.offsetWidth;
+            this.zoneCard.classList.add('on');
+          }
+          this.lastZoneCard = zone;
+        }
         this.zoneSub.textContent = t('zone.sub', { rank: zd.rank, level: zd.level });
       }
       this.hud.classList.toggle('safe', P.inCamp);
