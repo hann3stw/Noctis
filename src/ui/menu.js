@@ -47,13 +47,15 @@ export class Menu {
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
 
-  open(tab) {
+  // hint: text shown in the army tab (army full while a soul waits)
+  open(tab, hint) {
     if (this.isOpen) return;
     const P = this.game.player;
     this.isOpen = true;
     this.locked = !P.inCamp;
-    this.army.locked = this.locked;
+    this.army.locked = false; // the army can be changed anywhere
     this.army.reset();
+    this.army.hint = hint || '';
     if (tab) this.tab = tab;
     else if (P.points > 0) this.tab = 'stats';
     this.selItem = null;
@@ -126,7 +128,7 @@ export class Menu {
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     this.el.innerHTML = `
-      <div class="mn-head">${tabs}<span class="mn-note">${this.locked ? t('menu.campOnly') : ''}</span>
+      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && this.tab !== 'army' ? t('menu.campOnly') : ''}</span>
         <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
       <div class="mn-body"></div>`;
     const body = this.el.querySelector('.mn-body');

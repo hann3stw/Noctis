@@ -4,7 +4,7 @@
 // handled by one delegated listener (data-act attributes).
 import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
-import { settings, setSetting } from '../core/settings.js';
+import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 
@@ -238,8 +238,8 @@ export class Screens {
     const vol = Math.round(settings.volume * 100);
     return `<div class="scr-page">${this.header(t('title.settings'), 'setBack')}
       <div class="set-list" data-scroll="set">
-        <div class="set-row"><div><b>${t('set.graphics')}</b><small>${t('set.graphicsHint')}</small></div>
-          <div class="segs">${seg('gfx', [['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], settings.graphics)}</div></div>
+        <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level) }) : t('set.graphicsHint')}</small></div>
+          <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], settings.graphics)}</div></div>
         <div class="set-row"><div><b>${t('set.volume')}</b></div>
           <div class="segs"><input type="range" min="0" max="100" step="5" value="${vol}" data-act="volume"><span class="vol-val">${vol}%</span></div></div>
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>

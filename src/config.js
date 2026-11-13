@@ -390,12 +390,16 @@ export const CONFIG = {
 
   // pixelRatio = upper limit of the render resolution, particles = share of
   // effect particles, decorRadius = view distance of plants and rocks,
-  // renderRadius = enemies and shadows further away are not drawn
+  // renderRadius = enemies and shadows further away are not drawn,
+  // shadows = soft shadows under characters
   graphics: {
+    // "Auto" measures the frame rate while playing and steps down when it
+    // stays below lowFps, or up again when it stays above highFps.
+    auto: { measure: 3, lowFps: 50, highFps: 58, upAfter: 5 },
     presets: {
-      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30 },
-      medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34 },
-      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38 },
+      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: false },
+      medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34, shadows: true },
+      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true },
     },
   },
 

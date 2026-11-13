@@ -13,7 +13,70 @@ npm run dev
 Open the address Vite prints. To test on a tablet or phone in the same Wi-Fi,
 open the "Network" address (e.g. `http://192.168.x.x:5173`) on the device.
 
-Production build: `npm run build`, then `npm run preview`.
+Production build: `npm run build` (also draws the app icons), then
+`npm run preview`.
+
+## Play it online / install it
+
+The game is a PWA: once opened it works offline and can be installed like an
+app (fullscreen, landscape, own icon).
+
+Live version: **https://hann3stw.github.io/Noctis/**
+
+### Install on an Android tablet or phone (Chrome)
+
+1. Open the link above in Chrome.
+2. Wait a moment, then tap the menu (three dots) -> **Install app** (on some
+   devices: **Add to Home screen** -> Install).
+3. Start Noctis from the home screen icon. It runs fullscreen in landscape and
+   also works without internet.
+
+### Install on an iPhone or iPad (Safari)
+
+1. Open the link in **Safari** (other browsers on iOS cannot install apps).
+2. Tap the **Share** button -> **Add to Home Screen** -> Add.
+3. Start Noctis from the home screen. Turn the device sideways.
+
+Saves live in the browser storage of the installed app. Uninstalling the app
+or clearing the site data deletes them.
+
+### Updates
+
+The installed app updates itself: after a new version is online, it is
+loaded in the background and used the next time the app is started.
+
+## Hosting on GitHub Pages (free)
+
+Already set up for this repository: `.github/workflows/deploy.yml` builds the
+game and publishes `dist/` on every push to `main` (and the working branch).
+
+To set it up for a fork or a new repository:
+
+1. Push the project to GitHub.
+2. Repository -> **Settings** -> **Pages** -> Source: **GitHub Actions**.
+3. Push a commit (or run the workflow by hand under **Actions** -> Deploy to
+   GitHub Pages -> Run workflow).
+4. After a minute the game is online at
+   `https://<user>.github.io/<repository>/`. The build uses relative paths,
+   so any repository name works.
+
+Any other static host works as well (Netlify, Cloudflare Pages, itch.io as
+HTML game): upload the contents of `dist/` after `npm run build`. PWAs need
+HTTPS (or localhost) for offline mode and installing.
+
+## Graphics and performance
+
+- Settings -> Graphics: **Auto** (default) measures the frame rate while
+  playing and switches between Low, Medium and High by itself; it never goes
+  back up to a level that was too slow. Or pick a level by hand.
+- Presets (in `src/config.js` -> `graphics`): render resolution limit, view
+  distance of plants and rocks, draw distance of enemies and shadows, effect
+  particles, soft shadows under characters.
+- Measured in the worst case (volcano, 32 shadows, 54 enemies fighting) on a
+  desktop GPU: game logic 0.5 ms and drawing 1.9 ms per frame at tablet
+  resolution (2240 x 1400, High), 82 draw calls, about 60 000 triangles.
+  Enemies far away are not simulated, everything repeated is drawn with
+  instancing and nothing is allocated per frame.
 
 ## Controls
 
@@ -28,7 +91,7 @@ Production build: `npm run build`, then `npm run preview`.
 | Revive fallen shadows | Green button above the army chip | 3 |
 | Skills | Drag a skill button to aim, release to cast. Quick tap = auto-aim | Q / R (towards the mouse) |
 | Ultimate | Ultimate button (charges by landing hits) | F |
-| Menu | Menu button (top right): Gear, Stats, Skills, Army, Look. Equipment, skills, the army and your look can only be changed in the camp | click it |
+| Menu | Menu button (top right): Gear, Stats, Skills, Army, Look. Equipment, skills and your look can only be changed in the camp or a captured outpost; the army anywhere | click it |
 | Pause | Pause button (top right corner) | Esc |
 | Enter a gate | Enter button (appears next to a gate) | G |
 | Minimap | Tap it: close view <-> whole world | M |
@@ -65,6 +128,9 @@ Production build: `npm run build`, then `npm run preview`.
   Summoned, it either attacks on its own or protects you.
 - Army size comes from Intelligence (5 slots + 1 per 2 points, plus the
   Gravecaller set). Shadows grow with their own levels and evolve.
+- The army can be managed anywhere. When it is full and you press Arise, the
+  army list opens so you can dismiss a weaker shadow and raise the strong one
+  (the game is paused meanwhile, so the soul does not fade).
 
 ## Items and stats
 
@@ -100,22 +166,15 @@ URL options: `?seed=123` starts a test world straight away (never saved),
 
 ## Status
 
-Milestone 5 of 6. Done so far:
+All six milestones are done:
 
 1. World with camp and first zone, movement, aiming, one enemy type
-2. Shadow army: Arise, squads A/B/C (Attack / Guard / Hold), shadow levels and
-   evolution, revive, army management
+2. Shadow army: Arise, behaviours, shadow levels and evolution, revive
 3. Player levels and stat points, 5 weapons, armour with rarities and 3 sets,
-   8 skills, 3 ultimates, chests and loot, inventory with comparison, upgrading
-   and dismantling, menu
-4. Title screen, 3 save slots, New World with skin editor (6 hairstyles,
-   colour palettes, aura colour tints the army), Load Game, autosave, pause
-   menu, settings (graphics, volume, button size, swap sides), sound effects
+   8 skills, 3 ultimates, chests and loot, inventory, upgrading, menu
+4. Title screen, 3 save slots, New World with skin editor, Load Game,
+   autosave, pause menu, settings, sound effects
 5. Six big zones (x10 per rank), 18 enemy types, elites and champions, six
-   gates with arena bosses and rank ups, 24 outposts to capture (respawn,
-   fast travel, chest), arise chance by level difference, one army to
-   summon or recall, army size from Intelligence, minimap
-
-Still to come: PWA setup,
-automatic graphics preset and performance check (6). Hosting and install
-instructions follow with milestone 6.
+   gates with arena bosses and rank ups, 24 outposts to capture, minimap
+6. PWA (offline, installable, fullscreen landscape, icons drawn in code),
+   automatic graphics preset, performance check, hosting and install guide

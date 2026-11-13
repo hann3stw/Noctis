@@ -65,7 +65,21 @@ export class App {
   }
 
   // ---- starting and leaving worlds ---------------------------------------------
+  // On phones and tablets the game goes fullscreen in landscape. Browsers only
+  // allow this right after a tap, so it happens when a world starts.
+  goFullscreen() {
+    const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const installed = window.matchMedia && window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+    if (!touch || installed || document.fullscreenElement) return;
+    const el = document.documentElement;
+    if (!el.requestFullscreen) return;
+    el.requestFullscreen({ navigationUI: 'hide' })
+      .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
+      .catch(() => { /* not allowed here: play in the normal window */ });
+  }
+
   launch(opts) {
+    this.goFullscreen();
     this.screens.hide();
     if (opts.slot >= 0) { settings.lastSlot = opts.slot; saveSettings(); }
     this.game = new Game(this, this.uiRoot, { ...opts, showFps: settings.showFps || this.debug });

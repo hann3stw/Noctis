@@ -16,6 +16,7 @@ export class ArmyPanel {
     this.selected = -1;
     this.confirm = false;
     this.locked = false;
+    this.hint = ''; // "army full" note while a soul waits to be raised
     this.el.addEventListener('click', (e) => this.onClick(e));
   }
 
@@ -43,6 +44,8 @@ export class ArmyPanel {
       army.dismiss(this.selected);
       this.selected = -1;
       this.confirm = false;
+      // a soul is waiting: back to the fight so it can be raised
+      if (this.hint) { this.hint = ''; this.game.menu.close(); return; }
     }
     this.render();
   }
@@ -73,7 +76,7 @@ export class ArmyPanel {
       bar = `<div class="grow">${esc(army.name(sel))}</div>
         <button class="ap-btn danger" data-act="dismiss">${t('army.dismiss')}</button>`;
     } else {
-      bar = `<div class="grow">${head} · ${t('army.select')}</div>`;
+      bar = `<div class="grow">${head} · ${this.hint ? esc(this.hint) : t('army.select')}</div>`;
     }
     const scroll = this.el.querySelector('.ap-grid');
     const top = scroll ? scroll.scrollTop : 0;

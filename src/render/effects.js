@@ -191,7 +191,7 @@ export class Effects {
   }
 
   blob(x, z, r) {
-    if (this.blobCount >= MAX_BLOBS) return;
+    if (this.blobCount >= MAX_BLOBS || !gfx.shadows) return;
     const a = this.blobMesh.instanceMatrix.array;
     const o = this.blobCount++ * 16;
     a[o] = r; a[o + 5] = 1; a[o + 10] = r;

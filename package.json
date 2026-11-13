@@ -1,17 +1,20 @@
 {
   "name": "noctis",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
-    "preview": "vite preview --host"
+    "build": "node scripts/make-icons.mjs && vite build",
+    "preview": "vite preview --host",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"
   },
   "devDependencies": {
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-window": "^7.4.1"
   }
 }

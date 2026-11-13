@@ -26,6 +26,7 @@ import { Hud } from './ui/hud.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
+import { reportFps } from './core/settings.js';
 
 const _v = new THREE.Vector3();
 const _col = new THREE.Color();
@@ -43,6 +44,8 @@ export class Game {
     this.created = save ? save.created : Date.now();
     this.playTime = save ? save.playTime || 0 : 0;
     this.saveT = 0;
+    this.fpsT = 0;
+    this.fpsN = 0;
     this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
     this.discovered = new Set(save ? save.discovered || [] : []); // outposts found (index in world.safes)
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
@@ -163,6 +166,8 @@ export class Game {
   // Writes the world into its slot. Returns a promise (true = saved).
   save(manual = false) {
     this.saveT = 0;
+    this.fpsT = 0;
+    this.fpsN = 0;
     if (this.slot < 0 || !this.running) return Promise.resolve(false);
     const data = this.serialize();
     this.hud.showSaving();
@@ -204,14 +209,25 @@ export class Game {
   frame(now) {
     if (!this.running) return;
     requestAnimationFrame(this.frame);
+    const fresh = !this.last;
     let dt = this.last ? (now - this.last) / 1000 : 0.016;
     this.last = now;
-    if (dt > 0.05) dt = 0.05;
     if (this.paused || this.portrait || document.hidden) {
       // one-shot inputs must not pile up while the game stands still
       clearEvents();
+      this.fpsT = this.fpsN = 0;
       return;
     }
+    // measure the real frame rate for the automatic graphics preset
+    if (!fresh && dt < 0.5) {
+      this.fpsT += dt;
+      this.fpsN++;
+      if (this.fpsT >= CONFIG.graphics.auto.measure) {
+        reportFps(this.fpsN / this.fpsT);
+        this.fpsT = this.fpsN = 0;
+      }
+    }
+    if (dt > 0.05) dt = 0.05;
     this.update(dt);
     this.renderer.render(this.scene, this.cam.camera);
   }
@@ -458,7 +474,12 @@ export class Game {
     if (i < 0) return;
     const cost = CONFIG.arise.cost[souls.tier[i]];
     if (P.mana < cost) { this.hud.toast(t('toast.noMana')); return; }
-    if (!army.hasRoom()) { this.hud.toast(t('toast.armyFull')); return; }
+    if (!army.hasRoom()) {
+      // army full: open the army list so a weaker shadow can make room
+      const name = t('enemy.' + this.enemies.types[souls.type[i]].id);
+      this.menu.open('army', t('army.fullHint', { name }));
+      return;
+    }
     P.mana -= cost;
     if (Math.random() >= this.chanceFor(i)) {
       // the shadow resists
