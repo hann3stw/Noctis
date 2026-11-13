@@ -79,6 +79,11 @@ export class Player {
     this.dead = false;
     this.respawnT = 0;
     this.inCamp = true;
+    this.safeIndex = 0;
+    this.hpRegen = 0;
+    this.critDmg = 1.8;
+    this.dodgeCdMax = c.dodge.cooldown;
+    this.takenBonus = 1;
     this.moving = false;
     this.hurtFlash = 0;
 
@@ -163,7 +168,8 @@ export class Player {
       }
     }
     const oldMax = this.maxHp;
-    this.maxHp = Math.round(c.baseHp + G.hpPerLevel * (this.level - 1) + st.vit * S.vit.hp + b.hp);
+    this.maxHp = Math.round((c.baseHp + G.hpPerLevel * (this.level - 1)) * (1 + st.vit * S.vit.hpPct) + b.hp);
+    this.hpRegen = st.vit * S.vit.regen * this.maxHp;
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     this.maxMana = Math.round(c.baseMana + st.int * S.int.mana + b.mana);
@@ -172,15 +178,25 @@ export class Player {
     this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
     this.crit = G.baseCrit + st.per * S.per.crit + b.crit;
+    this.critDmg = G.critDamage + st.per * S.per.critDamage;
+    this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
     this.drop = st.per * S.per.drop;
     this.damageMult = 1 + st.str * S.str.damage + b.damage;
     this.defense = def;
-    this.taken = (G.defenseK / (G.defenseK + def)) * (1 + b.damageTaken);
+    this.takenBonus = 1 + b.damageTaken;
     this.armyDamage = b.armyDamage;
     this.armyHp = b.armyHp;
     this.armySlots = b.armySlots;
     this.model.setEquipment(this.equip);
     if (this.game.army) this.game.army.recalcAll();
+  }
+
+  // Share of damage that gets through. Armour counts less in stronger zones
+  // (K grows with the zone's power), so new zones need new armour.
+  takenFactor() {
+    const zi = Math.max(0, this.game.curZone);
+    const K = CONFIG.progression.defenseK * CONFIG.world.zones[zi].power;
+    return (K / (K + this.defense)) * this.takenBonus;
   }
 
   // damage of one basic attack before variance and crit
@@ -299,7 +315,7 @@ export class Player {
   damage(amount) {
     if (this.dead || this.invuln > 0) return;
     const fx = this.game.effects;
-    let d = amount * this.taken;
+    let d = amount * this.takenFactor();
     if (this.shield > 0) {
       const absorbed = Math.min(this.shield, d);
       this.shield -= absorbed;
@@ -326,8 +342,9 @@ export class Player {
 
   respawn() {
     this.dead = false;
-    this.x = 0;
-    this.z = 5;
+    const sp = this.game.respawnSpot();
+    this.x = sp.x;
+    this.z = sp.z;
     this.dirX = 0;
     this.dirZ = 1;
     this.hp = this.maxHp;
@@ -382,7 +399,7 @@ export class Player {
         this.dirX = this.dodgeX;
         this.dirZ = this.dodgeZ;
         this.dodgeT = c.dodge.duration;
-        this.dodgeCd = c.dodge.cooldown;
+        this.dodgeCd = this.dodgeCdMax;
         this.invuln = Math.max(this.invuln, c.dodge.invuln);
         game.effects.burst(this.x, 0.6, this.z, 10, 0x8a4dff, 3, 0.2, 0.4);
       }
@@ -414,8 +431,9 @@ export class Player {
       this.x = game.world.rx;
       this.z = game.world.rz;
     }
-    const cr = game.world.campRadius;
-    this.inCamp = this.x * this.x + this.z * this.z < cr * cr;
+    // camp or outpost: safe, heals, equipment can be changed
+    this.safeIndex = game.gates.active >= 0 ? -1 : game.world.safeIndexAt(this.x, this.z);
+    this.inCamp = this.safeIndex >= 0;
 
     // ---- charges reload one after another
     if (this.charges < this.maxCharges) {
@@ -458,8 +476,9 @@ export class Player {
     else if (this.attackAnim <= 0 && this.dodgeT <= 0 && ml > 0.01) { this.dirX = mx / ml; this.dirZ = mz / ml; }
 
     // ---- camp heals, mana comes back on its own
-    if (this.inCamp && this.hp < this.maxHp) {
-      this.hp = Math.min(this.maxHp, this.hp + c.campRegenPerSec * dt);
+    if (this.hp < this.maxHp) {
+      const regen = this.hpRegen + (this.inCamp ? c.campRegenPerSec + this.maxHp * 0.1 : 0);
+      this.hp = Math.min(this.maxHp, this.hp + regen * dt);
     }
     if (this.mana < this.maxMana) {
       const regen = this.manaRegen + (this.inCamp ? c.campManaRegenPerSec : 0);

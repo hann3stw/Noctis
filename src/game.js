@@ -43,7 +43,11 @@ export class Game {
     this.created = save ? save.created : Date.now();
     this.playTime = save ? save.playTime || 0 : 0;
     this.saveT = 0;
-    this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // gate bosses (milestone 5)
+    this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
+    this.discovered = new Set(save ? save.discovered || [] : []); // outposts found (index in world.safes)
+    this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
+    this.lastSafe = 0;
+    this.curZone = 0; // zone the player is in (the camp counts as the first)
     this.input = input; // handy for debugging
     this.running = false;
     this.paused = false;
@@ -55,6 +59,8 @@ export class Game {
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
     this.soulNear = -1; // soul in reach of the Arise button
     this.ariseCost = 0;
+    this.ariseChance = 1;
+    this.ariseTries = 3;
 
     this.renderer = getRenderer();
     this.scene = new THREE.Scene();
@@ -90,7 +96,6 @@ export class Game {
       this.kills = save.kills || 0;
       setNextItemId(Math.max(save.nextItemId || 1, getNextItemId()));
     }
-    this.wasInCamp = true;
 
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
@@ -134,6 +139,8 @@ export class Game {
       playTime: Math.round(this.playTime),
       rankIndex: this.rankIndex,
       defeatedGates: [...this.defeatedGates],
+      discovered: [...this.discovered],
+      respawnIndex: this.respawnIndex,
       kills: this.kills,
       appearance: { ...this.appearance },
       nextItemId: getNextItemId(),
@@ -210,8 +217,7 @@ export class Game {
     this.playTime += dt;
     this.saveT += dt;
     if (this.saveT >= CONFIG.save.autosaveInterval) this.save();
-    if (P.inCamp && !this.wasInCamp) this.save(); // autosave when entering the camp
-    this.wasInCamp = P.inCamp;
+    this.updateSafe();
     this.resolveMouse();
     this.effects.beginFrame();
     P.update(dt);
@@ -226,11 +232,16 @@ export class Game {
     this.souls.update(dt);
     this.loot.update(dt);
     this.soulNear = P.dead ? -1 : this.souls.nearest(P.x, P.z, CONFIG.souls.ariseRange);
-    if (this.soulNear >= 0) this.ariseCost = CONFIG.arise.cost[this.souls.tier[this.soulNear]];
+    if (this.soulNear >= 0) {
+      this.ariseCost = CONFIG.arise.cost[this.souls.tier[this.soulNear]];
+      this.ariseChance = this.chanceFor(this.soulNear);
+      this.ariseTries = this.souls.tries[this.soulNear];
+    }
     this.world.update(P.x, P.z, false);
     this.world.camp.update(dt);
 
     const zi = this.gates.active >= 0 ? this.gates.active : this.world.zoneIndexAt(Math.sqrt(P.x * P.x + P.z * P.z));
+    this.curZone = Math.max(0, zi);
     if (zi >= 0) {
       const zone = CONFIG.world.zones[zi];
       this.zoneId = zone.id;
@@ -244,6 +255,49 @@ export class Game {
     this.cam.update(dt, P.x, P.z);
     this.effects.update(dt);
     this.hud.update(dt);
+  }
+
+  // Entering the camp or an outpost: discover it, make it the respawn point
+  // and save.
+  updateSafe() {
+    const si = this.player.safeIndex;
+    if (si >= 0 && si !== this.lastSafe) {
+      if (si > 0 && !this.discovered.has(si)) {
+        this.discovered.add(si);
+        this.hud.toast(t('toast.outpostFound', { name: this.safeName(si) }));
+        play('chest');
+      }
+      this.respawnIndex = si;
+      this.save();
+    }
+    this.lastSafe = si;
+  }
+
+  safeName(si) {
+    const s = this.world.safes[si];
+    if (!s || s.zone < 0) return t('zone.camp');
+    return t('outpost.name', { zone: t('zone.' + CONFIG.world.zones[s.zone].id), dir: t('dir.' + s.dir) });
+  }
+
+  respawnSpot() {
+    const s = this.world.safes[this.respawnIndex] || this.world.safes[0];
+    return { x: s.x, z: s.z + (s.zone < 0 ? 5 : 3) };
+  }
+
+  // Fast travel between the camp and discovered outposts (only from a safe place).
+  travel(si) {
+    const P = this.player, s = this.world.safes[si];
+    if (!s || P.dead || !P.inCamp) return;
+    P.x = s.x;
+    P.z = s.z + (s.zone < 0 ? 5 : 3);
+    this.respawnIndex = si;
+    this.lastSafe = si;
+    P.safeIndex = si;
+    this.army.relocate(P.x, P.z);
+    this.cam.snap(P.x, P.z);
+    this.world.update(P.x, P.z, true);
+    this.effects.burst(P.x, 1, P.z, 30, this.appearance.aura, 6, 0.24, 0.8);
+    play('arise');
   }
 
   // Light colour follows the zone the player is in (soft blend).
@@ -342,6 +396,15 @@ export class Game {
     }
   }
 
+  // Chance that an arise try on soul i works: lower for strong enemies and
+  // for enemies above the player's level, higher with Intelligence.
+  chanceFor(i) {
+    const A = CONFIG.arise, souls = this.souls, P = this.player;
+    const over = Math.max(0, souls.level[i] - P.level);
+    const c = A.chance[souls.tier[i]] - over * A.levelPenalty + P.stats.int * CONFIG.progression.stats.int.arise;
+    return Math.max(A.minChance, Math.min(A.maxChance, c));
+  }
+
   tryArise() {
     const P = this.player, souls = this.souls, army = this.army;
     if (P.dead) return;
@@ -350,9 +413,22 @@ export class Game {
     const cost = CONFIG.arise.cost[souls.tier[i]];
     if (P.mana < cost) { this.hud.toast(t('toast.noMana')); return; }
     if (!army.hasRoom()) { this.hud.toast(t('toast.armyFull')); return; }
+    P.mana -= cost;
+    if (Math.random() >= this.chanceFor(i)) {
+      // the shadow resists
+      souls.tries[i]--;
+      this.effects.burst(souls.x[i], 1, souls.z[i], 12, 0x707080, 3, 0.18, 0.5);
+      if (souls.tries[i] <= 0) {
+        souls.remove(i);
+        this.hud.toast(t('toast.soulFaded'));
+      } else {
+        this.hud.toast(t('toast.ariseFailed', { n: souls.tries[i] }));
+      }
+      play('hurt');
+      return;
+    }
     const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i], undefined, souls.zone[i]);
     if (!u) return;
-    P.mana -= cost;
     souls.remove(i);
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
@@ -370,7 +446,8 @@ export class Game {
     this.kills++;
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
-    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi);
+    const level = CONFIG.world.zones[zi].level + CONFIG.arise.tierLevel[tier];
+    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level);
     this.army.grantXp(src, xp);
     this.player.addXp(xp);
     if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);

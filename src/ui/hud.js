@@ -39,13 +39,14 @@ export class Hud {
         <div class="toast"></div>
         <div class="top-right">
           <div class="saving">${t('hud.saving')}</div>
+          <div id="btn-travel" class="btn pill">${t('hud.travel')}</div>
           <div id="btn-menu" class="btn pill">${t('hud.menu')}<i></i></div>
           <div id="btn-pause" class="btn pill" aria-label="${t('hud.pause')}"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg></div>
         </div>
         <div class="squads">${[0, 1, 2].map((k) => `<div class="squad" data-k="${k}"><div class="sq-revive btn"></div><div class="sq-chip btn"><b>${t('squad.' + k)}</b><span></span><small></small></div></div>`).join('')}</div>
         <div id="joy"><div class="knob"></div></div>
         <div class="actions">
-          <div id="btn-arise" class="btn round" aria-label="${t('hud.arise')}">${ICON_ARISE}<small></small></div>
+          <div id="btn-arise" class="btn round" aria-label="${t('hud.arise')}">${ICON_ARISE}<small></small><em></em></div>
           <div id="btn-dodge" class="btn round" aria-label="${t('hud.dodge')}">${ICON_DASH}<div class="cd"></div></div>
           ${skillBtn('btn-skill0', '')}
           ${skillBtn('btn-skill1', '')}
@@ -118,6 +119,7 @@ export class Hud {
     this.toastT = 0;
     this.btnArise = $('#btn-arise');
     this.ariseCost = $('#btn-arise small');
+    this.ariseInfo = $('#btn-arise em');
     this.squads = [];
     root.querySelectorAll('.squad').forEach((el, k) => {
       const chip = el.querySelector('.sq-chip'), revive = el.querySelector('.sq-revive');
@@ -131,6 +133,7 @@ export class Hud {
     });
     this.btnArise.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.arise = true; });
     $('#btn-menu').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.menu.open(); });
+    $('#btn-travel').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openTravel(); });
     $('#btn-pause').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openPause(); });
     this.hud.classList.toggle('swap', input.swap);
 
@@ -284,10 +287,15 @@ export class Hud {
 
     // Arise button: only while a soul is in reach
     const cost = game.soulNear >= 0 ? game.ariseCost : -1;
-    if (cost !== this.vArise) {
-      this.vArise = cost;
+    const info = cost >= 0 ? cost * 10000 + Math.round(game.ariseChance * 100) * 10 + game.ariseTries : -1;
+    if (info !== this.vArise) {
+      this.vArise = info;
       this.btnArise.classList.toggle('on', cost >= 0);
-      if (cost >= 0) this.ariseCost.textContent = cost;
+      if (cost >= 0) {
+        this.ariseCost.textContent = cost;
+        // chance and the tries that are left (dots)
+        this.ariseInfo.textContent = Math.round(game.ariseChance * 100) + '% ' + '•'.repeat(game.ariseTries);
+      }
     }
     const cant = cost >= 0 && P.mana < cost;
     if (cant !== this.vAriseCant) {
@@ -400,7 +408,7 @@ export class Hud {
     }
 
     // dodge cooldown
-    const dc = Math.max(0, Math.ceil((P.dodgeCd / CONFIG.player.dodge.cooldown) * 40));
+    const dc = Math.max(0, Math.ceil((P.dodgeCd / P.dodgeCdMax) * 40));
     if (dc !== this.vDodge) {
       this.vDodge = dc;
       this.dodgeCd.style.setProperty('--p', (dc / 40) * 100 + '%');
@@ -408,17 +416,24 @@ export class Hud {
     }
 
     // zone label
-    const zone = P.inCamp ? 'camp' : game.zoneId;
+    const zone = P.inCamp ? 'safe' + P.safeIndex : game.zoneId;
     if (zone !== this.vZone) {
       this.vZone = zone;
-      if (zone === 'camp') {
-        this.zoneName.textContent = t('zone.camp');
-        this.zoneSub.textContent = t('zone.camp.sub');
+      if (P.inCamp) {
+        const sp = game.world.safes[P.safeIndex];
+        if (sp.zone < 0) {
+          this.zoneName.textContent = t('zone.camp');
+          this.zoneSub.textContent = t('zone.camp.sub');
+        } else {
+          this.zoneName.textContent = t('outpost.short', { dir: t('dir.' + sp.dir) });
+          this.zoneSub.textContent = t('zone.' + CONFIG.world.zones[sp.zone].id) + ' · ' + t('zone.camp.sub');
+        }
       } else {
+        const zd = CONFIG.world.zones[game.curZone];
         this.zoneName.textContent = t('zone.' + zone);
-        this.zoneSub.textContent = game.zoneRank ? t('zone.sub', { rank: game.zoneRank }) : '';
+        this.zoneSub.textContent = t('zone.sub', { rank: zd.rank, level: zd.level });
       }
-      this.hud.classList.toggle('safe', zone === 'camp');
+      this.hud.classList.toggle('safe', P.inCamp);
     }
 
     // hurt vignette and death overlay

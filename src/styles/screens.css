@@ -325,6 +325,31 @@ body.editing #ui {
   margin: 0 0 calc(var(--u) * 1);
   line-height: 1.35;
 }
+.travel-box {
+  width: min(92vw, calc(var(--u) * 150));
+  text-align: left;
+}
+.tv-list {
+  overflow-y: auto;
+  touch-action: pan-y;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 2);
+}
+.tv-zone b {
+  display: block;
+  margin-bottom: calc(var(--u) * 1);
+  color: var(--violet-light);
+  font-size: calc(var(--u) * 3);
+}
+.tv-zone small {
+  opacity: 0.5;
+}
+.tv-zone .sbtn {
+  flex: 0 1 auto;
+  min-height: calc(var(--u) * 9);
+  font-size: calc(var(--u) * 2.9);
+}
 .pause .scr-box {
   min-width: calc(var(--u) * 64);
 }

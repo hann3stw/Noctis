@@ -7,6 +7,7 @@ import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
 import { DECOR, FLOWER_COLORS } from '../render/models/props.js';
 import { buildCamp } from './camp.js';
+import { buildOutposts } from './outposts.js';
 
 const VOID_COLOR = 0x0d0a16;
 const MAX_CHUNK_COLLIDERS = 48;
@@ -55,16 +56,28 @@ export class World {
     this.lastCz = 1e9;
     this.pending = false;
 
-    // one gate per zone, half way through the ring at a seeded angle
+    // Safe places: the camp (index 0) and 4 outposts per zone at north, east,
+    // south and west, half way through the ring.
+    this.safes = [{ x: 0, z: 0, r: this.campRadius, zone: -1, dir: -1 }];
+    const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // north, east, south, west
+    this.zones.forEach((zone, zi) => {
+      const r = (zone.inner + zone.outer) / 2;
+      DIRS.forEach(([dx, dz], d) => {
+        this.safes.push({ x: dx * r, z: dz * r, r: CONFIG.outposts.radius, zone: zi, dir: d });
+      });
+    });
+
+    // one gate per zone, half way through the ring, between two outposts
     const grng = mulberry32(hashSeed(seed, 777, 13));
     this.gates = this.zones.map((zone, i) => {
-      const a = grng() * Math.PI * 2;
+      const a = Math.PI / 4 + ((grng() * 4) | 0) * (Math.PI / 2) + (grng() - 0.5) * 0.5;
       const r = (zone.inner + zone.outer) / 2;
       return { zone: i, x: Math.cos(a) * r, z: Math.sin(a) * r };
     });
 
     this.buildGround();
     this.camp = buildCamp(scene, this);
+    this.outposts = buildOutposts(scene, this.safes);
   }
 
   zoneAt(r) {
@@ -80,6 +93,41 @@ export class World {
     return -1;
   }
 
+  // index of the safe place (0 = camp) at (x, z), or -1
+  safeIndexAt(x, z) {
+    const S = this.safes;
+    for (let i = 0; i < S.length; i++) {
+      const dx = x - S[i].x, dz = z - S[i].z;
+      if (dx * dx + dz * dz < S[i].r * S[i].r) return i;
+    }
+    return -1;
+  }
+
+  nearSafe(x, z, extra) {
+    const S = this.safes;
+    for (let i = 0; i < S.length; i++) {
+      const dx = x - S[i].x, dz = z - S[i].z, r = S[i].r + extra;
+      if (dx * dx + dz * dz < r * r) return true;
+    }
+    return false;
+  }
+
+  // Pushes a circle out of every safe place (enemies use this). Result in rx / rz.
+  pushOutOfSafe(x, z, r) {
+    const S = this.safes;
+    for (let i = 0; i < S.length; i++) {
+      const dx = x - S[i].x, dz = z - S[i].z, m = S[i].r + r + 1.2;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < m * m && d2 > 1e-4) {
+        const k = m / Math.sqrt(d2);
+        x = S[i].x + dx * k;
+        z = S[i].z + dz * k;
+      }
+    }
+    this.rx = x;
+    this.rz = z;
+  }
+
   nearGate(x, z, dist) {
     for (const g of this.gates) {
       const dx = g.x - x, dz = g.z - z;
@@ -89,60 +137,73 @@ export class World {
   }
 
   // ---- ground -------------------------------------------------------------
+  // The ground is split into square tiles so the camera only draws the few
+  // tiles it can see. Vertex colours come from the zone at that distance;
+  // shared tile borders get the same colour (hash of the vertex position).
   buildGround() {
-    const rng = mulberry32(hashSeed(this.seed, 11, 7));
-    const step = 4;
-    const segs = 180;
+    const T = CONFIG.world.groundTile, C = CONFIG.world.groundCell, n = Math.round(T / C);
     const maxR = this.radius + CONFIG.world.voidWidth;
-    const rings = Math.ceil(maxR / step);
-    const pos = [];
-    const col = [];
-    const idx = [];
+    const span = Math.ceil(maxR / T);
+    const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const seed = this.seed;
+    const rnd = (ix, iz, k) => hashSeed(seed, ix * 7 + k, iz) / 4294967296;
     _c2.setHex(VOID_COLOR);
-    for (let ri = 0; ri <= rings; ri++) {
-      const r = ri * step;
-      const rr = Math.max(r, this.campRadius);
-      for (let si = 0; si <= segs; si++) {
-        const a = (si / segs) * Math.PI * 2;
-        pos.push(Math.cos(a) * r, 0, Math.sin(a) * r);
-        // ragged borders: near a zone edge the vertex may take the other colour
-        const jitter = (rng() - 0.5) * 14;
-        const zone = this.zoneAt(rr + jitter) || this.zoneAt(rr);
-        if (zone) {
-          const gc = zone.groundColors;
-          _c.setHex(gc[(rng() * gc.length) | 0]);
-          const shade = 0.9 + rng() * 0.2;
-          _c.multiplyScalar(shade);
-          // fade into the void at the world edge
-          const edge = (r - (this.radius - 10)) / 10;
-          if (edge > 0) _c.lerp(_c2, Math.min(1, edge));
-        } else {
-          _c.copy(_c2);
+    // one index buffer shared by all tiles
+    const idx = [];
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        const a = j * (n + 1) + i, b = a + 1, c = a + n + 1, d = c + 1;
+        idx.push(a, c, b, b, c, d);
+      }
+    }
+    const index = new THREE.Uint16BufferAttribute(idx, 1);
+    const normals = new Float32Array((n + 1) * (n + 1) * 3);
+    for (let i = 1; i < normals.length; i += 3) normals[i] = 1;
+    const normalAttr = new THREE.BufferAttribute(normals, 3);
+    this.ground = new THREE.Group();
+    for (let tz = -span; tz < span; tz++) {
+      for (let tx = -span; tx < span; tx++) {
+        const x0 = tx * T, z0 = tz * T;
+        // skip tiles completely outside the world
+        const nx = Math.max(x0, Math.min(0, x0 + T)), nz = Math.max(z0, Math.min(0, z0 + T));
+        if (nx * nx + nz * nz > maxR * maxR) continue;
+        const pos = new Float32Array((n + 1) * (n + 1) * 3);
+        const col = new Float32Array((n + 1) * (n + 1) * 3);
+        let k = 0;
+        for (let j = 0; j <= n; j++) {
+          for (let i = 0; i <= n; i++) {
+            const ix = tx * n + i, iz = tz * n + j;
+            const x = ix * C, z = iz * C;
+            pos[k] = x; pos[k + 1] = 0; pos[k + 2] = z;
+            const r = Math.max(Math.hypot(x, z), this.campRadius);
+            // ragged borders: near a zone edge the vertex may take the other colour
+            const jitter = (rnd(ix, iz, 1) - 0.5) * 18;
+            const zone = this.zoneAt(r + jitter) || this.zoneAt(r);
+            if (zone) {
+              const gc = zone.groundColors;
+              _c.setHex(gc[(rnd(ix, iz, 2) * gc.length) | 0]);
+              _c.multiplyScalar(0.9 + rnd(ix, iz, 3) * 0.2);
+              const edge = (r - (this.radius - 12)) / 12; // fade into the void
+              if (edge > 0) _c.lerp(_c2, Math.min(1, edge));
+            } else {
+              _c.copy(_c2);
+            }
+            col[k] = _c.r; col[k + 1] = _c.g; col[k + 2] = _c.b;
+            k += 3;
+          }
         }
-        col.push(_c.r, _c.g, _c.b);
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        g.setAttribute('normal', normalAttr);
+        g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        g.setIndex(index);
+        g.computeBoundingSphere();
+        const mesh = new THREE.Mesh(g, material);
+        mesh.matrixAutoUpdate = false;
+        this.ground.add(mesh);
       }
     }
-    // close the seam: last vertex of each ring copies the first
-    const row = segs + 1;
-    for (let ri = 0; ri <= rings; ri++) {
-      const a = ri * row * 3, b = (ri * row + segs) * 3;
-      col[b] = col[a]; col[b + 1] = col[a + 1]; col[b + 2] = col[a + 2];
-    }
-    for (let ri = 0; ri < rings; ri++) {
-      for (let si = 0; si < segs; si++) {
-        const a = ri * row + si, b = a + 1, c = a + row, d = c + 1;
-        idx.push(a, b, c, b, d, c);
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    g.setIndex(idx);
-    g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
-    mesh.frustumCulled = false;
-    this.scene.add(mesh);
-    this.ground = mesh;
+    this.scene.add(this.ground);
   }
 
   // ---- collision ----------------------------------------------------------
@@ -253,7 +314,7 @@ export class World {
           const tint = rng();
           const rr = Math.hypot(x, z);
           if (rr < zone.inner + 2 || rr >= zone.outer - 1) continue;
-          if (this.nearGate(x, z, GATE_CLEAR)) continue;
+          if (this.nearGate(x, z, GATE_CLEAR) || this.nearSafe(x, z, 2)) continue;
           if (!mesh) mesh = this.takeMesh(type);
           _q.setFromAxisAngle(_up, rot);
           _m.compose(_p.set(x, 0, z), _q, _s.set(sc, sc, sc));

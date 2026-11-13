@@ -10,7 +10,7 @@ export function playerHit(game, i, base, kx, kz) {
   const P = game.player, C = CONFIG.progression;
   let dmg = base * (1 + (Math.random() * 2 - 1) * CONFIG.combat.damageVariance);
   const crit = Math.random() < P.crit;
-  if (crit) dmg *= C.critDamage;
+  if (crit) dmg *= P.critDmg;
   P.ult = Math.min(C.ultCharge.max, P.ult + C.ultCharge.perHit);
   play(crit ? 'crit' : 'hit');
   game.enemies.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);

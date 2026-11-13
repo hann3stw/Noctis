@@ -148,7 +148,7 @@ export class Enemies {
         const r = Math.sqrt(rIn * rIn + rng() * (rOut * rOut - rIn * rIn));
         const a = rng() * Math.PI * 2;
         const px = Math.cos(a) * r, pz = Math.sin(a) * r;
-        if (world.nearGate(px, pz, 30)) continue;
+        if (world.nearGate(px, pz, 30) || world.nearSafe(px, pz, 30)) continue;
         let ok = true;
         for (let p = first; p < this.packCount; p++) {
           const dx = this.packX[p] - px, dz = this.packZ[p] - pz;
@@ -205,8 +205,7 @@ export class Enemies {
     const def = this.types[this.type[i]].def;
     const tier = this.tier[i];
     const T = CONFIG.enemies.tiers[tier];
-    const zone = CONFIG.world.zones[this.zone[i]];
-    const zm = def.boss ? { hp: 1, dmg: 1, xp: 1 } : zone;
+    const zm = CONFIG.world.zones[this.zone[i]];
     const p = this.pack[i];
     if (x === undefined) {
       const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 3.5;
@@ -221,7 +220,7 @@ export class Enemies {
     this.maxHp[i] = Math.round(def.hp * zm.hp * T.hp);
     this.hp[i] = this.maxHp[i];
     this.dmg[i] = def.damage * zm.dmg * T.dmg;
-    this.xpv[i] = Math.round(def.xp * zm.xp * (def.boss ? 1 : T.xp));
+    this.xpv[i] = Math.round(def.xp * zm.xp * T.xp);
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];
     this.state[i] = ST_IDLE;
@@ -347,7 +346,6 @@ export class Enemies {
     const playerOk = !P.dead && !P.inCamp;
     const activeR2 = S.activeRadius * S.activeRadius;
     const renderR2 = gfx.renderRadius * gfx.renderRadius;
-    const campR = world.campRadius + 1.2;
     const leash2 = E.leash * E.leash;
     const respawnD2 = S.respawnMinPlayerDist * S.respawnMinPlayerDist;
     let nAct = 0;
@@ -547,9 +545,8 @@ export class Enemies {
         x = gates.cx; z = gates.cz;
       } else {
         world.resolve(this.x[i], this.z[i], this.radius[i]);
+        world.pushOutOfSafe(world.rx, world.rz, this.radius[i]);
         x = world.rx; z = world.rz;
-        const r2 = x * x + z * z;
-        if (r2 < campR * campR && r2 > 1e-4) { const k = campR / Math.sqrt(r2); x *= k; z *= k; }
       }
       this.x[i] = x;
       this.z[i] = z;

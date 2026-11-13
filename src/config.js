@@ -9,14 +9,22 @@ export const CONFIG = {
     chunkSize: 32, // decoration is streamed in square chunks of this size
     decorLoadRadius: 64, // decoration chunks are kept loaded within this distance
     voidWidth: 70, // dark ground beyond the last zone
-    // Ring shaped zones from the camp outwards. level = item level of drops and
-    // recommended player level; gateLevel = recommended level for the gate boss; hp / dmg / xp = multipliers for every enemy
-    // of the zone. decor = average decoration pieces per chunk. light = sky,
-    // ground and sun colour while the player is in the zone.
+    groundTile: 120, // the ground is drawn in square tiles of this size
+    groundCell: 8, // colour resolution of the ground
+    // Ring shaped zones from the camp outwards. Every zone is a big step up:
+    //   level      item level of drops (and the level you should have there)
+    //   gateLevel  recommended level for the gate boss
+    //   hp, dmg, xp  multipliers for every enemy of the zone (a normal enemy
+    //              one zone further out is stronger than an elite here)
+    //   power      damage and health of shadows raised there; also the armour
+    //              scale of the zone (your defence counts less further out)
+    //   packs, champions, chests  how many of each the zone gets
+    //   decor      average decoration pieces per chunk
+    //   light      sky, ground and sun colour while the player is in the zone
     zones: [
       {
-        id: 'meadow', rank: 'E', level: 1, gateLevel: 5, inner: 20, outer: 130,
-        hp: 1, dmg: 1, xp: 1, packs: 22, champions: 2,
+        id: 'meadow', rank: 'E', level: 1, gateLevel: 7, inner: 20, outer: 280,
+        hp: 1, dmg: 1, xp: 1, power: 1, packs: 80, champions: 6, chests: 22,
         groundColors: [0x3c7a3a, 0x4a8c42, 0x58963c],
         decor: { grass: 34, flower: 9, bush: 3, rock: 1.6, tree: 2.2 },
         enemyTypes: ['gloomfang', 'thornspitter', 'tuskboar'],
@@ -24,8 +32,8 @@ export const CONFIG = {
         light: { sky: 0xb9c4ff, ground: 0x2a2238, sun: 0xfff0d8, sky_i: 1.5 },
       },
       {
-        id: 'forest', rank: 'D', level: 6, gateLevel: 11, inner: 130, outer: 220,
-        hp: 2, dmg: 1.7, xp: 2.2, packs: 32, champions: 2,
+        id: 'forest', rank: 'D', level: 9, gateLevel: 15, inner: 280, outer: 520,
+        hp: 4.5, dmg: 1.8, xp: 3.5, power: 3, packs: 170, champions: 10, chests: 36,
         groundColors: [0x2c5e2e, 0x356a32, 0x2a5428],
         decor: { grass: 16, fern: 9, mushroom: 2, bush: 3, rock: 1.2, tree: 3, pine: 6 },
         enemyTypes: ['mossback', 'hollowArcher', 'antlerstag'],
@@ -33,8 +41,8 @@ export const CONFIG = {
         light: { sky: 0xa8d0b0, ground: 0x1e2a1e, sun: 0xf0f0c8, sky_i: 1.35 },
       },
       {
-        id: 'swamp', rank: 'C', level: 12, gateLevel: 17, inner: 220, outer: 305,
-        hp: 3.6, dmg: 2.6, xp: 4, packs: 38, champions: 3,
+        id: 'swamp', rank: 'C', level: 17, gateLevel: 23, inner: 520, outer: 760,
+        hp: 20, dmg: 3.2, xp: 12, power: 9, packs: 240, champions: 13, chests: 48,
         groundColors: [0x3e4a2c, 0x46512e, 0x35402a, 0x4a4630],
         decor: { reed: 16, puddle: 3, deadTree: 2.5, glowShroom: 3, bush: 1.5, rock: 0.8 },
         enemyTypes: ['bogshambler', 'sporemother', 'mirecrawler'],
@@ -42,8 +50,8 @@ export const CONFIG = {
         light: { sky: 0xa0b890, ground: 0x24281a, sun: 0xd8e0b0, sky_i: 1.25 },
       },
       {
-        id: 'ruins', rank: 'B', level: 18, gateLevel: 23, inner: 305, outer: 390,
-        hp: 6, dmg: 3.8, xp: 7, packs: 42, champions: 3,
+        id: 'ruins', rank: 'B', level: 25, gateLevel: 31, inner: 760, outer: 1000,
+        hp: 90, dmg: 5.8, xp: 43, power: 27, packs: 300, champions: 15, chests: 56,
         groundColors: [0x8a7d62, 0x7c7058, 0x948468],
         decor: { dryGrass: 18, rubble: 5, pillar: 1.6, wall: 1.1, rock: 1.2, deadTree: 0.8 },
         enemyTypes: ['sentinel', 'acolyte', 'ruinhound'],
@@ -51,8 +59,8 @@ export const CONFIG = {
         light: { sky: 0xffd8b0, ground: 0x3a2a24, sun: 0xffc890, sky_i: 1.4 },
       },
       {
-        id: 'ice', rank: 'A', level: 25, gateLevel: 30, inner: 390, outer: 470,
-        hp: 9.5, dmg: 5.4, xp: 11, packs: 46, champions: 3,
+        id: 'ice', rank: 'A', level: 33, gateLevel: 39, inner: 1000, outer: 1240,
+        hp: 410, dmg: 10.5, xp: 150, power: 81, packs: 350, champions: 17, chests: 64,
         groundColors: [0xd8e4ee, 0xc4d6e6, 0xe6eef6],
         decor: { snowMound: 6, snowPine: 4, crystal: 2, iceRock: 1.6 },
         enemyTypes: ['frostTroll', 'iceWisp', 'snowram'],
@@ -60,8 +68,8 @@ export const CONFIG = {
         light: { sky: 0xc8e0ff, ground: 0x506070, sun: 0xffffff, sky_i: 1.1 },
       },
       {
-        id: 'volcano', rank: 'S', level: 32, gateLevel: 38, inner: 470, outer: 550,
-        hp: 15, dmg: 7.5, xp: 17, packs: 48, champions: 4,
+        id: 'volcano', rank: 'S', level: 41, gateLevel: 47, inner: 1240, outer: 1480,
+        hp: 1850, dmg: 19, xp: 525, power: 243, packs: 400, champions: 19, chests: 70,
         groundColors: [0x463634, 0x523c34, 0x3c302e, 0x5c4034],
         decor: { ash: 8, basalt: 2.2, lavaPool: 1.6, charredTree: 1.8, emberCrystal: 1.2 },
         enemyTypes: ['magmaBrute', 'emberImp', 'cinderhound'],
@@ -69,6 +77,14 @@ export const CONFIG = {
         light: { sky: 0xffa880, ground: 0x402018, sun: 0xffb890, sky_i: 1.6 },
       },
     ],
+  },
+
+  // Safe outposts: 4 per zone (north, east, south, west), half way through the
+  // ring. Like the camp: no enemies, healing, equipment can be changed. The last
+  // one visited is where you come back after dying; you can travel between
+  // the ones you have found.
+  outposts: {
+    radius: 10,
   },
 
   camera: {
@@ -110,21 +126,29 @@ export const CONFIG = {
 
   // ---- levels and stat points ---------------------------------------------
   progression: {
-    xpBase: 40, // XP for the next level = xpBase * level ^ xpGrowth
-    xpGrowth: 1.5,
+    // XP for the next level = xpBase * xpGrowth ^ (level - 1): about 8 levels per zone
+    xpBase: 145,
+    xpGrowth: 1.17,
     maxLevel: 60,
     pointsPerLevel: 3,
-    hpPerLevel: 6,
+    rankPoints: 5, // extra stat points for every new rank
+    hpPerLevel: 14,
+    // What one stat point does. The stats decide the play style:
+    //   Strength      hard hitting hunter
+    //   Agility       fast, quick reloads and dodges
+    //   Vitality      tough, regenerates health
+    //   Intelligence  big army, lots of mana, better chance to raise shadows
+    //   Perception    critical hits and loot
     stats: {
-      str: { damage: 0.04 }, // +4 % damage per point
-      agi: { speed: 0.008, reload: 0.015 }, // +0.8 % speed, 1.5 % faster reload
-      vit: { hp: 12 },
-      int: { mana: 8, manaRegen: 0.2 },
-      per: { crit: 0.008, drop: 0.02 }, // +0.8 % crit, +2 % drop chance
+      str: { damage: 0.04 }, // +4 % damage
+      agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
+      vit: { hpPct: 0.04, regen: 0.0005 }, // +4 % health, regenerates 0.05 % of max health per second
+      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.006 }, // +1 army slot per 2 points, +0.6 % arise chance
+      per: { crit: 0.008, critDamage: 0.015, drop: 0.02 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops
     },
     baseCrit: 0.05,
     critDamage: 1.8,
-    defenseK: 60, // damage taken = K / (K + defence)
+    defenseK: 60, // damage taken = K / (K + defence), K grows with the zone's power
     ultCharge: { perHit: 3, max: 100 }, // every enemy hit charges the ultimate
     dismissXpShare: 0.5, // share of a dismissed shadow's XP that goes to the player
   },
@@ -142,7 +166,8 @@ export const CONFIG = {
   items: {
     rarityWeights: [62, 27, 9, 2], // common, rare, epic, legendary
     rarityStat: [1, 1.25, 1.6, 2.1], // stat factor per rarity
-    levelScale: 0.12, // +12 % stats per item level (= level of the zone it dropped in)
+    levelGrowth: 1.147, // damage and defence x1.147 per item level (x3 per zone)
+    bonusLevelScale: 0.25, // health and mana bonus of armour: +25 % per item level
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
     upgradeCost: [2, 4, 8, 16], // essence per rarity, times (upgrade + 1)
@@ -162,7 +187,7 @@ export const CONFIG = {
     dropChance: [0.05, 1, 1, 1], // normal enemy, elite, champion, boss
     weights: { weapon: 30, armor: 50, skill: 20 },
     pickupRange: 1.8,
-    chest: { perZone: 12, items: [1, 2], respawn: 180, openRange: 2.4 },
+    chest: { items: [1, 2], respawn: 180, openRange: 2.4 }, // count per zone: see zones
   },
 
   // ---- skills ---------------------------------------------------------------
@@ -200,7 +225,7 @@ export const CONFIG = {
       { hp: 1, dmg: 1, scale: 1, xp: 1 },
       { hp: 4, dmg: 1.5, scale: 1.3, xp: 5 },
       { hp: 10, dmg: 2, scale: 1.6, xp: 14 },
-      { hp: 1, dmg: 1, scale: 1, xp: 40 },
+      { hp: 1, dmg: 1, scale: 1, xp: 1 }, // bosses: their own base stats
     ],
     types: {
       // ---- meadow
@@ -228,14 +253,14 @@ export const CONFIG = {
       emberImp: { behavior: 'ranged', shadowRole: 'ranged', xp: 13, hp: 36, damage: 8, speed: 5, radius: 0.55, scale: 1, aggroRange: 15, attackRange: 12, attackWindup: 0.45, attackCooldown: 1.7, shotSpeed: 19, shotColor: 0xff7020 },
       cinderhound: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 52, damage: 12, speed: 5.6, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 25, chargeTime: 0.55 },
 
-      // ---- gate bosses (stats already include the zone, no zone multiplier)
+      // ---- gate bosses (meadow values, multiplied by their zone like everything else)
       // patterns: see bossPatterns. shadowBase = stats of the boss as a shadow.
       thornmaw: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 900, damage: 12, speed: 4.6, radius: 1.8, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['slam', 'charge', 'summon'], adds: 'gloomfang', shadowBase: { hp: 90, damage: 11 } },
-      barkhide: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 260, hp: 2200, damage: 18, speed: 3.6, radius: 2, scale: 2.2, aggroRange: 40, attackRange: 3.6, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['slam', 'eruption', 'summon'], adds: 'mossback', shadowBase: { hp: 130, damage: 13 } },
-      mireMatriarch: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 320, hp: 4200, damage: 24, speed: 3, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['nova', 'eruption', 'summon'], adds: 'mirecrawler', shadowBase: { hp: 110, damage: 10 } },
-      hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 400, hp: 7500, damage: 34, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
-      rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 500, hp: 12000, damage: 46, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
-      pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 650, hp: 19000, damage: 60, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
+      barkhide: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1000, damage: 12, speed: 3.6, radius: 2, scale: 2.2, aggroRange: 40, attackRange: 3.6, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['slam', 'eruption', 'summon'], adds: 'mossback', shadowBase: { hp: 130, damage: 13 } },
+      mireMatriarch: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 950, damage: 11, speed: 3, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['nova', 'eruption', 'summon'], adds: 'mirecrawler', shadowBase: { hp: 110, damage: 10 } },
+      hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1000, damage: 13, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
+      rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1100, damage: 13, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
+      pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1200, damage: 14, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
     },
   },
 
@@ -276,12 +301,21 @@ export const CONFIG = {
   },
 
   arise: {
-    cost: [10, 25, 45, 80], // mana: normal, elite, champion, boss
+    cost: [10, 25, 45, 80], // mana per try: normal, elite, champion, boss
+    // Chance that a try works. Every soul allows a few tries, then it fades.
+    // enemy level = zone level + tierLevel; every level the enemy is above
+    // the player costs levelPenalty. Intelligence adds to the chance.
+    chance: [0.9, 0.65, 0.45, 0.3],
+    tierLevel: [0, 2, 4, 6],
+    levelPenalty: 0.04,
+    minChance: 0.05,
+    maxChance: 0.95,
+    tries: 3,
   },
 
   shadows: {
-    baseSlots: 6, // army slots at rank E
-    slotsPerRank: 2,
+    baseSlots: 5, // army slots without Intelligence (each point adds progression.stats.int.slots)
+    maxSlots: 40,
     reserveMax: 40,
     defaultBehaviors: ['attack', 'guard', 'guard'], // squads A, B, C
     tierFactor: [1, 1.8, 2.6, 4], // stat factor: normal, elite, champion, boss
@@ -333,8 +367,8 @@ export const CONFIG = {
   },
 
   sim: {
-    maxEnemies: 1600,
-    maxPacks: 512,
+    maxEnemies: 9000,
+    maxPacks: 1800,
     activeRadius: 55, // enemies further away are not simulated
     respawnTime: 40,
     respawnMinPlayerDist: 45, // packs only respawn when the player is away

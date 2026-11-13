@@ -47,13 +47,15 @@ export class Loot {
     const C = CONFIG.loot.chest;
     const rng = mulberry32(hashSeed(game.seed, 303, 404));
     const xs = [], zs = [], levels = [];
+    const world = game.world;
     for (const zone of CONFIG.world.zones) {
       let placed = 0, tries = 0;
-      while (placed < C.perZone && tries++ < C.perZone * 40) {
+      while (placed < zone.chests && tries++ < zone.chests * 40) {
         const rIn = zone.inner + 10, rOut = zone.outer - 6;
         const r = Math.sqrt(rIn * rIn + rng() * (rOut * rOut - rIn * rIn));
         const ang = rng() * Math.PI * 2;
         const x = Math.cos(ang) * r, z = Math.sin(ang) * r;
+        if (world.nearSafe(x, z, 4) || world.nearGate(x, z, 10)) continue;
         let ok = true;
         for (let k = 0; k < xs.length; k++) {
           const dx = xs[k] - x, dz = zs[k] - z;

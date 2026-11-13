@@ -127,6 +127,12 @@
   border: 1px solid rgba(180, 140, 255, 0.25);
   white-space: nowrap;
 }
+.zone b,
+.zone small {
+  max-width: 36vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .zone b {
   display: block;
   font-size: calc(var(--u) * 3.6);

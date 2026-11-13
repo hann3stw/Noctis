@@ -51,9 +51,9 @@ export function makeArmor(type, set, bonus, rarity, level) {
 }
 
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
-export function rollLoot(level, luck, known, minRarity = 0) {
+export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false) {
   const W = CONFIG.loot.weights;
-  const kind = weighted([W.weapon, W.armor, W.skill]);
+  const kind = weighted([W.weapon, W.armor, gearOnly ? 0 : W.skill]);
   if (kind === 2) {
     const open = [];
     for (const id in CONFIG.skills) if (!known.includes(id)) open.push(id);
@@ -68,7 +68,7 @@ export function rollLoot(level, luck, known, minRarity = 0) {
 // ---- stats ------------------------------------------------------------------
 function factor(item) {
   const I = CONFIG.items;
-  return (1 + I.levelScale * (item.level - 1)) * I.rarityStat[item.rarity] * (1 + I.upgradeBonus * item.up);
+  return Math.pow(I.levelGrowth, item.level - 1) * I.rarityStat[item.rarity] * (1 + I.upgradeBonus * item.up);
 }
 
 export function weaponDamage(item) {
@@ -83,7 +83,7 @@ export function armorDefense(item) {
 export function armorBonus(item) {
   const I = CONFIG.items;
   const base = I.bonuses[item.bonus] * I.rarityStat[item.rarity];
-  if (item.bonus === 'hp' || item.bonus === 'mana') return Math.round(base * (1 + I.levelScale * (item.level - 1)));
+  if (item.bonus === 'hp' || item.bonus === 'mana') return Math.round(base * (1 + I.bonusLevelScale * (item.level - 1)));
   return base;
 }
 

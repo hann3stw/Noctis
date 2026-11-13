@@ -17,6 +17,23 @@
   top: calc(var(--st) + var(--u) * 43) !important;
 }
 
+#btn-travel {
+  display: none;
+  background: rgba(30, 80, 60, 0.9);
+  border-color: #7df0a0;
+}
+#hud.safe #btn-travel {
+  display: flex;
+}
+#btn-arise em {
+  font-style: normal;
+  font-weight: 800;
+  font-size: calc(var(--u) * 2.3 * var(--btn));
+  color: #d9c4ff;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 /* ---- gate panel ------------------------------------------------------------- */
 .gate-panel {
   position: absolute;

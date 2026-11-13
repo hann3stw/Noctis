@@ -107,6 +107,21 @@ export class App {
     this.screens.show('pause');
   }
 
+  // fast travel list (only opened from the camp or an outpost)
+  openTravel() {
+    const g = this.game;
+    if (!g || g.paused || !g.player.inCamp) return;
+    g.setPaused(true);
+    this.screens.show('travel');
+  }
+
+  travelTo(si) {
+    this.screens.hide();
+    if (!this.game) return;
+    this.game.setPaused(false);
+    this.game.travel(si);
+  }
+
   resume() {
     this.screens.hide();
     if (this.game) this.game.setPaused(false);
@@ -131,7 +146,7 @@ export class App {
       if (cur && cur !== 'title' && cur !== 'editor') this.screens.show('title');
       return;
     }
-    if (cur === 'pause') this.resume();
+    if (cur === 'pause' || cur === 'travel') this.resume();
     else if (cur === 'settings') this.screens.show('pause');
     else if (cur === 'editor') this.closeEditorInCamp(null);
     else if (g.menu.isOpen) g.menu.close();

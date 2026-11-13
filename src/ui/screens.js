@@ -149,6 +149,8 @@ export class Screens {
       case 'saveNow': app.saveNow(); break;
       case 'pauseSettings': this.show('settings', { back: 'pause' }); break;
       case 'quit': app.exitToTitle(); break;
+      // travel
+      case 'travel': app.travelTo(Number(v)); break;
     }
   }
 
@@ -166,7 +168,7 @@ export class Screens {
   render() {
     const views = {
       title: () => this.title(), load: () => this.load(), newSlot: () => this.newSlot(),
-      editor: () => this.editor(), settings: () => this.settingsView(), pause: () => this.pause(),
+      editor: () => this.editor(), settings: () => this.settingsView(), pause: () => this.pause(), travel: () => this.travel(),
     };
     const keepScroll = [...this.el.querySelectorAll('[data-scroll]')].map((x) => [x.dataset.scroll, x.scrollTop]);
     let html = views[this.current] ? views[this.current]() : '';
@@ -255,6 +257,24 @@ export class Screens {
       <button class="sbtn main" data-act="pauseSettings">${t('title.settings')}</button>
       <button class="sbtn main ghost" data-act="quit">${t('pause.quit')}</button>
     </div></div>`;
+  }
+
+  // ---- fast travel --------------------------------------------------------------
+  travel() {
+    const g = this.app.game;
+    if (!g) return '';
+    const here = g.player.safeIndex;
+    const btn = (si) => `<button class="sbtn${si === here ? ' ghost' : ''}" data-act="travel" data-v="${si}"${si === here ? ' disabled' : ''}>${esc(g.safeName(si))}</button>`;
+    const groups = [`<div class="tv-zone"><b>${t('zone.camp')}</b><div class="scr-row">${btn(0)}</div></div>`];
+    CONFIG.world.zones.forEach((zone, zi) => {
+      const list = [];
+      g.world.safes.forEach((s, si) => { if (s.zone === zi && g.discovered.has(si)) list.push(si); });
+      const body = list.length ? list.map(btn).join('') : `<small>${t('travel.none')}</small>`;
+      groups.push(`<div class="tv-zone"><b>${t('zone.' + zone.id)} · ${t('zone.sub', { rank: zone.rank, level: zone.level })}</b><div class="scr-row">${body}</div></div>`);
+    });
+    return `<div class="scr-modal"><div class="scr-box travel-box"><h2>${t('travel.title')}</h2>
+      <div class="tv-list" data-scroll="tv">${groups.join('')}</div>
+      <button class="sbtn ghost" data-act="resume">${t('confirm.cancel')}</button></div></div>`;
   }
 
   // ---- skin editor -----------------------------------------------------------

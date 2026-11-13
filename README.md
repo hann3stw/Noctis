@@ -34,16 +34,40 @@ Production build: `npm run build`, then `npm run preview`.
 
 ## World
 
-- Six ring shaped zones around the camp: Whispering Meadow (E), Gloomwood (D),
-  Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera (S).
-  Enemies get stronger further out; every zone has three enemy types
-  (melee, ranged, charger).
+- Six big ring shaped zones around the camp: Whispering Meadow (E), Gloomwood
+  (D), Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera
+  (S). Every zone is a big step up (enemy health x4.5, damage x1.8): a normal
+  enemy of the next zone is stronger than an elite of the current one. Gear
+  from a zone is about 3x stronger than from the zone before, and armour counts
+  less in stronger zones, so you have to prepare before moving on. Every zone
+  has three enemy types (melee, ranged, charger).
+- Four outposts per zone (north, east, south, west): safe like the camp
+  (healing, gear, army, look). The last outpost you entered is where you come
+  back after dying, and the Travel button takes you to every outpost you have
+  found.
 - Elites (gold ring) and champions (red ring, with two escorts) are much
   stronger and always drop loot. Their shadows get an ability: tanks taunt,
   melee shadows cleave, ranged shadows fire a volley, healers heal everyone.
 - One gate per zone leads into an arena with a boss (own attack patterns,
   telegraphed with red circles). The first win per gate raises the rank
-  (E -> S, +2 army slots per rank). Gates can be repeated for loot.
+  (E -> S): +5 stat points and a legendary item. Gates can be repeated for
+  loot (3 items, at least epic, plus essence).
+- Raising a shadow can fail: the chance is lower for elites, champions and
+  bosses and for enemies above your level. Every soul allows 3 tries (each
+  costs mana); the Arise button shows the chance and the tries left.
+
+## Stats
+
+| Stat | Effect |
+|---|---|
+| Strength | +4 % damage |
+| Agility | speed, faster reload, shorter dodge cooldown |
+| Vitality | +4 % health, health regeneration |
+| Intelligence | +1 army slot per 2 points, mana, mana regeneration, arise chance |
+| Perception | crit chance, crit damage, loot |
+
+The army starts with 5 slots; Intelligence is the only way to grow it (plus
+the Gravecaller set).
 - Minimap: camp, gates (also on the edge when far away; white outline =
   cleared), elites, champions and your army.
 
@@ -79,8 +103,10 @@ Milestone 5 of 6. Done so far:
 4. Title screen, 3 save slots, New World with skin editor (6 hairstyles,
    colour palettes, aura colour tints the army), Load Game, autosave, pause
    menu, settings (graphics, volume, button size, swap sides), sound effects
-5. Six zones with their own look, 18 enemy types, elites and champions, six
-   gates with arena bosses and rank ups, minimap
+5. Six big zones with their own look and steep difficulty steps, 18 enemy
+   types, elites and champions, six gates with arena bosses and rank ups,
+   24 outposts with respawn and fast travel, arise chance with 3 tries,
+   army size from Intelligence, minimap
 
 Still to come: PWA setup,
 automatic graphics preset and performance check (6). Hosting and install

@@ -116,7 +116,10 @@ export class Army {
 
   // ---- roster ---------------------------------------------------------------
   maxDeployed() {
-    return CONFIG.shadows.baseSlots + CONFIG.shadows.slotsPerRank * this.game.rankIndex + this.game.player.armySlots;
+    // Intelligence decides how big the army can be
+    const P = this.game.player, S = CONFIG.shadows;
+    const n = S.baseSlots + Math.floor(P.stats.int * CONFIG.progression.stats.int.slots) + P.armySlots;
+    return Math.min(S.maxSlots, n);
   }
 
   totalCount() {
@@ -139,8 +142,8 @@ export class Army {
     const zone = CONFIG.world.zones[u.zone] || CONFIG.world.zones[0];
     const tier = S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus);
     // shadows are as strong as the zone they were raised in
-    const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * zone.hp;
-    const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * zone.dmg;
+    const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * zone.power;
+    const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * zone.power;
     u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * (1 + (u.level - 1) * S.hpPerLevel) * (1 + this.game.player.armyHp));
     u.dmg = baseDmg * S.damageFactor * role.damage * tier * (1 + (u.level - 1) * S.damagePerLevel);
     u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
@@ -405,9 +408,7 @@ export class Army {
 
   // ---- used by the enemies ---------------------------------------------------
   targetable(u) {
-    if (!u || !u.alive || u.squad < 0 || u.riseT > 0) return false;
-    const cr = this.game.world.campRadius;
-    return u.x * u.x + u.z * u.z > cr * cr;
+    return !!u && u.alive && u.squad >= 0 && u.riseT <= 0 && !u.safe;
   }
 
   // Most attractive shadow for an enemy at (x, z): close and threatening
@@ -487,7 +488,6 @@ export class Army {
     const game = this.game, P = game.player, E = game.enemies, fx = game.effects, world = game.world;
     const S = CONFIG.shadows, roles = S.roles;
     const D = this.deployed;
-    const camp2 = world.campRadius * world.campRadius;
     const tele2 = S.teleportDist * S.teleportDist;
     const variance = CONFIG.combat.damageVariance;
     if (this.buffT > 0) this.buffT -= dt;
@@ -533,7 +533,8 @@ export class Army {
         const fxd = u.x - P.x, fzd = u.z - P.z;
         if (fxd * fxd + fzd * fzd > tele2) this.placeAtHome(u, true);
       }
-      if (u.hp < u.maxHp && u.x * u.x + u.z * u.z < camp2) {
+      u.safe = game.gates.active < 0 && world.safeIndexAt(u.x, u.z) >= 0;
+      if (u.hp < u.maxHp && u.safe) {
         u.hp = Math.min(u.maxHp, u.hp + u.maxHp * S.campRegen * dt);
       }
 

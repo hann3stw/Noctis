@@ -16,7 +16,7 @@ const PAUSE = 0, WINDUP = 1, CHARGE = 2;
 
 // arenas lie far outside the world, one per gate
 export function arenaCenter(i) {
-  return { x: 2400 + i * 220, z: 2400 };
+  return { x: 4200 + i * 220, z: 4200 };
 }
 
 function portalMesh(color, w, h) {
@@ -194,7 +194,7 @@ export class Gates {
     const zone = CONFIG.world.zones[gi];
     for (let k = 0; k < G.rewardItems; k++) {
       const a = (k / G.rewardItems) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.level, P.drop + 1.5, P.known, G.rewardMinRarity));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.level, P.drop + 1.5, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -204,13 +204,18 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
+    const ess = 10 * (gi + 1);
+    P.essence += ess;
+    game.hud.toast(t('toast.essence', { n: ess }));
     if (!game.defeatedGates.includes(zone.id)) {
       game.defeatedGates.push(zone.id);
       const before = game.rankIndex;
       game.rankIndex = Math.min(RANKS.length - 1, game.defeatedGates.length);
       if (game.rankIndex > before) {
-        game.army.rebuild();
-        game.hud.banner(t('toast.rankUp', { rank: RANKS[game.rankIndex] }), t('toast.rankUpSub', { n: CONFIG.shadows.slotsPerRank }));
+        // a new rank: more stat points and a legendary item
+        P.points += CONFIG.progression.rankPoints;
+        game.loot.drop(x, z + 3, rollLoot(zone.level + 2, 0, P.known, 3, true));
+        game.hud.banner(t('toast.rankUp', { rank: RANKS[game.rankIndex] }), t('toast.rankUpSub', { n: CONFIG.progression.rankPoints }));
       } else {
         game.hud.banner(t('toast.gateCleared'), t('enemy.' + zone.boss));
       }
