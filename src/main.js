@@ -12,6 +12,9 @@ import './styles/world.css';
 import './styles/premium.css';
 import { App } from './app.js';
 import { t } from './strings.js';
+import { blockZoom } from './core/nozoom.js';
+
+blockZoom();
 
 const params = new URLSearchParams(location.search);
 const debug = import.meta.env.DEV || params.has('debug');

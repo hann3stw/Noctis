@@ -961,3 +961,16 @@ body {
   filter: brightness(1.3);
   transform: scale(0.95);
 }
+
+/* iOS zooms into text fields with a font below 16 px and does not zoom back */
+input,
+textarea,
+select {
+  font-size: max(16px, calc(var(--u) * 3.4)) !important;
+}
+/* taps on buttons never start a browser gesture (double-tap zoom) */
+button,
+.btn,
+[data-act] {
+  touch-action: manipulation;
+}
