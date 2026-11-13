@@ -94,6 +94,13 @@ export const CONFIG = {
     chestMinRarity: 1, // at least rare
   },
 
+  // Global difficulty: every enemy (bosses too) gets this much more health
+  // and damage. Turn these up or down to make the whole game harder or easier.
+  difficulty: {
+    enemyHp: 1.5,
+    enemyDamage: 1.75,
+  },
+
   camera: {
     fov: 38,
     height: 24,
@@ -135,14 +142,18 @@ export const CONFIG = {
   progression: {
     // Every level makes the hunter x levelGrowth stronger (health and damage):
     // 8 levels per zone = x10, the same step as the enemies of the next rank.
-    levelGrowth: 1.334,
+    levelGrowth: 1.25, // x6 over the 8 levels of a zone: gear, stats and the army must close the gap to x10
     // XP for the next level = xpBase * xpGrowth ^ (level - 1). Enemies one rank
     // higher give 10x the XP, so fighting above your rank levels you fast.
     xpBase: 120,
     xpGrowth: 1.334,
     maxLevel: 60,
     pointsPerLevel: 3,
+    // The rank comes from the level: reaching the level of the next zone makes
+    // you that rank (D at 9, C at 17 ...). Every new rank gives rankPoints.
+    rankLevels: [1, 9, 17, 25, 33, 41],
     rankPoints: [0, 10, 12, 15, 18, 20], // stat points for reaching rank D, C, B, A, S
+    armyKillXp: 0.5, // share of the XP you get when one of your shadows lands the kill
     // What one stat point does. The stats decide the play style:
     //   Strength      hard hitting hunter
     //   Agility       fast, quick reloads and dodges
@@ -294,8 +305,12 @@ export const CONFIG = {
   gates: {
     enterRange: 4, // the Enter button appears within this distance
     arenaRadius: 26,
-    rewardItems: 3, // loot of a gate boss
+    // Gates are about loot and strong shadows (the rank comes from the level):
+    rewardItems: 4, // loot of a gate boss
     rewardMinRarity: 2, // at least epic
+    rewardLuck: 2.5, // higher = more legendaries
+    eliteAdds: true, // the boss's helpers are elites (elite shadows)
+    ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
     exitRange: 3,
   },
 

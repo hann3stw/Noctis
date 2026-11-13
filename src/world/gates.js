@@ -194,7 +194,7 @@ export class Gates {
     const zone = CONFIG.world.zones[gi];
     for (let k = 0; k < G.rewardItems; k++) {
       const a = (k / G.rewardItems) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.level, P.drop + 1.5, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(zone.level, P.drop + G.rewardLuck, P.known, G.rewardMinRarity, k < G.rewardItems - 1));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -207,21 +207,8 @@ export class Gates {
     const ess = 10 * (gi + 1);
     P.essence += ess;
     game.hud.toast(t('toast.essence', { n: ess }));
-    if (!game.defeatedGates.includes(zone.id)) {
-      game.defeatedGates.push(zone.id);
-      const before = game.rankIndex;
-      game.rankIndex = Math.min(RANKS.length - 1, game.defeatedGates.length);
-      if (game.rankIndex > before) {
-        // a new rank: lots of stat points
-        const pts = CONFIG.progression.rankPoints[game.rankIndex] || 0;
-        P.points += pts;
-        game.hud.banner(t('toast.rankUp', { rank: RANKS[game.rankIndex] }), t('toast.rankUpSub', { n: pts }));
-      } else {
-        game.hud.banner(t('toast.gateCleared'), t('enemy.' + zone.boss));
-      }
-    } else {
-      game.hud.banner(t('toast.gateCleared'), t('enemy.' + zone.boss));
-    }
+    if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
+    game.hud.banner(t('toast.gateCleared'), t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
     this.exitOpen = true;
     this.exit.visible = true;
     game.effects.burst(x, 2, z, 60, zone.gateColor, 10, 0.3, 1.2);

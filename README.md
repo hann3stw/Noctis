@@ -102,8 +102,13 @@ HTTPS (or localhost) for offline mode and installing.
   (D), Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera
   (S). Every rank multiplies enemy health, damage and XP by 10: enemies two
   ranks above you kill you with one hit, but they also give 10x the XP.
-- The hunter grows x1.334 per level (health and damage), which is x10 over the
-  8 levels of a zone. Near the end of a rank you are far too strong for it.
+- The hunter grows x1.25 per level (health and damage), x6 over the 8 levels
+  of a zone. The rest of the step to the next zone must come from better gear,
+  stat points and the army. A global difficulty setting (enemy health x1.5,
+  damage x1.75) sits in `src/config.js` -> `difficulty`.
+- The rank comes from the level: rank D at level 9, C at 17, B at 25, A at 33,
+  S at 41. Every new rank gives many stat points (10, 12, 15, 18, 20).
+- Kills of your shadows give you half the XP.
 - Every zone has three enemy types (melee, ranged, charger). Elites (gold
   ring) and champions (red ring, with two escorts) are much stronger and always
   drop loot. Their shadows get an ability: tanks taunt, melee shadows cleave,
@@ -114,9 +119,9 @@ HTTPS (or localhost) for offline mode and installing.
   your respawn point after dying, and you can travel between all captured
   outposts.
 - One gate per zone leads into an arena with a boss (own attack patterns,
-  telegraphed with red circles). The first win per gate raises the rank
-  (E -> S) and gives many stat points (10, 12, 15, 18, 20). Gates can be
-  repeated for loot (3 items, at least epic, plus essence).
+  telegraphed with red circles). Gates are for loot and strong shadows: 4
+  items (at least epic, often legendary) plus essence, elite helpers, and
+  souls inside a gate are easier to raise (+20 %). Gates can be repeated.
 
 ## Shadow army
 

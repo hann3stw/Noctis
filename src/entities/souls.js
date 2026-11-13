@@ -16,6 +16,7 @@ export class Souls {
     this.zone = new Uint8Array(MAX_SOULS);
     this.level = new Uint8Array(MAX_SOULS); // level of the enemy
     this.tries = new Uint8Array(MAX_SOULS); // arise tries left
+    this.gate = new Uint8Array(MAX_SOULS); // 1 = fell inside a gate (easier to raise)
     this.phase = new Float32Array(MAX_SOULS);
     this.next = 0;
     this.time = 0;
@@ -39,12 +40,13 @@ export class Souls {
     this.mesh.material.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.45);
   }
 
-  spawn(x, z, type, tier, zone = 0, level = 1) {
+  spawn(x, z, type, tier, zone = 0, level = 1, gate = false) {
     const i = this.next;
     this.next = (this.next + 1) % MAX_SOULS;
     this.life[i] = CONFIG.souls.duration + tier * CONFIG.souls.tierDuration;
     this.zone[i] = zone;
     this.level[i] = level;
+    this.gate[i] = gate ? 1 : 0;
     this.tries[i] = CONFIG.arise.tries;
     this.x[i] = x;
     this.z[i] = z;

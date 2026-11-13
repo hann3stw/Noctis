@@ -239,6 +239,7 @@ export class Player {
     this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
     play('levelup');
     this.game.hud.toast(t('toast.levelUp', { level: this.level, points: gained }));
+    this.game.checkRank();
   }
 
   spendPoint(stat) {

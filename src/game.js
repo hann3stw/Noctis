@@ -16,7 +16,7 @@ import { Projectiles } from './combat/projectiles.js';
 import { Zones } from './combat/zones.js';
 import { EnemyShots } from './combat/enemyShots.js';
 import { Hazards } from './combat/hazards.js';
-import { Gates } from './world/gates.js';
+import { Gates, RANKS } from './world/gates.js';
 import { Minimap } from './ui/minimap.js';
 import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
@@ -63,7 +63,7 @@ export class Game {
     this.kills = 0;
     this.zoneId = 'meadow';
     this.zoneRank = 'E';
-    this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S
+    this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S (from the level)
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
     this.soulNear = -1; // soul in reach of the Arise button
     this.ariseCost = 0;
@@ -100,6 +100,7 @@ export class Game {
 
     if (save) {
       this.player.restore(save.player);
+      this.rankIndex = this.rankForLevel(this.player.level);
       this.army.restore(save.army);
       this.kills = save.kills || 0;
       setNextItemId(Math.max(save.nextItemId || 1, getNextItemId()));
@@ -169,6 +170,28 @@ export class Game {
     const d = this.player.serialize();
     if (this.gates.active >= 0) { d.x = this.gates.returnX; d.z = this.gates.returnZ; }
     return d;
+  }
+
+  // rank that belongs to the player's level
+  rankForLevel(level) {
+    const L = CONFIG.progression.rankLevels;
+    let r = 0;
+    for (let i = 0; i < L.length; i++) if (level >= L[i]) r = i;
+    return r;
+  }
+
+  // Called after a level up: a new rank gives lots of stat points.
+  checkRank() {
+    const P = this.player, G = CONFIG.progression;
+    const r = this.rankForLevel(P.level);
+    if (r <= this.rankIndex) return;
+    let pts = 0;
+    for (let k = this.rankIndex + 1; k <= r; k++) pts += G.rankPoints[k] || 0;
+    this.rankIndex = r;
+    P.points += pts;
+    this.hud.banner(t('toast.rankUp', { rank: RANKS[r] }), t('toast.rankUpSub', { n: pts }));
+    this.effects.ring(P.x, P.z, 0.5, 8, 0xffd24a, 0.8);
+    this.save();
   }
 
   hitStop(t) {
@@ -482,7 +505,8 @@ export class Game {
     const A = CONFIG.arise, souls = this.souls, P = this.player;
     const over = souls.level[i] - P.level;
     if (over < 0) return 1; // weaker than you: always rises
-    const c = A.chance[souls.tier[i]] * Math.pow(A.levelFalloff, over) + P.stats.int * CONFIG.progression.stats.int.arise;
+    const c = A.chance[souls.tier[i]] * Math.pow(A.levelFalloff, over) + P.stats.int * CONFIG.progression.stats.int.arise
+      + (souls.gate[i] ? CONFIG.gates.ariseBonus : 0);
     return Math.max(A.minChance, Math.min(1, c));
   }
 
@@ -535,9 +559,10 @@ export class Game {
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
     const level = CONFIG.world.zones[zi].level + CONFIG.arise.tierLevel[tier];
-    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level);
+    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0);
     this.army.grantXp(src, xp);
-    this.player.addXp(xp);
+    // kills of the army count only partly for the hunter
+    this.player.addXp(src < 0 ? xp : xp * CONFIG.progression.armyKillXp);
     if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
     else this.loot.enemyDrop(E.x[i], E.z[i], CONFIG.world.zones[zi].level, tier);
   }

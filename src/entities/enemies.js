@@ -204,7 +204,7 @@ export class Enemies {
       const adds = [];
       const addType = CONFIG.enemies.types[zone.boss].adds;
       for (let k = 0; k < maxAdds; k++) {
-        const i = this.newEnemy(addType, p, 0, gi, rng);
+        const i = this.newEnemy(addType, p, CONFIG.gates.eliteAdds ? 1 : 0, gi, rng);
         if (i < 0) break;
         this.arena[i] = gi + 1;
         this.alive[i] = 0;
@@ -232,9 +232,10 @@ export class Enemies {
     this.tx[i] = x;
     this.tz[i] = z;
     this.yaw[i] = Math.random() * 6.28;
-    this.maxHp[i] = Math.round(def.hp * zm.hp * T.hp);
+    const D = CONFIG.difficulty;
+    this.maxHp[i] = Math.round(def.hp * zm.hp * T.hp * D.enemyHp);
     this.hp[i] = this.maxHp[i];
-    this.dmg[i] = def.damage * zm.dmg * T.dmg;
+    this.dmg[i] = def.damage * zm.dmg * T.dmg * D.enemyDamage;
     this.xpv[i] = Math.round(def.xp * zm.xp * T.xp);
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];
