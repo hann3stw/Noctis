@@ -145,7 +145,7 @@
 .fps {
   position: absolute;
   right: calc(var(--sr) + var(--u) * 3);
-  top: calc(var(--st) + var(--u) * 3);
+  top: calc(var(--st) + var(--u) * 14);
   font-size: calc(var(--u) * 2.8);
   opacity: 0.7;
   font-variant-numeric: tabular-nums;

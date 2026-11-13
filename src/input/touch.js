@@ -63,9 +63,10 @@ export function initTouch(els) {
     }
     if (e.pointerId === moveId) moveTo(e.clientX, e.clientY);
   });
-  window.addEventListener('pointermove', (e) => {
+  const onWinMove = (e) => {
     if (e.pointerType === 'mouse') { input.mouseX = e.clientX; input.mouseY = e.clientY; }
-  });
+  };
+  window.addEventListener('pointermove', onWinMove);
 
   function layerUp(e) {
     if (e.pointerType === 'mouse') {
@@ -166,9 +167,15 @@ export function initTouch(els) {
   btnDodge.addEventListener('pointercancel', release);
   btnDodge.addEventListener('pointerleave', release);
 
-  window.addEventListener('contextmenu', (e) => e.preventDefault());
-  window.addEventListener('blur', () => {
+  const onBlur = () => {
     if (moveId !== -1) endMove();
     for (const c of cancels) c();
-  });
+  };
+  window.addEventListener('blur', onBlur);
+
+  // removes the listeners on the window when the world is left
+  return () => {
+    window.removeEventListener('pointermove', onWinMove);
+    window.removeEventListener('blur', onBlur);
+  };
 }

@@ -32,7 +32,11 @@ export class Hud {
         <div class="zone"><b></b><small></small></div>
         <div class="fps"></div>
         <div class="toast"></div>
-        <div id="btn-menu" class="btn pill">${t('hud.menu')}<i></i></div>
+        <div class="top-right">
+          <div class="saving">${t('hud.saving')}</div>
+          <div id="btn-menu" class="btn pill">${t('hud.menu')}<i></i></div>
+          <div id="btn-pause" class="btn pill" aria-label="${t('hud.pause')}"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg></div>
+        </div>
         <div class="squads">${[0, 1, 2].map((k) => `<div class="squad" data-k="${k}"><div class="sq-revive btn"></div><div class="sq-chip btn"><b>${t('squad.' + k)}</b><span></span><small></small></div></div>`).join('')}</div>
         <div id="joy"><div class="knob"></div></div>
         <div class="actions">
@@ -48,7 +52,6 @@ export class Hud {
         </div>
         <div class="death"><b>${t('hud.died')}</b><small>${t('hud.respawning')}</small></div>
       </div>
-      <div id="rotate"><div class="phone"></div><b>${t('rotate.title')}</b><small>${t('rotate.body')}</small></div>
     `;
     const $ = (s) => root.querySelector(s);
     this.skillEls = ['#btn-skill0', '#btn-skill1', '#btn-ult'].map((sel) => {
@@ -84,7 +87,8 @@ export class Hud {
     this.ohHp = $('#overhead .oh-hp i');
     this.vignette = $('#vignette');
     this.death = $('.death');
-    this.rotate = $('#rotate');
+    this.savingEl = $('.saving');
+    this.savingT = 0;
     this.mpFill = $('.bar.mp i');
     this.mpText = $('.bar.mp span');
     this.xpFill = $('.xp .bar i');
@@ -107,6 +111,8 @@ export class Hud {
     });
     this.btnArise.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.arise = true; });
     $('#btn-menu').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.menu.open(); });
+    $('#btn-pause').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openPause(); });
+    this.hud.classList.toggle('swap', input.swap);
 
     // cached values
     this.vHp = -1;
@@ -131,8 +137,15 @@ export class Hud {
     this.showFps = false;
   }
 
-  setSwap(swap) {
-    this.hud.classList.toggle('swap', swap);
+  setFps(on) {
+    this.showFps = !!on;
+    this.fpsEl.style.display = on ? '' : 'none';
+  }
+
+  // small "Saving…" label in the corner
+  showSaving() {
+    this.savingEl.classList.add('on');
+    this.savingT = 1.4;
   }
 
   toast(text) {
@@ -249,6 +262,10 @@ export class Hud {
     if (this.toastT > 0) {
       this.toastT -= dt;
       if (this.toastT <= 0) this.toastEl.classList.remove('on');
+    }
+    if (this.savingT > 0) {
+      this.savingT -= dt;
+      if (this.savingT <= 0) this.savingEl.classList.remove('on');
     }
   }
 

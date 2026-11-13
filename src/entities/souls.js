@@ -17,7 +17,7 @@ export class Souls {
     this.next = 0;
     this.time = 0;
 
-    const color = new THREE.Color(game.appearance.aura).lerp(new THREE.Color(0xffffff), 0.45);
+    const color = new THREE.Color();
     this.mesh = new THREE.InstancedMesh(
       new THREE.OctahedronGeometry(0.34, 0),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
@@ -29,6 +29,11 @@ export class Souls {
     const a = this.mesh.instanceMatrix.array;
     for (let i = 0; i < MAX_SOULS; i++) a[i * 16 + 15] = 1;
     game.scene.add(this.mesh);
+    this.setAura(game.appearance.aura);
+  }
+
+  setAura(hex) {
+    this.mesh.material.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.45);
   }
 
   spawn(x, z, type, tier) {

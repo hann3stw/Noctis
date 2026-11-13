@@ -2,6 +2,7 @@
 // near the player are simulated and drawn; one InstancedMesh per enemy type.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { gfx } from '../core/settings.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildEnemyGeometry } from '../render/models/enemies.js';
@@ -211,7 +212,7 @@ export class Enemies {
     const army = game.army;
     const playerOk = !P.dead && !P.inCamp;
     const activeR2 = S.activeRadius * S.activeRadius;
-    const renderR2 = S.renderRadius * S.renderRadius;
+    const renderR2 = gfx.renderRadius * gfx.renderRadius;
     const campR = world.campRadius + 1.2;
     const leash2 = E.leash * E.leash;
     const respawnD2 = S.respawnMinPlayerDist * S.respawnMinPlayerDist;

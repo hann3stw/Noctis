@@ -218,7 +218,6 @@ export const CONFIG = {
   sim: {
     maxEnemies: 1024,
     activeRadius: 55, // enemies further away are not simulated
-    renderRadius: 36, // enemies further away are not drawn
     respawnTime: 40,
     respawnMinPlayerDist: 45, // packs only respawn when the player is away
   },
@@ -228,11 +227,33 @@ export const CONFIG = {
     aimDeadzone: 0.28, // attack stick must be dragged this far to aim
   },
 
+  // pixelRatio = upper limit of the render resolution, particles = share of
+  // effect particles, decorRadius = view distance of plants and rocks,
+  // renderRadius = enemies and shadows further away are not drawn
   graphics: {
-    maxPixelRatio: 1.5,
+    presets: {
+      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30 },
+      medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34 },
+      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38 },
+    },
   },
 
-  // Default look until the skin editor exists (milestone 4).
+  save: {
+    autosaveInterval: 60, // seconds of play between two autosaves
+    nameMaxLength: 18,
+  },
+
+  // Fixed colour palettes of the skin editor (tap to pick).
+  palettes: {
+    skin: [0xf6d5b8, 0xe2b48c, 0xc99668, 0xa8744a, 0x7c5232, 0x553620, 0xd8c6e8, 0x9fb8c8],
+    hair: [0x1b1b26, 0x4a3020, 0x8a5a2b, 0xd8b058, 0xe8e0d0, 0xb03030, 0x3a5ad8, 0x7a3ad8, 0x2aa878, 0xe070b0],
+    eyes: [0x9f6bff, 0x4aa3ff, 0x30e8ff, 0x50ff90, 0xffd24a, 0xff5050, 0xff60d0, 0xffffff],
+    clothes: [0x23233a, 0x101014, 0x3a2a5a, 0x1e3a5a, 0x1e4a3a, 0x5a2020, 0x6a5a40, 0x8a8a9a, 0xd8d8e0, 0x4a1e4a],
+    cape: [0x34205c, 0x101014, 0x5a1020, 0x1e2e6a, 0x1e5a3a, 0xa87a20, 0xe0e0e8, 0x6a2a8a, 0x2a5a8a, 0x8a2a5a],
+    aura: [0x8a4dff, 0x4a7bff, 0x30d0ff, 0x40e080, 0xffc030, 0xff4050, 0xff50c0, 0xe8e8ff],
+  },
+  hairStyles: 6,
+
   defaultAppearance: {
     skin: 0xe2b48c,
     hair: 0x1b1b26,

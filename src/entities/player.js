@@ -9,6 +9,7 @@ import {
   makeWeapon, weaponDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS,
 } from '../core/items.js';
 import { t } from '../strings.js';
+import { play } from '../core/sfx.js';
 
 const ANIM = { moving: false, attack: 0, dodging: false, dead: false };
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
@@ -92,6 +93,55 @@ export class Player {
     return this.equip.weapon.type;
   }
 
+  // ---- saving ---------------------------------------------------------------
+  serialize() {
+    return {
+      x: this.x, z: this.z, hp: this.hp, mana: this.mana, ult: this.ult,
+      level: this.level, xp: this.xp, points: this.points, stats: { ...this.stats }, essence: this.essence,
+      inventory: this.inventory.map((it) => ({ ...it })),
+      equip: Object.fromEntries(Object.entries(this.equip).map(([k, v]) => [k, v ? { ...v } : null])),
+      known: [...this.known], slots: [...this.slots],
+    };
+  }
+
+  restore(d) {
+    if (!d) return;
+    this.level = d.level || 1;
+    this.xp = d.xp || 0;
+    this.points = d.points || 0;
+    for (const k of STAT_KEYS) this.stats[k] = (d.stats && d.stats[k]) || 0;
+    this.essence = d.essence || 0;
+    this.inventory = (d.inventory || []).filter((it) => it && (it.kind !== 'weapon' || CONFIG.weapons[it.type]));
+    for (const slot in this.equip) {
+      const it = d.equip && d.equip[slot];
+      if (it && (it.kind !== 'weapon' || CONFIG.weapons[it.type])) this.equip[slot] = it;
+      else if (slot !== 'weapon') this.equip[slot] = null;
+    }
+    const valid = (id) => CONFIG.skills[id] || CONFIG.ultimates[id];
+    if (d.known) this.known = d.known.filter(valid);
+    if (d.slots) this.slots = d.slots.map((id) => (id && valid(id) ? id : null));
+    this.ult = d.ult || 0;
+    this.recalc();
+    // the camp is safe: start there when the saved spot is unknown
+    if (typeof d.x === 'number' && typeof d.z === 'number') { this.x = d.x; this.z = d.z; }
+    this.hp = Math.min(this.maxHp, d.hp > 0 ? d.hp : this.maxHp);
+    this.mana = Math.min(this.maxMana, d.mana >= 0 ? d.mana : this.maxMana);
+  }
+
+  // Swaps the character model (skin editor in the camp).
+  setAppearance(appearance) {
+    const old = this.model.root;
+    this.game.scene.remove(old);
+    old.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
+    this.model = createPlayerModel(appearance);
+    this.model.setEquipment(this.equip);
+    this.model.root.rotation.y = old.rotation.y;
+    this.game.scene.add(this.model.root);
+  }
+
   // ---- derived values -------------------------------------------------------
   recalc() {
     const c = CONFIG.player, G = CONFIG.progression, S = G.stats, st = this.stats;
@@ -160,6 +210,7 @@ export class Player {
     this.recalc();
     if (!this.dead) { this.hp = this.maxHp; this.mana = this.maxMana; }
     this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
+    play('levelup');
     this.game.hud.toast(t('toast.levelUp', { level: this.level, points: gained }));
   }
 
@@ -259,6 +310,7 @@ export class Player {
     d = Math.max(1, Math.round(d));
     this.hp -= d;
     this.hurtFlash = 1;
+    play('hurt');
     fx.number(this.x, 2.6, this.z, String(d), 'hurt');
     fx.burst(this.x, 1.2, this.z, 5, 0xff4a5a, 4, 0.14, 0.35);
     if (this.hp <= 0) {
@@ -267,6 +319,7 @@ export class Player {
       this.shield = 0;
       this.eclipseT = 0;
       this.respawnT = CONFIG.player.respawnDelay;
+      play('death');
       fx.burst(this.x, 1.2, this.z, 24, 0x8a4dff, 6, 0.22, 0.8);
     }
   }
@@ -435,6 +488,7 @@ export class Player {
     if (this.eclipseT <= 0) this.charges--;
     this.atkCd = w.cooldown;
     this.attackAnim = 1;
+    play('swing');
     fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
   }
 
@@ -460,6 +514,7 @@ export class Player {
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
     this.attackAnim = 1;
+    play(slot === 2 ? 'ult' : 'skill');
     castSkill(this.game, id, this.pendingX, this.pendingZ, this.pendingP);
     if (slot === 2) this.ult = 0; // the ultimate does not charge itself
   }

@@ -2,6 +2,7 @@
 // floating damage numbers. Nothing here allocates while the game is running.
 import * as THREE from 'three';
 import { sectorGeometry } from './geo.js';
+import { gfx } from '../core/settings.js';
 
 const MAX_PARTICLES = 320;
 const MAX_BLOBS = 256;
@@ -138,6 +139,7 @@ export class Effects {
 
   // ---- particles ----------------------------------------------------------
   burst(x, y, z, count, color, speed = 5, size = 0.18, life = 0.5) {
+    count = Math.max(1, Math.round(count * gfx.particles));
     _c.setHex(color);
     const d = this.pData;
     for (let i = 0; i < count; i++) {

@@ -57,6 +57,49 @@ function buildWeapon(type, glow) {
   return g;
 }
 
+// ---- hairstyles (head centre at the origin, head is 0.5 units wide) -----------
+// 0 short, 1 spiky, 2 long, 3 ponytail, 4 mohawk, 5 swept fringe
+function buildHair(style, m) {
+  const g = new THREE.Group();
+  const add = (w, h, d, x, y, z, rx = 0, rz = 0) => {
+    const b = mesh(w, h, d, m, x, y, z);
+    b.rotation.set(rx, 0, rz);
+    g.add(b);
+  };
+  if (style === 4) {
+    // mohawk: shaved sides, one tall strip
+    add(0.14, 0.26, 0.5, 0, 0.36, -0.02);
+    add(0.14, 0.18, 0.18, 0, 0.3, -0.3);
+    return g;
+  }
+  add(0.56, 0.2, 0.56, 0, 0.28, -0.02); // top
+  if (style === 0) {
+    add(0.56, 0.4, 0.16, 0, 0.05, -0.24);
+  } else if (style === 1) {
+    add(0.56, 0.34, 0.16, 0, 0.1, -0.24);
+    for (let i = 0; i < 5; i++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.32, 4), m);
+      spike.position.set(-0.2 + i * 0.1, 0.48, -0.05 + (i % 2) * 0.12);
+      spike.rotation.z = (i - 2) * -0.25;
+      g.add(spike);
+    }
+  } else if (style === 2) {
+    add(0.58, 0.9, 0.18, 0, -0.18, -0.24);
+    add(0.1, 0.62, 0.42, 0.29, -0.04, -0.04);
+    add(0.1, 0.62, 0.42, -0.29, -0.04, -0.04);
+  } else if (style === 3) {
+    add(0.56, 0.36, 0.16, 0, 0.08, -0.24);
+    add(0.14, 0.14, 0.14, 0, 0.12, -0.36);
+    add(0.13, 0.6, 0.13, 0, -0.2, -0.42, 0.25);
+  } else {
+    // swept fringe over one eye
+    add(0.56, 0.4, 0.16, 0, 0.05, -0.24);
+    add(0.32, 0.22, 0.1, 0.12, 0.13, 0.26, 0, 0.35);
+    add(0.1, 0.4, 0.4, 0.29, 0.06, -0.02);
+  }
+  return g;
+}
+
 function dispose(group) {
   group.traverse((o) => {
     if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
@@ -83,9 +126,7 @@ export function createPlayerModel(appearance) {
   const head = new THREE.Group();
   head.position.set(0, 1.88, 0);
   head.add(mesh(0.5, 0.5, 0.5, mats.skin, 0, 0, 0));
-  const hair = new THREE.Group();
-  hair.add(mesh(0.56, 0.2, 0.56, mats.hair, 0, 0.28, -0.02));
-  hair.add(mesh(0.56, 0.4, 0.16, mats.hair, 0, 0.05, -0.24));
+  const hair = buildHair(appearance.hairStyle || 0, mats.hair);
   head.add(hair);
   head.add(mesh(0.1, 0.07, 0.04, mats.eyes, 0.12, 0.02, 0.26));
   head.add(mesh(0.1, 0.07, 0.04, mats.eyes, -0.12, 0.02, 0.26));
@@ -108,6 +149,17 @@ export function createPlayerModel(appearance) {
   cape.add(mesh(0.7, 1.15, 0.05, mats.cape, 0, -0.57, 0));
   cape.visible = appearance.cape;
   body.add(cape);
+
+  // faint aura on the ground in the aura colour
+  const auraGeo = new THREE.RingGeometry(0.55, 0.85, 24);
+  auraGeo.rotateX(-Math.PI / 2);
+  const aura = new THREE.Mesh(
+    auraGeo,
+    new THREE.MeshBasicMaterial({ color: appearance.aura, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }),
+  );
+  aura.position.y = 0.06;
+  aura.renderOrder = 2;
+  root.add(aura);
 
   // ---- equipment: rebuilt whenever it changes ---------------------------------
   let gear = []; // { group, parent }
@@ -212,6 +264,7 @@ export function createPlayerModel(appearance) {
         armR.rotation.z *= 0.6;
         body.rotation.y *= 0.6;
       }
+      aura.material.opacity = st.dead ? 0 : 0.35 + Math.sin(walk * 0.3 + fall) * 0.1;
       const flutter = st.moving ? 0.55 + Math.sin(walk * 0.7) * 0.12 : 0.1;
       cape.rotation.x += (flutter - cape.rotation.x) * 0.2;
     },

@@ -11,7 +11,7 @@ import {
   upgradeCost, dismantleValue, itemPower, slotOf,
 } from '../core/items.js';
 
-const TABS = ['gear', 'stats', 'skills', 'army'];
+const TABS = ['gear', 'stats', 'skills', 'army', 'look'];
 
 const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="currentColor"/></svg>`;
 const ICONS = {
@@ -83,6 +83,12 @@ export class Menu {
     const P = this.game.player;
     const act = target.dataset.act;
     if (act === 'close') { this.close(); return; }
+    if (act === 'editor') {
+      if (this.locked) return;
+      this.close();
+      this.game.app.openEditorInCamp();
+      return;
+    }
     if (this.army.el.contains(target)) return; // handled by the army tab itself
     const item = this.selItem;
     if (act !== 'dismantle') this.confirmId = 0;
@@ -127,7 +133,8 @@ export class Menu {
       body.appendChild(this.army.el);
       this.army.render();
     } else {
-      body.innerHTML = this.tab === 'gear' ? this.gear() : this.tab === 'stats' ? this.stats() : this.skills();
+      const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look() };
+      body.innerHTML = views[this.tab]();
     }
     for (const [key, top] of scroll) {
       const l = this.el.querySelector(`[data-scroll="${key}"]`);
@@ -227,6 +234,13 @@ export class Menu {
         <div class="s-head"><b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: Math.floor(P.xp), need: P.xpNeed() })}</span>
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
+  }
+
+  // ---- appearance ---------------------------------------------------------------
+  look() {
+    return `<div class="look"><p>${t('look.text')}</p>
+      <button class="ap-btn big" data-act="editor"${this.locked ? ' disabled' : ''}>${t('look.open')}</button>
+      ${this.locked ? `<small>${t('menu.campOnly')}</small>` : ''}</div>`;
   }
 
   // ---- skills -----------------------------------------------------------------

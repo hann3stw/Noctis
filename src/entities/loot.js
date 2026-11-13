@@ -6,6 +6,7 @@ import { mulberry32, hashSeed } from '../core/rng.js';
 import { box, merge, flatMaterial } from '../render/geo.js';
 import { rollLoot, RARITY_COLORS } from '../core/items.js';
 import { t } from '../strings.js';
+import { play } from '../core/sfx.js';
 
 const MAX_PICKUPS = 32;
 const _c = new THREE.Color();
@@ -104,6 +105,7 @@ export class Loot {
       this.drop(this.cx[i] + Math.cos(a) * 1.6, this.cz[i] + Math.sin(a) * 1.6, rollLoot(this.cLevel[i], P.drop + 0.4, P.known));
     }
     this.game.effects.burst(this.cx[i], 0.8, this.cz[i], 24, 0xffd24a, 6, 0.2, 0.7);
+    play('chest');
   }
 
   update(dt) {
@@ -150,6 +152,7 @@ export class Loot {
       if (!P.dead && this.pAge[i] > 0.4 && dx * dx + dz * dz < range2) {
         if (P.addItem(item)) {
           game.effects.burst(this.px[i], 1, this.pz[i], 10, RARITY_COLORS[item.rarity], 4, 0.16, 0.5);
+          play('pickup');
           this.items[i] = null;
           continue;
         }

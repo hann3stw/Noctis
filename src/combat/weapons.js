@@ -1,6 +1,7 @@
 // Player damage: hit shapes shared by weapons and skills, and the basic attack
 // of every weapon type.
 import { CONFIG } from '../config.js';
+import { play } from '../core/sfx.js';
 
 const DEG = Math.PI / 180;
 
@@ -11,6 +12,7 @@ export function playerHit(game, i, base, kx, kz) {
   const crit = Math.random() < P.crit;
   if (crit) dmg *= C.critDamage;
   P.ult = Math.min(C.ultCharge.max, P.ult + C.ultCharge.perHit);
+  play(crit ? 'crit' : 'hit');
   game.enemies.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);
 }
 

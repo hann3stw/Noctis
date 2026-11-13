@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import { CONFIG } from './config.js';
 import { input, resetInput, clearEvents } from './input/input.js';
 import { initTouch } from './input/touch.js';
-import { initKeyboard } from './input/keyboard.js';
 import { FollowCamera } from './render/camera.js';
 import { Effects } from './render/effects.js';
 import { AimIndicator } from './render/aim.js';
@@ -20,26 +19,39 @@ import { Menu } from './ui/menu.js';
 import { skillDef } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
+import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
+import { setNextItemId, getNextItemId } from './core/items.js';
+import { play } from './core/sfx.js';
 
 const _v = new THREE.Vector3();
 
 export class Game {
-  constructor(canvas, uiRoot, opts) {
-    this.seed = opts.seed;
+  // opts: { slot, name, seed, appearance } for a new world, or { slot, save }
+  // to continue a saved one. slot -1 = test world that is never saved.
+  constructor(app, uiRoot, opts) {
+    const save = opts.save || null;
+    this.app = app;
+    this.uiRoot = uiRoot;
+    this.slot = opts.slot === undefined ? -1 : opts.slot;
+    this.name = save ? save.name : opts.name || '';
+    this.seed = save ? save.seed : opts.seed;
+    this.created = save ? save.created : Date.now();
+    this.playTime = save ? save.playTime || 0 : 0;
+    this.saveT = 0;
+    this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // gate bosses (milestone 5)
     this.input = input; // handy for debugging
-    this.canvas = canvas;
     this.running = false;
     this.paused = false;
     this.last = 0;
     this.kills = 0;
     this.zoneId = 'meadow';
     this.zoneRank = 'E';
-    this.rankIndex = 0; // player rank: 0 = E ... 5 = S (rises with gate bosses, milestone 5)
-    this.appearance = opts.appearance || CONFIG.defaultAppearance;
+    this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S
+    this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
     this.soulNear = -1; // soul in reach of the Arise button
     this.ariseCost = 0;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer = getRenderer();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0d0a16);
     this.scene.add(new THREE.HemisphereLight(0xb9c4ff, 0x2a2238, 1.5));
@@ -51,6 +63,7 @@ export class Game {
     this.hud = new Hud(uiRoot, this);
     this.effects = new Effects(this.scene, this.cam.camera, this.hud.els.fx);
     this.world = new World(this.scene, this.seed);
+    setNextItemId(save ? save.nextItemId || 1 : 1);
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
     this.army = new Army(this);
@@ -61,17 +74,29 @@ export class Game {
     this.menu = new Menu(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
-    initTouch(this.hud.els);
+    if (save) {
+      this.player.restore(save.player);
+      this.army.restore(save.army);
+      this.kills = save.kills || 0;
+      setNextItemId(Math.max(save.nextItemId || 1, getNextItemId()));
+    }
+    this.wasInCamp = true;
+
+    this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
-    initKeyboard();
-    this.hud.showFps = !!opts.showFps;
-    this.hud.fpsEl.style.display = opts.showFps ? '' : 'none';
+    this.hud.setFps(opts.showFps);
 
     this.resize = this.resize.bind(this);
     this.frame = this.frame.bind(this);
+    this.onHide = () => {
+      this.last = 0;
+      if (document.hidden) this.save();
+    };
+    this.onPageHide = () => this.save();
     window.addEventListener('resize', this.resize);
     window.addEventListener('orientationchange', this.resize);
-    document.addEventListener('visibilitychange', () => { this.last = 0; });
+    document.addEventListener('visibilitychange', this.onHide);
+    window.addEventListener('pagehide', this.onPageHide);
     this.resize();
 
     this.world.update(this.player.x, this.player.z, true);
@@ -80,12 +105,64 @@ export class Game {
 
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CONFIG.graphics.maxPixelRatio));
-    this.renderer.setSize(w, h, false);
+    sizeRenderer();
     this.cam.resize(w, h);
     this.effects.resize(w, h);
     // the rotate notice is shown by CSS; the game pauses while it is visible
-    this.portrait = getComputedStyle(this.hud.rotate).display !== 'none';
+    this.portrait = getComputedStyle(document.getElementById('rotate')).display !== 'none';
+  }
+
+  // ---- saving ---------------------------------------------------------------
+  serialize() {
+    return {
+      version: 1,
+      name: this.name,
+      seed: this.seed,
+      created: this.created,
+      updated: Date.now(),
+      playTime: Math.round(this.playTime),
+      rankIndex: this.rankIndex,
+      defeatedGates: [...this.defeatedGates],
+      kills: this.kills,
+      appearance: { ...this.appearance },
+      nextItemId: getNextItemId(),
+      player: this.player.serialize(),
+      army: this.army.serialize(),
+    };
+  }
+
+  // Writes the world into its slot. Returns a promise (true = saved).
+  save(manual = false) {
+    this.saveT = 0;
+    if (this.slot < 0 || !this.running) return Promise.resolve(false);
+    const data = this.serialize();
+    this.hud.showSaving();
+    return this.app.store(this.slot, data).then((ok) => {
+      if (manual) this.hud.toast(t(ok ? 'toast.saved' : 'toast.saveFailed'));
+      return ok;
+    });
+  }
+
+  // Leaves the world: stops the loop and frees everything it created.
+  destroy() {
+    this.running = false;
+    window.removeEventListener('resize', this.resize);
+    window.removeEventListener('orientationchange', this.resize);
+    document.removeEventListener('visibilitychange', this.onHide);
+    window.removeEventListener('pagehide', this.onPageHide);
+    this.touchCleanup();
+    disposeScene(this.scene);
+    this.uiRoot.innerHTML = '';
+    resetInput();
+  }
+
+  // New look from the skin editor in the camp.
+  setAppearance(appearance) {
+    this.appearance = { ...appearance };
+    this.player.setAppearance(this.appearance);
+    this.army.setAura(this.appearance.aura);
+    this.souls.setAura(this.appearance.aura);
+    this.projectiles.setAura(this.appearance.aura);
   }
 
   start() {
@@ -112,6 +189,11 @@ export class Game {
 
   update(dt) {
     const P = this.player;
+    this.playTime += dt;
+    this.saveT += dt;
+    if (this.saveT >= CONFIG.save.autosaveInterval) this.save();
+    if (P.inCamp && !this.wasInCamp) this.save(); // autosave when entering the camp
+    this.wasInCamp = P.inCamp;
     this.resolveMouse();
     this.effects.beginFrame();
     P.update(dt);
@@ -227,6 +309,7 @@ export class Game {
     if (!u) return;
     P.mana -= cost;
     souls.remove(i);
+    play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
     if (u.squad < 0) this.hud.toast(t('toast.toReserve', { name: army.name(u) }));
   }

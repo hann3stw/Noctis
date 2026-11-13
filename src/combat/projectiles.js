@@ -42,6 +42,10 @@ export class Projectiles {
     game.scene.add(this.mesh);
   }
 
+  setAura(hex) {
+    this.mesh.material.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.5);
+  }
+
   fire(x, z, target, speed, dmg, src) {
     const i = this.next;
     this.next = (this.next + 1) % MAX;

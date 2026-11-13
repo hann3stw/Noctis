@@ -2,6 +2,7 @@
 // decoration chunks (InstancedMesh, pooled) and simple circle colliders.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { gfx } from '../core/settings.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
 import { DECOR, FLOWER_COLORS } from '../render/models/props.js';
@@ -164,7 +165,7 @@ export class World {
     if (!force && !this.pending && pcx === this.lastCx && pcz === this.lastCz) return;
     this.lastCx = pcx;
     this.lastCz = pcz;
-    const R = CONFIG.world.decorLoadRadius;
+    const R = gfx.decorRadius;
     const span = Math.ceil(R / cs);
     let budget = force ? 999 : 2;
     this.pending = false;

@@ -2,16 +2,17 @@ import './styles/base.css';
 import './styles/hud.css';
 import './styles/army.css';
 import './styles/menu.css';
-import { Game } from './game.js';
-import { randomSeed } from './core/rng.js';
+import './styles/screens.css';
+import { App } from './app.js';
+import { t } from './strings.js';
 
 const params = new URLSearchParams(location.search);
 const debug = import.meta.env.DEV || params.has('debug');
 
-const game = new Game(document.getElementById('game'), document.getElementById('ui'), {
-  seed: params.has('seed') ? Number(params.get('seed')) >>> 0 : randomSeed(),
-  showFps: debug || params.has('fps'),
-});
-game.start();
+// "Please rotate your device" (shown by CSS on touch devices held upright)
+const rotate = document.getElementById('rotate');
+rotate.innerHTML = `<div class="phone"></div><b>${t('rotate.title')}</b><small>${t('rotate.body')}</small>`;
 
-if (debug) window.__noctis = game;
+const app = new App(debug);
+app.init(params);
+if (debug) window.__app = app;

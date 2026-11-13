@@ -15,9 +15,24 @@ function refresh() {
   input.keyZ = z;
 }
 
+let onEscape = null;
+export function setEscapeHandler(fn) {
+  onEscape = fn;
+}
+
+function typing(e) {
+  const tag = e.target && e.target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA';
+}
+
+// called once when the app starts
 export function initKeyboard() {
   window.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+    if (e.code === 'Escape') {
+      if (onEscape) onEscape();
+      return;
+    }
+    if (e.repeat || typing(e)) return;
     if (e.code === 'Space' || e.code === 'ShiftLeft') {
       input.dodge = true;
       e.preventDefault();

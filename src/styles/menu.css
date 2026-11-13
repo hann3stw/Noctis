@@ -30,9 +30,55 @@
 }
 
 /* ---- menu button ----------------------------------------------------------- */
-#btn-menu {
+.top-right {
+  position: absolute;
   right: calc(var(--sr) + var(--u) * 3);
-  top: calc(var(--st) + var(--u) * 9);
+  top: calc(var(--st) + var(--u) * 3);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.6);
+}
+.top-right .btn {
+  position: relative;
+}
+#btn-pause {
+  width: calc(var(--u) * 9 * var(--btn));
+  padding: 0;
+}
+#btn-pause svg {
+  width: 55%;
+  height: 55%;
+}
+.saving {
+  font-size: calc(var(--u) * 2.6);
+  color: #c9a8ff;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.saving.on {
+  opacity: 0.9;
+}
+.look {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 3);
+  text-align: center;
+}
+.look p {
+  max-width: 70%;
+  margin: 0;
+  opacity: 0.85;
+}
+.look small {
+  color: #ffb37a;
+}
+.ap-btn.big {
+  min-height: calc(var(--u) * 12);
+  padding: 0 calc(var(--u) * 8);
+  font-size: calc(var(--u) * 3.6);
 }
 #btn-menu i,
 .mn-tab i {

@@ -3,6 +3,7 @@
 // shadows belong to squad 0-2 (A, B, C), the reserve is squad -1.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
+import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
 import { t } from '../strings.js';
@@ -31,13 +32,7 @@ export class Army {
       total: 0, alive: 0, ready: 0, readyCost: 0, nextReady: 0,
     }));
 
-    // aura tint, applied per instance on top of the near-black model
-    const c = new THREE.Color(game.appearance.aura);
-    const m = Math.max(c.r, c.g, c.b, 0.001);
-    this.tr = 0.3 + (c.r / m) * 0.7;
-    this.tg = 0.3 + (c.g / m) * 0.7;
-    this.tb = 0.3 + (c.b / m) * 0.7;
-    this.auraHex = game.appearance.aura;
+    this.setAura(game.appearance.aura);
 
     this.types = [];
     for (const et of game.enemies.types) {
@@ -64,6 +59,58 @@ export class Army {
       game.scene.add(ring);
       this.holdMarks.push(ring);
     }
+  }
+
+  // aura tint, applied per instance on top of the near-black model
+  setAura(hex) {
+    const c = new THREE.Color(hex);
+    const m = Math.max(c.r, c.g, c.b, 0.001);
+    this.tr = 0.3 + (c.r / m) * 0.7;
+    this.tg = 0.3 + (c.g / m) * 0.7;
+    this.tb = 0.3 + (c.b / m) * 0.7;
+    this.auraHex = hex;
+  }
+
+  // ---- saving ---------------------------------------------------------------
+  serialize() {
+    const units = [];
+    for (const u of this.units) {
+      if (!u) continue;
+      units.push({
+        type: u.type, role: u.role, tier: u.tier, level: u.level, xp: u.xp, totalXp: u.totalXp,
+        stage: u.stage, squad: u.squad, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
+      });
+    }
+    return { units, squads: this.squads.map((s) => ({ behavior: s.behavior, holdX: s.holdX, holdZ: s.holdZ })) };
+  }
+
+  restore(data) {
+    if (!data) return;
+    (data.squads || []).forEach((s, k) => {
+      if (!this.squads[k]) return;
+      this.squads[k].behavior = s.behavior;
+      this.squads[k].holdX = s.holdX;
+      this.squads[k].holdZ = s.holdZ;
+    });
+    const P = this.game.player;
+    let slot = 0;
+    for (const d of data.units || []) {
+      if (slot >= MAX_UNITS || !CONFIG.enemies.types[d.type]) continue;
+      const u = {
+        slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier,
+        level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage, squad: d.squad,
+        alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
+        x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
+        target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0,
+        reviveT: d.reviveT || 0, riseT: 0, flash: 0, lunge: 0, phase: Math.random() * TAU, moving: false,
+      };
+      this.recalc(u);
+      if (u.alive && u.hp <= 0) u.hp = u.maxHp;
+      this.units[slot++] = u;
+    }
+    this.rebuild();
+    // deployed shadows appear in formation around their anchor
+    for (const u of this.deployed) if (u.alive) this.placeAtHome(u, false);
   }
 
   // ---- roster ---------------------------------------------------------------
@@ -511,7 +558,7 @@ export class Army {
     }
 
     // ---- keep shadows apart and out of obstacles, then draw
-    const renderR2 = CONFIG.sim.renderRadius * CONFIG.sim.renderRadius;
+    const renderR2 = gfx.renderRadius * gfx.renderRadius;
     for (let a = 0; a < D.length; a++) {
       const u = D[a];
       if (!u.alive) continue;
