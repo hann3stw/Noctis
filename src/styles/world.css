@@ -1,0 +1,130 @@
+/* Minimap, gate panel, boss health bar and the big banner (rank up). */
+
+.minimap {
+  position: absolute;
+  right: calc(var(--sr) + var(--u) * 3);
+  top: calc(var(--st) + var(--u) * 14);
+  width: calc(var(--u) * 27);
+  height: calc(var(--u) * 27);
+  border-radius: 50%;
+  border: calc(var(--u) * 0.5) solid rgba(180, 140, 255, 0.55);
+  box-shadow: 0 0 calc(var(--u) * 2) rgba(0, 0, 0, 0.6);
+  background: #0d0a16;
+  pointer-events: auto;
+  touch-action: none;
+}
+.fps {
+  top: calc(var(--st) + var(--u) * 43) !important;
+}
+
+/* ---- gate panel ------------------------------------------------------------- */
+.gate-panel {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--sb) + var(--u) * 36);
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 2) calc(var(--u) * 1.5) calc(var(--u) * 4);
+  background: var(--panel);
+  border: 1px solid var(--violet-light);
+  border-radius: calc(var(--u) * 2.5);
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(138, 77, 255, 0.4);
+  max-width: 70vw;
+}
+.gate-panel.on {
+  display: flex;
+}
+.gp-text {
+  min-width: 0;
+}
+.gp-text b,
+.gp-text small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gp-text b {
+  font-size: calc(var(--u) * 3.4);
+  color: var(--violet-light);
+}
+.gp-text small {
+  font-size: calc(var(--u) * 2.7);
+  opacity: 0.8;
+}
+#btn-gate {
+  position: relative;
+  flex: none;
+  background: linear-gradient(#8a4dff, #5a24c8);
+  border-color: #fff;
+  animation: arise-pulse 0.9s ease-in-out infinite alternate;
+}
+
+/* ---- boss bar (inside an arena the zone label makes room for it) ---------------- */
+#hud.arena .zone {
+  display: none;
+}
+.boss-bar {
+  position: absolute;
+  top: calc(var(--st) + var(--u) * 3);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--u) * 80);
+  max-width: 46vw;
+  display: none;
+  text-align: center;
+}
+.boss-bar.on {
+  display: block;
+}
+.boss-bar b {
+  display: block;
+  font-size: calc(var(--u) * 3.6);
+  color: #ff8090;
+  text-shadow: 0 0 calc(var(--u) * 2) #ff2050, 0 1px 2px #000;
+  letter-spacing: 0.04em;
+}
+.boss-bar .bar {
+  margin-top: calc(var(--u) * 0.8);
+  height: calc(var(--u) * 4.4);
+  border-color: rgba(255, 80, 110, 0.6);
+}
+.boss-bar .bar i {
+  background: linear-gradient(#ff5068, #b0203c);
+}
+.boss-bar .bar span {
+  font-size: calc(var(--u) * 2.7);
+}
+
+/* ---- banner ----------------------------------------------------------------------- */
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translate(-50%, -50%) scale(0.9);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s, transform 0.4s;
+  white-space: nowrap;
+}
+.banner.on {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.banner b {
+  display: block;
+  font-size: calc(var(--u) * 10);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ffe08a;
+  text-shadow: 0 0 calc(var(--u) * 4) #ffb030, 0 2px 4px #000;
+}
+.banner small {
+  display: block;
+  margin-top: calc(var(--u) * 1);
+  font-size: calc(var(--u) * 3.8);
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+}

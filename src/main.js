@@ -3,6 +3,7 @@ import './styles/hud.css';
 import './styles/army.css';
 import './styles/menu.css';
 import './styles/screens.css';
+import './styles/world.css';
 import { App } from './app.js';
 import { t } from './strings.js';
 

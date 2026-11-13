@@ -14,6 +14,10 @@ import { Army } from './entities/army.js';
 import { Souls } from './entities/souls.js';
 import { Projectiles } from './combat/projectiles.js';
 import { Zones } from './combat/zones.js';
+import { EnemyShots } from './combat/enemyShots.js';
+import { Hazards } from './combat/hazards.js';
+import { Gates } from './world/gates.js';
+import { Minimap } from './ui/minimap.js';
 import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
 import { skillDef } from './combat/skills.js';
@@ -24,6 +28,7 @@ import { setNextItemId, getNextItemId } from './core/items.js';
 import { play } from './core/sfx.js';
 
 const _v = new THREE.Vector3();
+const _col = new THREE.Color();
 
 export class Game {
   // opts: { slot, name, seed, appearance } for a new world, or { slot, save }
@@ -54,20 +59,25 @@ export class Game {
     this.renderer = getRenderer();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0d0a16);
-    this.scene.add(new THREE.HemisphereLight(0xb9c4ff, 0x2a2238, 1.5));
-    const sun = new THREE.DirectionalLight(0xfff0d8, 1.9);
-    sun.position.set(-6, 12, 5);
-    this.scene.add(sun);
+    this.hemi = new THREE.HemisphereLight(0xb9c4ff, 0x2a2238, 1.5);
+    this.scene.add(this.hemi);
+    this.sun = new THREE.DirectionalLight(0xfff0d8, 1.9);
+    this.sun.position.set(-6, 12, 5);
+    this.scene.add(this.sun);
+    this.lightZone = -1;
 
     this.cam = new FollowCamera();
     this.hud = new Hud(uiRoot, this);
     this.effects = new Effects(this.scene, this.cam.camera, this.hud.els.fx);
     this.world = new World(this.scene, this.seed);
+    this.gates = new Gates(this);
     setNextItemId(save ? save.nextItemId || 1 : 1);
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
     this.army = new Army(this);
     this.souls = new Souls(this);
+    this.shots = new EnemyShots(this);
+    this.hazards = new Hazards(this);
     this.projectiles = new Projectiles(this);
     this.zones = new Zones(this);
     this.loot = new Loot(this);
@@ -82,6 +92,7 @@ export class Game {
     }
     this.wasInCamp = true;
 
+    this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
     this.hud.setFps(opts.showFps);
@@ -126,9 +137,16 @@ export class Game {
       kills: this.kills,
       appearance: { ...this.appearance },
       nextItemId: getNextItemId(),
-      player: this.player.serialize(),
+      player: this.playerSave(),
       army: this.army.serialize(),
     };
+  }
+
+  // inside an arena the player is saved in front of its gate
+  playerSave() {
+    const d = this.player.serialize();
+    if (this.gates.active >= 0) { d.x = this.gates.returnX; d.z = this.gates.returnZ; }
+    return d;
   }
 
   // Writes the world into its slot. Returns a promise (true = saved).
@@ -202,6 +220,9 @@ export class Game {
     this.enemies.update(dt);
     this.projectiles.update(dt);
     this.zones.update(dt);
+    this.shots.update(dt);
+    this.hazards.update(dt);
+    this.gates.update(dt);
     this.souls.update(dt);
     this.loot.update(dt);
     this.soulNear = P.dead ? -1 : this.souls.nearest(P.x, P.z, CONFIG.souls.ariseRange);
@@ -209,14 +230,34 @@ export class Game {
     this.world.update(P.x, P.z, false);
     this.world.camp.update(dt);
 
-    const zone = this.world.zoneAt(Math.sqrt(P.x * P.x + P.z * P.z));
-    if (zone) { this.zoneId = zone.id; this.zoneRank = zone.rank; }
+    const zi = this.gates.active >= 0 ? this.gates.active : this.world.zoneIndexAt(Math.sqrt(P.x * P.x + P.z * P.z));
+    if (zi >= 0) {
+      const zone = CONFIG.world.zones[zi];
+      this.zoneId = zone.id;
+      this.zoneRank = zone.rank;
+    }
+    this.updateLight(dt, zi);
+    this.minimap.update(dt);
 
     this.updateAim();
 
     this.cam.update(dt, P.x, P.z);
     this.effects.update(dt);
     this.hud.update(dt);
+  }
+
+  // Light colour follows the zone the player is in (soft blend).
+  updateLight(dt, zi) {
+    const L = CONFIG.world.zones[Math.max(0, zi)].light;
+    const k = this.lightZone === -1 ? 1 : 1 - Math.exp(-dt * 1.5);
+    this.lightZone = zi;
+    _col.setHex(L.sky);
+    this.hemi.color.lerp(_col, k);
+    _col.setHex(L.ground);
+    this.hemi.groundColor.lerp(_col, k);
+    _col.setHex(L.sun);
+    this.sun.color.lerp(_col, k);
+    this.hemi.intensity += (L.sky_i - this.hemi.intensity) * k;
   }
 
   // Ground preview of the attack or skill that is being aimed.
@@ -283,6 +324,10 @@ export class Game {
       input.arise = false;
       this.tryArise();
     }
+    if (input.enterGate) {
+      input.enterGate = false;
+      if (this.gates.near >= 0) this.gates.enter(this.gates.near);
+    }
     if (input.squadCycle >= 0) {
       army.cycleBehavior(input.squadCycle);
       input.squadCycle = -1;
@@ -305,7 +350,7 @@ export class Game {
     const cost = CONFIG.arise.cost[souls.tier[i]];
     if (P.mana < cost) { this.hud.toast(t('toast.noMana')); return; }
     if (!army.hasRoom()) { this.hud.toast(t('toast.armyFull')); return; }
-    const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i]);
+    const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i], undefined, souls.zone[i]);
     if (!u) return;
     P.mana -= cost;
     souls.remove(i);
@@ -324,15 +369,16 @@ export class Game {
   onEnemyKilled(i, src) {
     this.kills++;
     const E = this.enemies;
-    const xp = E.types[E.type[i]].def.xp;
-    const zone = this.world.zoneAt(Math.sqrt(E.x[i] * E.x[i] + E.z[i] * E.z[i]));
-    this.souls.spawn(E.x[i], E.z[i], E.type[i], 0);
+    const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
+    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi);
     this.army.grantXp(src, xp);
     this.player.addXp(xp);
-    this.loot.enemyDrop(E.x[i], E.z[i], zone ? zone.level : 1, 0);
+    if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
+    else this.loot.enemyDrop(E.x[i], E.z[i], CONFIG.world.zones[zi].level, tier);
   }
 
   onPlayerRespawn() {
+    if (this.gates.active >= 0) this.gates.leave(true);
     this.enemies.calmAll();
     this.cam.snap(this.player.x, this.player.z);
   }

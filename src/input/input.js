@@ -27,6 +27,7 @@ export const input = {
   // one-shot events, consumed by the game
   dodge: false,
   arise: false,
+  enterGate: false,
   squadCycle: -1, // squad whose behaviour should switch to the next one
   reviveSquad: -1, // squad whose fallen shadows should be revived
   keyCast: -1, // stick 1-3 triggered by the keyboard, aimed with the mouse
@@ -41,7 +42,7 @@ export const input = {
 // clears one-shot events (used while the game is paused)
 export function clearEvents() {
   for (const s of input.sticks) s.fire = false;
-  input.dodge = input.arise = input.mouseReleased = false;
+  input.dodge = input.arise = input.enterGate = input.mouseReleased = false;
   input.squadCycle = input.reviveSquad = input.keyCast = -1;
 }
 

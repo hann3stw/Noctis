@@ -5,6 +5,7 @@ import { t } from '../strings.js';
 import { input } from '../input/input.js';
 import { BEHAVIORS } from '../entities/army.js';
 import { skillDef } from '../combat/skills.js';
+import { RANKS } from '../world/gates.js';
 
 const ICON_SWORD =
   '<svg viewBox="0 0 48 48"><path d="M36 6l6 0 0 6-20 20-6-6z" fill="currentColor"/><path d="M12 26l10 10-4 4-4-4-6 6-4-4 6-6-4-4z" fill="currentColor" opacity=".8"/></svg>';
@@ -30,6 +31,10 @@ export class Hud {
           <div class="xp"><b></b><div class="bar"><i></i></div></div>
         </div>
         <div class="zone"><b></b><small></small></div>
+        <div class="boss-bar"><b></b><div class="bar"><i></i><span></span></div></div>
+        <canvas class="minimap"></canvas>
+        <div class="gate-panel"><div class="gp-text"><b></b><small></small></div><div id="btn-gate" class="btn pill">${t('gate.enter')}</div></div>
+        <div class="banner"><b></b><small></small></div>
         <div class="fps"></div>
         <div class="toast"></div>
         <div class="top-right">
@@ -68,6 +73,7 @@ export class Hud {
       joyBase: $('#joy'),
       joyKnob: $('#joy .knob'),
       btnAttack: $('#btn-attack'),
+      minimap: $('.minimap'),
       btnDodge: $('#btn-dodge'),
       sticks: [
         { btn: $('#btn-attack'), knob: $('#btn-attack .knob') },
@@ -87,6 +93,20 @@ export class Hud {
     this.ohHp = $('#overhead .oh-hp i');
     this.vignette = $('#vignette');
     this.death = $('.death');
+    this.bossBar = $('.boss-bar');
+    this.bossName = $('.boss-bar b');
+    this.bossFill = $('.boss-bar i');
+    this.bossText = $('.boss-bar span');
+    this.gatePanel = $('.gate-panel');
+    this.gateTitle = $('.gate-panel b');
+    this.gateInfo = $('.gate-panel small');
+    this.bannerEl = $('.banner');
+    this.bannerT = 0;
+    this.vGate = -2;
+    this.vBoss = -2;
+    this.vBossHp = -1;
+    this.vRank = -1;
+    $('#btn-gate').addEventListener('pointerdown', (e) => { e.stopPropagation(); input.enterGate = true; });
     this.savingEl = $('.saving');
     this.savingT = 0;
     this.mpFill = $('.bar.mp i');
@@ -140,6 +160,53 @@ export class Hud {
   setFps(on) {
     this.showFps = !!on;
     this.fpsEl.style.display = on ? '' : 'none';
+  }
+
+  // big centred message (rank up, gate cleared)
+  banner(title, sub) {
+    this.bannerEl.querySelector('b').textContent = title;
+    this.bannerEl.querySelector('small').textContent = sub || '';
+    this.bannerEl.classList.add('on');
+    this.bannerT = 3.5;
+  }
+
+  updateGates(dt) {
+    const game = this.game, gates = game.gates, E = game.enemies;
+    // gate panel in the world
+    const near = gates.active < 0 ? gates.near : -1;
+    if (near !== this.vGate) {
+      this.vGate = near;
+      this.gatePanel.classList.toggle('on', near >= 0);
+      if (near >= 0) {
+        const zone = CONFIG.world.zones[near];
+        const cleared = game.defeatedGates.includes(zone.id);
+        this.gateTitle.textContent = t('gate.title', { zone: t('zone.' + zone.id), rank: zone.rank });
+        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: zone.gateLevel })
+          + (cleared ? ' · ' + t('gate.cleared') : '');
+      }
+    }
+    // boss health
+    const b = gates.bossIndex();
+    const show = b >= 0 && E.alive[b] ? b : -1;
+    if (show !== this.vBoss) {
+      this.vBoss = show;
+      this.bossBar.classList.toggle('on', show >= 0);
+      this.hud.classList.toggle('arena', gates.active >= 0);
+      if (show >= 0) this.bossName.textContent = t('enemy.' + E.types[E.type[show]].id);
+      this.vBossHp = -1;
+    }
+    if (show >= 0) {
+      const hp = Math.ceil(E.hp[show]);
+      if (hp !== this.vBossHp) {
+        this.vBossHp = hp;
+        this.bossFill.style.transform = 'scaleX(' + Math.max(0, E.hp[show] / E.maxHp[show]).toFixed(3) + ')';
+        this.bossText.textContent = Math.max(0, hp) + ' / ' + E.maxHp[show];
+      }
+    }
+    if (this.bannerT > 0) {
+      this.bannerT -= dt;
+      if (this.bannerT <= 0) this.bannerEl.classList.remove('on');
+    }
   }
 
   // small "Saving…" label in the corner
@@ -273,6 +340,7 @@ export class Hud {
     const game = this.game, P = game.player;
     this.updateArmy(dt);
     this.updateSkills();
+    this.updateGates(dt);
 
     // health
     const hp = Math.ceil(P.hp);
@@ -302,9 +370,10 @@ export class Hud {
       this.vXp = xp;
       this.xpFill.style.transform = 'scaleX(' + xp / 100 + ')';
     }
-    if (P.level !== this.vLevel) {
+    if (P.level !== this.vLevel || game.rankIndex !== this.vRank) {
       this.vLevel = P.level;
-      this.xpLabel.textContent = t('hud.level', { level: P.level });
+      this.vRank = game.rankIndex;
+      this.xpLabel.textContent = t('hud.levelRank', { level: P.level, rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
     }
     if (P.points !== this.vPoints) {
       this.vPoints = P.points;

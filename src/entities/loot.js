@@ -92,7 +92,10 @@ export class Loot {
   enemyDrop(x, z, level, tier) {
     const P = this.game.player;
     if (Math.random() > CONFIG.loot.dropChance[tier] * (1 + P.drop)) return;
-    this.drop(x, z, rollLoot(level, P.drop + tier * 0.6, P.known, tier > 0 ? 1 : 0));
+    const n = tier === 2 ? 2 : 1;
+    for (let k = 0; k < n; k++) {
+      this.drop(x + k * 1.5, z, rollLoot(level, P.drop + tier * 0.6, P.known, tier > 0 ? 1 : 0));
+    }
   }
 
   openChest(i) {

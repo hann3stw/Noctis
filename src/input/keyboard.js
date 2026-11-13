@@ -39,6 +39,8 @@ export function initKeyboard() {
       return;
     }
     if (e.code === 'KeyE') input.arise = true;
+    else if (e.code === 'KeyG') input.enterGate = true;
+    else if (e.code === 'KeyM') input.toggleMap = true;
     else if (e.code === 'KeyQ') input.keyCast = 1;
     else if (e.code === 'KeyR') input.keyCast = 2;
     else if (e.code === 'KeyF') input.keyCast = 3;

@@ -9,18 +9,64 @@ export const CONFIG = {
     chunkSize: 32, // decoration is streamed in square chunks of this size
     decorLoadRadius: 64, // decoration chunks are kept loaded within this distance
     voidWidth: 70, // dark ground beyond the last zone
+    // Ring shaped zones from the camp outwards. level = item level of drops and
+    // recommended player level; gateLevel = recommended level for the gate boss; hp / dmg / xp = multipliers for every enemy
+    // of the zone. decor = average decoration pieces per chunk. light = sky,
+    // ground and sun colour while the player is in the zone.
     zones: [
       {
-        id: 'meadow',
-        rank: 'E',
-        level: 1,
-        inner: 20,
-        outer: 150,
+        id: 'meadow', rank: 'E', level: 1, gateLevel: 5, inner: 20, outer: 130,
+        hp: 1, dmg: 1, xp: 1, packs: 22, champions: 2,
         groundColors: [0x3c7a3a, 0x4a8c42, 0x58963c],
-        // average decoration pieces per chunk
         decor: { grass: 34, flower: 9, bush: 3, rock: 1.6, tree: 2.2 },
-        packs: 26, // enemy packs in this zone
-        enemyTypes: ['gloomfang'],
+        enemyTypes: ['gloomfang', 'thornspitter', 'tuskboar'],
+        boss: 'thornmaw', gateColor: 0x8a4dff,
+        light: { sky: 0xb9c4ff, ground: 0x2a2238, sun: 0xfff0d8, sky_i: 1.5 },
+      },
+      {
+        id: 'forest', rank: 'D', level: 6, gateLevel: 11, inner: 130, outer: 220,
+        hp: 2, dmg: 1.7, xp: 2.2, packs: 32, champions: 2,
+        groundColors: [0x2c5e2e, 0x356a32, 0x2a5428],
+        decor: { grass: 16, fern: 9, mushroom: 2, bush: 3, rock: 1.2, tree: 3, pine: 6 },
+        enemyTypes: ['mossback', 'hollowArcher', 'antlerstag'],
+        boss: 'barkhide', gateColor: 0x40e080,
+        light: { sky: 0xa8d0b0, ground: 0x1e2a1e, sun: 0xf0f0c8, sky_i: 1.35 },
+      },
+      {
+        id: 'swamp', rank: 'C', level: 12, gateLevel: 17, inner: 220, outer: 305,
+        hp: 3.6, dmg: 2.6, xp: 4, packs: 38, champions: 3,
+        groundColors: [0x3e4a2c, 0x46512e, 0x35402a, 0x4a4630],
+        decor: { reed: 16, puddle: 3, deadTree: 2.5, glowShroom: 3, bush: 1.5, rock: 0.8 },
+        enemyTypes: ['bogshambler', 'sporemother', 'mirecrawler'],
+        boss: 'mireMatriarch', gateColor: 0x9ad040,
+        light: { sky: 0xa0b890, ground: 0x24281a, sun: 0xd8e0b0, sky_i: 1.25 },
+      },
+      {
+        id: 'ruins', rank: 'B', level: 18, gateLevel: 23, inner: 305, outer: 390,
+        hp: 6, dmg: 3.8, xp: 7, packs: 42, champions: 3,
+        groundColors: [0x8a7d62, 0x7c7058, 0x948468],
+        decor: { dryGrass: 18, rubble: 5, pillar: 1.6, wall: 1.1, rock: 1.2, deadTree: 0.8 },
+        enemyTypes: ['sentinel', 'acolyte', 'ruinhound'],
+        boss: 'hollowKing', gateColor: 0xffc030,
+        light: { sky: 0xffd8b0, ground: 0x3a2a24, sun: 0xffc890, sky_i: 1.4 },
+      },
+      {
+        id: 'ice', rank: 'A', level: 25, gateLevel: 30, inner: 390, outer: 470,
+        hp: 9.5, dmg: 5.4, xp: 11, packs: 46, champions: 3,
+        groundColors: [0xd8e4ee, 0xc4d6e6, 0xe6eef6],
+        decor: { snowMound: 6, snowPine: 4, crystal: 2, iceRock: 1.6 },
+        enemyTypes: ['frostTroll', 'iceWisp', 'snowram'],
+        boss: 'rimeclaw', gateColor: 0x30d0ff,
+        light: { sky: 0xc8e0ff, ground: 0x506070, sun: 0xffffff, sky_i: 1.1 },
+      },
+      {
+        id: 'volcano', rank: 'S', level: 32, gateLevel: 38, inner: 470, outer: 550,
+        hp: 15, dmg: 7.5, xp: 17, packs: 48, champions: 4,
+        groundColors: [0x463634, 0x523c34, 0x3c302e, 0x5c4034],
+        decor: { ash: 8, basalt: 2.2, lavaPool: 1.6, charredTree: 1.8, emberCrystal: 1.2 },
+        enemyTypes: ['magmaBrute', 'emberImp', 'cinderhound'],
+        boss: 'pyrelord', gateColor: 0xff4050,
+        light: { sky: 0xffa880, ground: 0x402018, sun: 0xffb890, sky_i: 1.6 },
       },
     ],
   },
@@ -138,38 +184,99 @@ export const CONFIG = {
     eclipse: { aim: 'self', radius: 3, duration: 8, damage: 1 }, // +100 % damage, attacks cost no charges
   },
 
+  // behavior: melee (bites up close), ranged (keeps distance and shoots),
+  // charger (telegraphs, then rams in a straight line). shadowRole decides what
+  // the enemy becomes when it rises as a shadow. Stats are for the meadow and
+  // are multiplied by the zone values (hp, dmg, xp) and the tier values.
   enemies: {
     packSize: [3, 6],
     packSpacing: 22, // minimum distance between two pack centres
     roamRadius: 5,
     leash: 38, // enemies give up when this far from their pack centre
     targetRange: 16, // enemies look for shadows to attack within this distance
+    eliteChance: 0.14, // chance that a pack is led by an elite
+    // normal, elite, champion, boss
+    tiers: [
+      { hp: 1, dmg: 1, scale: 1, xp: 1 },
+      { hp: 4, dmg: 1.5, scale: 1.3, xp: 5 },
+      { hp: 10, dmg: 2, scale: 1.6, xp: 14 },
+      { hp: 1, dmg: 1, scale: 1, xp: 40 },
+    ],
     types: {
-      gloomfang: {
-        behavior: 'melee',
-        shadowRole: 'melee', // tank | melee | ranged | healer
-        xp: 10,
-        hp: 46,
-        damage: 6,
-        speed: 5.4,
-        radius: 0.75,
-        scale: 1,
-        aggroRange: 11,
-        attackRange: 1.9,
-        attackWindup: 0.45, // telegraph before the hit lands
-        attackCooldown: 1.3,
-      },
+      // ---- meadow
+      gloomfang: { behavior: 'melee', shadowRole: 'melee', xp: 10, hp: 46, damage: 6, speed: 5.4, radius: 0.75, scale: 1, aggroRange: 11, attackRange: 1.9, attackWindup: 0.45, attackCooldown: 1.3 },
+      thornspitter: { behavior: 'ranged', shadowRole: 'ranged', xp: 10, hp: 32, damage: 5, speed: 3.4, radius: 0.7, scale: 1, aggroRange: 13, attackRange: 10, attackWindup: 0.6, attackCooldown: 2.2, shotSpeed: 14, shotColor: 0x9ad040 },
+      tuskboar: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 60, damage: 9, speed: 4.2, radius: 0.85, scale: 1, aggroRange: 12, attackRange: 1.9, attackWindup: 0.75, attackCooldown: 3.2, chargeRange: 12, chargeSpeed: 20, chargeTime: 0.65 },
+      // ---- forest
+      mossback: { behavior: 'melee', shadowRole: 'tank', xp: 12, hp: 70, damage: 8, speed: 4.4, radius: 0.95, scale: 1.1, aggroRange: 11, attackRange: 2.1, attackWindup: 0.55, attackCooldown: 1.6 },
+      hollowArcher: { behavior: 'ranged', shadowRole: 'ranged', xp: 11, hp: 36, damage: 7, speed: 4, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.55, attackCooldown: 2, shotSpeed: 20, shotColor: 0xd8f0a0 },
+      antlerstag: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 52, damage: 10, speed: 5, radius: 0.85, scale: 1.05, aggroRange: 13, attackRange: 2, attackWindup: 0.7, attackCooldown: 3, chargeRange: 13, chargeSpeed: 22, chargeTime: 0.6 },
+      // ---- swamp
+      bogshambler: { behavior: 'melee', shadowRole: 'tank', xp: 12, hp: 80, damage: 8, speed: 3.6, radius: 0.95, scale: 1.1, aggroRange: 10, attackRange: 2.1, attackWindup: 0.6, attackCooldown: 1.7 },
+      sporemother: { behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 40, damage: 6, speed: 3, radius: 0.8, scale: 1, aggroRange: 13, attackRange: 11, attackWindup: 0.7, attackCooldown: 2.4, shotSpeed: 12, shotColor: 0xd070ff },
+      mirecrawler: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 50, damage: 9, speed: 4.6, radius: 0.8, scale: 1, aggroRange: 12, attackRange: 1.9, attackWindup: 0.65, attackCooldown: 2.8, chargeRange: 11, chargeSpeed: 21, chargeTime: 0.6 },
+      // ---- ruins
+      sentinel: { behavior: 'melee', shadowRole: 'tank', xp: 13, hp: 85, damage: 9, speed: 3.8, radius: 0.9, scale: 1.1, aggroRange: 10, attackRange: 2.2, attackWindup: 0.6, attackCooldown: 1.7 },
+      acolyte: { behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 38, damage: 7, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2.1, shotSpeed: 15, shotColor: 0xffc030 },
+      ruinhound: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 50, damage: 10, speed: 5.4, radius: 0.8, scale: 1, aggroRange: 13, attackRange: 1.9, attackWindup: 0.6, attackCooldown: 2.8, chargeRange: 13, chargeSpeed: 24, chargeTime: 0.55 },
+      // ---- ice
+      frostTroll: { behavior: 'melee', shadowRole: 'tank', xp: 14, hp: 90, damage: 10, speed: 3.8, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.65, attackCooldown: 1.8 },
+      iceWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 12, hp: 34, damage: 8, speed: 4.6, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.5, attackCooldown: 1.9, shotSpeed: 18, shotColor: 0x80e0ff },
+      snowram: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 58, damage: 11, speed: 4.8, radius: 0.85, scale: 1.05, aggroRange: 13, attackRange: 2, attackWindup: 0.7, attackCooldown: 3, chargeRange: 13, chargeSpeed: 23, chargeTime: 0.6 },
+      // ---- volcano
+      magmaBrute: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 95, damage: 11, speed: 3.9, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
+      emberImp: { behavior: 'ranged', shadowRole: 'ranged', xp: 13, hp: 36, damage: 8, speed: 5, radius: 0.55, scale: 1, aggroRange: 15, attackRange: 12, attackWindup: 0.45, attackCooldown: 1.7, shotSpeed: 19, shotColor: 0xff7020 },
+      cinderhound: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 52, damage: 12, speed: 5.6, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 25, chargeTime: 0.55 },
+
+      // ---- gate bosses (stats already include the zone, no zone multiplier)
+      // patterns: see bossPatterns. shadowBase = stats of the boss as a shadow.
+      thornmaw: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 900, damage: 12, speed: 4.6, radius: 1.8, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['slam', 'charge', 'summon'], adds: 'gloomfang', shadowBase: { hp: 90, damage: 11 } },
+      barkhide: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 260, hp: 2200, damage: 18, speed: 3.6, radius: 2, scale: 2.2, aggroRange: 40, attackRange: 3.6, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['slam', 'eruption', 'summon'], adds: 'mossback', shadowBase: { hp: 130, damage: 13 } },
+      mireMatriarch: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 320, hp: 4200, damage: 24, speed: 3, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['nova', 'eruption', 'summon'], adds: 'mirecrawler', shadowBase: { hp: 110, damage: 10 } },
+      hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 400, hp: 7500, damage: 34, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
+      rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 500, hp: 12000, damage: 46, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
+      pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 650, hp: 19000, damage: 60, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
     },
+  },
+
+  // Boss attacks. damage = multiple of the boss damage.
+  bossPatterns: {
+    slam: { windup: 1, radius: 5.5, damage: 1.6 },
+    charge: { windup: 0.8, speed: 26, time: 0.7, damage: 1.4 },
+    nova: { windup: 0.8, shots: 16, speed: 12, damage: 0.8 },
+    volley: { windup: 0.6, shots: 5, spreadDeg: 40, speed: 18, damage: 0.9 },
+    eruption: { windup: 1.1, count: 5, radius: 3, spread: 9, damage: 1.3 },
+    summon: { count: 3, maxAdds: 6 },
+  },
+  boss: {
+    pause: 1.4, // seconds between two attacks
+    enrageAt: 0.5, // below this share of health the boss gets faster
+    enrageSpeed: 1.35,
+    shotRadius: 0.5,
+  },
+
+  gates: {
+    enterRange: 4, // the Enter button appears within this distance
+    arenaRadius: 26,
+    rewardItems: 3, // loot of a gate boss
+    rewardMinRarity: 2, // at least epic
+    exitRange: 3,
+  },
+
+  minimap: {
+    localRadius: 110, // world units shown around the player (tap to see the whole world)
+    refresh: 0.1, // seconds between two redraws
   },
 
   // ---- shadow army --------------------------------------------------------
   souls: {
-    duration: 9, // seconds a soul stays after an enemy dies
+    duration: 9, // seconds a soul stays after an enemy dies (elites and bosses: longer)
+    tierDuration: 6, // extra seconds per tier
     ariseRange: 6.5, // the Arise button appears within this distance
   },
 
   arise: {
-    cost: [10, 30, 60, 120], // mana: normal, elite, champion, boss
+    cost: [10, 25, 45, 80], // mana: normal, elite, champion, boss
   },
 
   shadows: {
@@ -206,6 +313,16 @@ export const CONFIG = {
 
     revive: { cooldown: 12, cooldownPerLevel: 1, cost: 6, costPerLevel: 2 },
 
+    // Elite, champion and boss shadows get an ability of their role.
+    // power grows with the tier: x (1 + tierPower * (tier - 1)).
+    tierPower: 0.5,
+    abilities: {
+      tank: { name: 'taunt', cooldown: 9, radius: 9, duration: 3, reduction: 0.5 },
+      melee: { name: 'cleave', cooldown: 6, radius: 3.5, power: 2.5 },
+      ranged: { name: 'volley', cooldown: 7, shots: 5, power: 1.2 },
+      healer: { name: 'mend', cooldown: 10, radius: 10, heal: 0.25 },
+    },
+
     roles: {
       tank: { hp: 2.2, damage: 0.7, range: 1.9, windup: 0.35, cooldown: 1.4, threat: 2.5 },
       melee: { hp: 1.0, damage: 1.0, range: 1.9, windup: 0.3, cooldown: 1.1, threat: 1 },
@@ -216,7 +333,8 @@ export const CONFIG = {
   },
 
   sim: {
-    maxEnemies: 1024,
+    maxEnemies: 1600,
+    maxPacks: 512,
     activeRadius: 55, // enemies further away are not simulated
     respawnTime: 40,
     respawnMinPlayerDist: 45, // packs only respawn when the player is away

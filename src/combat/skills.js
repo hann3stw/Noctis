@@ -20,11 +20,17 @@ export function castSkill(game, id, dx, dz, power) {
   switch (id) {
     case 'shadowStep': {
       fx.burst(P.x, 1, P.z, 16, aura, 4, 0.22, 0.5);
-      const lim = game.world.radius - 1.5, r = Math.sqrt(tx * tx + tz * tz);
-      if (r > lim) { tx *= lim / r; tz *= lim / r; }
-      game.world.resolve(tx, tz, P.radius);
-      P.x = game.world.rx;
-      P.z = game.world.rz;
+      if (game.gates.active >= 0) {
+        game.gates.clamp(tx, tz, P.radius);
+        P.x = game.gates.cx;
+        P.z = game.gates.cz;
+      } else {
+        const lim = game.world.radius - 1.5, r = Math.sqrt(tx * tx + tz * tz);
+        if (r > lim) { tx *= lim / r; tz *= lim / r; }
+        game.world.resolve(tx, tz, P.radius);
+        P.x = game.world.rx;
+        P.z = game.world.rz;
+      }
       P.invuln = Math.max(P.invuln, 0.4);
       hitCircle(game, P.x, P.z, def.radius, base);
       fx.slash(P.x, P.z, 0, def.radius, 360, aura);

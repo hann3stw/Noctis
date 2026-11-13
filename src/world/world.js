@@ -10,6 +10,9 @@ import { buildCamp } from './camp.js';
 
 const VOID_COLOR = 0x0d0a16;
 const MAX_CHUNK_COLLIDERS = 48;
+const GATE_CLEAR = 9; // no decoration this close to a gate
+// unlit material for glowing decoration (lava, crystals, glowing mushrooms)
+const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -52,6 +55,14 @@ export class World {
     this.lastCz = 1e9;
     this.pending = false;
 
+    // one gate per zone, half way through the ring at a seeded angle
+    const grng = mulberry32(hashSeed(seed, 777, 13));
+    this.gates = this.zones.map((zone, i) => {
+      const a = grng() * Math.PI * 2;
+      const r = (zone.inner + zone.outer) / 2;
+      return { zone: i, x: Math.cos(a) * r, z: Math.sin(a) * r };
+    });
+
     this.buildGround();
     this.camp = buildCamp(scene, this);
   }
@@ -62,11 +73,26 @@ export class World {
     return null;
   }
 
+  // index of the zone at distance r from the centre (-1 = camp or outside)
+  zoneIndexAt(r) {
+    const zs = this.zones;
+    for (let i = 0; i < zs.length; i++) if (r >= zs[i].inner && r < zs[i].outer) return i;
+    return -1;
+  }
+
+  nearGate(x, z, dist) {
+    for (const g of this.gates) {
+      const dx = g.x - x, dz = g.z - z;
+      if (dx * dx + dz * dz < dist * dist) return true;
+    }
+    return false;
+  }
+
   // ---- ground -------------------------------------------------------------
   buildGround() {
     const rng = mulberry32(hashSeed(this.seed, 11, 7));
     const step = 4;
-    const segs = 96;
+    const segs = 180;
     const maxR = this.radius + CONFIG.world.voidWidth;
     const rings = Math.ceil(maxR / step);
     const pos = [];
@@ -75,10 +101,13 @@ export class World {
     _c2.setHex(VOID_COLOR);
     for (let ri = 0; ri <= rings; ri++) {
       const r = ri * step;
-      const zone = this.zoneAt(Math.max(r, this.campRadius)) || null;
+      const rr = Math.max(r, this.campRadius);
       for (let si = 0; si <= segs; si++) {
         const a = (si / segs) * Math.PI * 2;
         pos.push(Math.cos(a) * r, 0, Math.sin(a) * r);
+        // ragged borders: near a zone edge the vertex may take the other colour
+        const jitter = (rng() - 0.5) * 14;
+        const zone = this.zoneAt(rr + jitter) || this.zoneAt(rr);
         if (zone) {
           const gc = zone.groundColors;
           _c.setHex(gc[(rng() * gc.length) | 0]);
@@ -192,7 +221,7 @@ export class World {
     if (pool.length) return pool.pop();
     const d = this.decor[type];
     if (!d.geo) d.geo = d.def.build();
-    const mesh = new THREE.InstancedMesh(d.geo, flatMaterial, d.cap);
+    const mesh = new THREE.InstancedMesh(d.geo, d.def.glow ? glowMaterial : flatMaterial, d.cap);
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(d.cap * 3).fill(1), 3);
     mesh.boundingSphere = new THREE.Sphere();
     mesh.matrixAutoUpdate = false;
@@ -224,6 +253,7 @@ export class World {
           const tint = rng();
           const rr = Math.hypot(x, z);
           if (rr < zone.inner + 2 || rr >= zone.outer - 1) continue;
+          if (this.nearGate(x, z, GATE_CLEAR)) continue;
           if (!mesh) mesh = this.takeMesh(type);
           _q.setFromAxisAngle(_up, rot);
           _m.compose(_p.set(x, 0, z), _q, _s.set(sc, sc, sc));

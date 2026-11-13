@@ -13,6 +13,7 @@ export class Souls {
     this.z = new Float32Array(MAX_SOULS);
     this.type = new Uint8Array(MAX_SOULS); // enemy type index
     this.tier = new Uint8Array(MAX_SOULS);
+    this.zone = new Uint8Array(MAX_SOULS);
     this.phase = new Float32Array(MAX_SOULS);
     this.next = 0;
     this.time = 0;
@@ -36,10 +37,11 @@ export class Souls {
     this.mesh.material.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.45);
   }
 
-  spawn(x, z, type, tier) {
+  spawn(x, z, type, tier, zone = 0) {
     const i = this.next;
     this.next = (this.next + 1) % MAX_SOULS;
-    this.life[i] = CONFIG.souls.duration;
+    this.life[i] = CONFIG.souls.duration + tier * CONFIG.souls.tierDuration;
+    this.zone[i] = zone;
     this.x[i] = x;
     this.z[i] = z;
     this.type[i] = type;

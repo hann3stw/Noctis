@@ -404,10 +404,16 @@ export class Player {
     // world edge and obstacles
     const lim = game.world.radius - 1.5;
     const r2 = nx * nx + nz * nz;
-    if (r2 > lim * lim) { const k = lim / Math.sqrt(r2); nx *= k; nz *= k; }
-    game.world.resolve(nx, nz, this.radius);
-    this.x = game.world.rx;
-    this.z = game.world.rz;
+    if (r2 > lim * lim && game.gates.active < 0) { const k = lim / Math.sqrt(r2); nx *= k; nz *= k; }
+    if (game.gates.active >= 0) {
+      game.gates.clamp(nx, nz, this.radius);
+      this.x = game.gates.cx;
+      this.z = game.gates.cz;
+    } else {
+      game.world.resolve(nx, nz, this.radius);
+      this.x = game.world.rx;
+      this.z = game.world.rz;
+    }
     const cr = game.world.campRadius;
     this.inCamp = this.x * this.x + this.z * this.z < cr * cr;
 

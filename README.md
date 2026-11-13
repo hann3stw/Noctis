@@ -29,6 +29,23 @@ Production build: `npm run build`, then `npm run preview`.
 | Ultimate | Ultimate button (charges by landing hits) | F |
 | Menu | Menu button (top right): Gear, Stats, Skills, Army, Look. Equipment, skills, the army and your look can only be changed in the camp | click it |
 | Pause | Pause button (top right corner) | Esc |
+| Enter a gate | Enter button (appears next to a gate) | G |
+| Minimap | Tap it: close view <-> whole world | M |
+
+## World
+
+- Six ring shaped zones around the camp: Whispering Meadow (E), Gloomwood (D),
+  Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera (S).
+  Enemies get stronger further out; every zone has three enemy types
+  (melee, ranged, charger).
+- Elites (gold ring) and champions (red ring, with two escorts) are much
+  stronger and always drop loot. Their shadows get an ability: tanks taunt,
+  melee shadows cleave, ranged shadows fire a volley, healers heal everyone.
+- One gate per zone leads into an arena with a boss (own attack patterns,
+  telegraphed with red circles). The first win per gate raises the rank
+  (E -> S, +2 army slots per rank). Gates can be repeated for loot.
+- Minimap: camp, gates (also on the edge when far away; white outline =
+  cleared), elites, champions and your army.
 
 ## Saving
 
@@ -51,7 +68,7 @@ URL options: `?seed=123` starts a test world straight away (never saved),
 
 ## Status
 
-Milestone 4 of 6. Done so far:
+Milestone 5 of 6. Done so far:
 
 1. World with camp and first zone, movement, aiming, one enemy type
 2. Shadow army: Arise, squads A/B/C (Attack / Guard / Hold), shadow levels and
@@ -62,7 +79,9 @@ Milestone 4 of 6. Done so far:
 4. Title screen, 3 save slots, New World with skin editor (6 hairstyles,
    colour palettes, aura colour tints the army), Load Game, autosave, pause
    menu, settings (graphics, volume, button size, swap sides), sound effects
+5. Six zones with their own look, 18 enemy types, elites and champions, six
+   gates with arena bosses and rank ups, minimap
 
-Still to come: all zones, elites, gates and bosses, minimap (5), PWA setup,
+Still to come: PWA setup,
 automatic graphics preset and performance check (6). Hosting and install
 instructions follow with milestone 6.

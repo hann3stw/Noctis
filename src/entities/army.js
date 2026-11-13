@@ -77,7 +77,7 @@ export class Army {
     for (const u of this.units) {
       if (!u) continue;
       units.push({
-        type: u.type, role: u.role, tier: u.tier, level: u.level, xp: u.xp, totalXp: u.totalXp,
+        type: u.type, role: u.role, tier: u.tier, zone: u.zone, level: u.level, xp: u.xp, totalXp: u.totalXp,
         stage: u.stage, squad: u.squad, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
       });
     }
@@ -97,7 +97,8 @@ export class Army {
     for (const d of data.units || []) {
       if (slot >= MAX_UNITS || !CONFIG.enemies.types[d.type]) continue;
       const u = {
-        slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier,
+        slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier, zone: d.zone || 0,
+        abT: 2, tauntT: 0,
         level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage, squad: d.squad,
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
         x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
@@ -127,16 +128,22 @@ export class Army {
   }
 
   name(u) {
-    return t('shadow.stage.' + u.stage, { name: t('enemy.' + u.type) });
+    const base = t('enemy.' + u.type);
+    const name = u.tier === 1 || u.tier === 2 ? t('tier.' + u.tier, { name: base }) : base;
+    return t('shadow.stage.' + u.stage, { name });
   }
 
   recalc(u) {
     const S = CONFIG.shadows, role = S.roles[u.role];
     const def = CONFIG.enemies.types[u.type];
+    const zone = CONFIG.world.zones[u.zone] || CONFIG.world.zones[0];
     const tier = S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus);
-    u.maxHp = Math.round(def.hp * S.hpFactor * role.hp * tier * (1 + (u.level - 1) * S.hpPerLevel) * (1 + this.game.player.armyHp));
-    u.dmg = def.damage * S.damageFactor * role.damage * tier * (1 + (u.level - 1) * S.damagePerLevel);
-    u.scale = def.scale * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
+    // shadows are as strong as the zone they were raised in
+    const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * zone.hp;
+    const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * zone.dmg;
+    u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * (1 + (u.level - 1) * S.hpPerLevel) * (1 + this.game.player.armyHp));
+    u.dmg = baseDmg * S.damageFactor * role.damage * tier * (1 + (u.level - 1) * S.damagePerLevel);
+    u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
     u.radius = def.radius * u.scale;
     u.speed = def.speed * S.combatSpeedFactor;
     if (u.hp > u.maxHp) u.hp = u.maxHp;
@@ -166,8 +173,71 @@ export class Army {
     this.version++;
   }
 
+  // Moves every deployed shadow to (x, z): used when the player enters or
+  // leaves a gate arena. Squads on "Hold" hold the new spot.
+  relocate(x, z) {
+    for (const sq of this.squads) { sq.holdX = x; sq.holdZ = z; }
+    this.layout();
+    for (const u of this.deployed) if (u.alive) this.placeAtHome(u, true);
+  }
+
+  // Ability of elite, champion and boss shadows (role decides which).
+  ability(u, dmgMult) {
+    const game = this.game, E = game.enemies, fx = game.effects, P = game.player, S = CONFIG.shadows;
+    const ab = S.abilities[u.role];
+    const pw = 1 + S.tierPower * (u.tier - 1);
+    u.abT = 1; // try again soon when there is nothing to do
+    if (ab.name === 'mend') {
+      const r2 = ab.radius * ab.radius;
+      let hurt = false;
+      for (const o of this.deployed) if (o.alive && o.hp < o.maxHp * 0.8 && (o.x - u.x) ** 2 + (o.z - u.z) ** 2 < r2) hurt = true;
+      const pHurt = !P.dead && P.hp < P.maxHp * 0.8 && (P.x - u.x) ** 2 + (P.z - u.z) ** 2 < r2;
+      if (!hurt && !pHurt) return;
+      for (const o of this.deployed) {
+        if (!o.alive || (o.x - u.x) ** 2 + (o.z - u.z) ** 2 > r2) continue;
+        o.hp = Math.min(o.maxHp, o.hp + o.maxHp * ab.heal * pw);
+      }
+      if (pHurt) P.heal(P.maxHp * ab.heal * pw);
+      fx.slash(u.x, u.z, 0, ab.radius, 360, 0x5cf08a);
+      fx.burst(u.x, 1.5, u.z, 20, 0x5cf08a, 4, 0.2, 0.7);
+      u.abT = ab.cooldown;
+      return;
+    }
+    const range = ab.name === 'volley' ? S.roles.ranged.range + 4 : ab.radius;
+    const r2 = range * range;
+    let n = 0;
+    for (let k = 0; k < E.activeCount; k++) {
+      const i = E.active[k];
+      if (!E.alive[i]) continue;
+      const dx = E.x[i] - u.x, dz = E.z[i] - u.z, d2 = dx * dx + dz * dz;
+      if (d2 > r2) continue;
+      if (ab.name === 'cleave') {
+        const d = Math.sqrt(d2) || 1;
+        E.damage(i, Math.round(u.dmg * dmgMult * ab.power * pw), dx / d, dz / d, u.slot);
+      } else if (ab.name === 'volley') {
+        if (n >= ab.shots) break;
+        game.projectiles.fire(u.x, u.z, i, S.roles.ranged.projectileSpeed, Math.round(u.dmg * dmgMult * ab.power * pw), u.slot);
+      }
+      n++;
+    }
+    if (n === 0) return;
+    if (ab.name === 'taunt') {
+      E.taunt(u.x, u.z, ab.radius, u.slot, ab.duration * pw);
+      u.tauntT = ab.duration * pw;
+      fx.slash(u.x, u.z, 0, ab.radius, 360, 0xff6070);
+      fx.burst(u.x, 1.5, u.z, 16, 0xff6070, 5, 0.2, 0.5);
+    } else if (ab.name === 'cleave') {
+      fx.slash(u.x, u.z, 0, ab.radius, 360, this.auraHex);
+      fx.burst(u.x, 1, u.z, 14, this.auraHex, 6, 0.2, 0.5);
+    } else {
+      fx.burst(u.x, 1.6, u.z, 10, this.auraHex, 3, 0.16, 0.4);
+    }
+    u.lunge = 1;
+    u.abT = ab.cooldown;
+  }
+
   // Creates a shadow. Returns the unit, or null when there is no room at all.
-  add(type, tier, x, z, role) {
+  add(type, tier, x, z, role, zone = 0) {
     const S = CONFIG.shadows;
     let slot = -1;
     for (let i = 0; i < MAX_UNITS; i++) if (!this.units[i]) { slot = i; break; }
@@ -182,7 +252,8 @@ export class Army {
     const u = {
       slot, type, ti: this.game.enemies.typeIndex[type],
       role: role || CONFIG.enemies.types[type].shadowRole,
-      tier, level: 1, xp: 0, totalXp: 0, stage: 0, squad,
+      tier, zone, level: 1, xp: 0, totalXp: 0, stage: 0, squad,
+      abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
       target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0,
@@ -363,6 +434,7 @@ export class Army {
   damage(slot, amount) {
     const u = this.units[slot];
     if (!u || !u.alive) return;
+    if (u.tauntT > 0) amount *= 1 - CONFIG.shadows.abilities.tank.reduction;
     u.hp -= amount;
     u.flash = 0.12;
     if (u.hp <= 0) {
@@ -444,6 +516,11 @@ export class Army {
       if (u.atkCd > 0) u.atkCd -= dt;
       u.moving = false;
       if (u.riseT > 0) { u.riseT -= dt / S.riseTime; continue; }
+      if (u.tier > 0) {
+        if (u.tauntT > 0) u.tauntT -= dt;
+        u.abT -= dt;
+        if (u.abT <= 0) this.ability(u, dmgMult);
+      }
 
       const role = roles[u.role];
       const beh = sq.behavior;
@@ -575,9 +652,15 @@ export class Army {
             o.x += dx * k; o.z += dz * k;
           }
         }
-        world.resolve(u.x, u.z, u.radius);
-        u.x = world.rx;
-        u.z = world.rz;
+        if (game.gates.active >= 0) {
+          game.gates.clamp(u.x, u.z, u.radius);
+          u.x = game.gates.cx;
+          u.z = game.gates.cz;
+        } else {
+          world.resolve(u.x, u.z, u.radius);
+          u.x = world.rx;
+          u.z = world.rz;
+        }
       }
       const dx = u.x - P.x, dz = u.z - P.z;
       if (dx * dx + dz * dz > renderR2) continue;
@@ -594,8 +677,11 @@ export class Army {
     for (let t2 = 0; t2 < this.types.length; t2++) {
       const ty = this.types[t2];
       ty.mesh.count = ty.n;
-      ty.mesh.instanceMatrix.needsUpdate = true;
-      ty.mesh.instanceColor.needsUpdate = true;
+      ty.mesh.visible = ty.n > 0;
+      if (ty.n > 0) {
+        ty.mesh.instanceMatrix.needsUpdate = true;
+        ty.mesh.instanceColor.needsUpdate = true;
+      }
     }
 
     for (let k = 0; k < 3; k++) {
