@@ -1,6 +1,7 @@
 // The shadow army. Every shadow is one plain object that lives as long as the
-// shadow exists (created on Arise, so nothing is allocated per frame). Deployed
-// shadows belong to squad 0-2 (A, B, C), the reserve is squad -1.
+// shadow exists (created on Arise, so nothing is allocated per frame). The
+// whole army is either summoned (out) or rests in the shadows; summoned it
+// either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { gfx } from '../core/settings.js';
@@ -8,29 +9,31 @@ import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
 import { t } from '../strings.js';
 
-export const BEHAVIORS = ['attack', 'guard', 'hold'];
-const B_ATTACK = 0, B_HOLD = 2;
+export const BEHAVIORS = ['attack', 'guard'];
+const B_ATTACK = 0;
 const MAX_UNITS = 128;
 const MAX_VISIBLE = 64; // per type
 const TAU = Math.PI * 2;
-const _list = [];
 
 export class Army {
   constructor(game) {
     this.game = game;
     const S = CONFIG.shadows;
     this.units = new Array(MAX_UNITS).fill(null);
-    this.deployed = []; // rebuilt whenever the roster changes
-    this.reserveCount = 0;
+    this.deployed = []; // every shadow, rebuilt whenever the roster changes
     this.version = 0; // goes up on every roster change (for the UI)
     this.pickW = 0;
     this.buffDamage = 0;
     this.buffT = 0;
-    this.squads = [0, 1, 2].map((k) => ({
-      behavior: Math.max(0, BEHAVIORS.indexOf(S.defaultBehaviors[k])),
-      holdX: 0, holdZ: 0,
-      total: 0, alive: 0, ready: 0, readyCost: 0, nextReady: 0,
-    }));
+    this.behavior = B_ATTACK;
+    this.out = true; // summoned
+    this.summonCd = 0;
+    // counts for the HUD
+    this.total = 0;
+    this.alive = 0;
+    this.ready = 0; // fallen shadows that can be revived
+    this.readyCost = 0;
+    this.nextReady = 0;
 
     this.setAura(game.appearance.aura);
 
@@ -48,17 +51,6 @@ export class Army {
       this.types.push({ id: et.id, def: et.def, mesh, n: 0 });
     }
 
-    // ground rings that mark the position of squads set to "Hold"
-    this.holdMarks = [];
-    const ringGeo = new THREE.RingGeometry(1.5, 1.8, 28);
-    ringGeo.rotateX(-Math.PI / 2);
-    for (let k = 0; k < 3; k++) {
-      const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.6, depthWrite: false }));
-      ring.position.y = 0.06;
-      ring.visible = false;
-      game.scene.add(ring);
-      this.holdMarks.push(ring);
-    }
   }
 
   // aura tint, applied per instance on top of the near-black model
@@ -78,20 +70,16 @@ export class Army {
       if (!u) continue;
       units.push({
         type: u.type, role: u.role, tier: u.tier, zone: u.zone, level: u.level, xp: u.xp, totalXp: u.totalXp,
-        stage: u.stage, squad: u.squad, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
+        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
       });
     }
-    return { units, squads: this.squads.map((s) => ({ behavior: s.behavior, holdX: s.holdX, holdZ: s.holdZ })) };
+    return { units, behavior: this.behavior, out: this.out };
   }
 
   restore(data) {
     if (!data) return;
-    (data.squads || []).forEach((s, k) => {
-      if (!this.squads[k]) return;
-      this.squads[k].behavior = s.behavior;
-      this.squads[k].holdX = s.holdX;
-      this.squads[k].holdZ = s.holdZ;
-    });
+    if (typeof data.behavior === 'number') this.behavior = data.behavior === 0 ? 0 : 1;
+    if (typeof data.out === 'boolean') this.out = data.out;
     const P = this.game.player;
     let slot = 0;
     for (const d of data.units || []) {
@@ -99,7 +87,7 @@ export class Army {
       const u = {
         slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier, zone: d.zone || 0,
         abT: 2, tauntT: 0,
-        level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage, squad: d.squad,
+        level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
         x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
         target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0,
@@ -110,7 +98,7 @@ export class Army {
       this.units[slot++] = u;
     }
     this.rebuild();
-    // deployed shadows appear in formation around their anchor
+    // the army appears in formation around the player
     for (const u of this.deployed) if (u.alive) this.placeAtHome(u, false);
   }
 
@@ -123,11 +111,11 @@ export class Army {
   }
 
   totalCount() {
-    return this.deployed.length + this.reserveCount;
+    return this.deployed.length;
   }
 
   hasRoom() {
-    return this.deployed.length < this.maxDeployed() || this.reserveCount < CONFIG.shadows.reserveMax;
+    return this.deployed.length < this.maxDeployed();
   }
 
   name(u) {
@@ -144,8 +132,9 @@ export class Army {
     // shadows are as strong as the zone they were raised in
     const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * zone.power;
     const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * zone.power;
-    u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * (1 + (u.level - 1) * S.hpPerLevel) * (1 + this.game.player.armyHp));
-    u.dmg = baseDmg * S.damageFactor * role.damage * tier * (1 + (u.level - 1) * S.damagePerLevel);
+    const lv = Math.pow(S.levelGrowth, u.level - 1);
+    u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + this.game.player.armyHp));
+    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv;
     u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
     u.radius = def.radius * u.scale;
     u.speed = def.speed * S.combatSpeedFactor;
@@ -176,12 +165,29 @@ export class Army {
     this.version++;
   }
 
-  // Moves every deployed shadow to (x, z): used when the player enters or
-  // leaves a gate arena. Squads on "Hold" hold the new spot.
-  relocate(x, z) {
-    for (const sq of this.squads) { sq.holdX = x; sq.holdZ = z; }
-    this.layout();
+  // The player teleported (gate, travel): the summoned army follows.
+  relocate() {
+    if (!this.out) return;
     for (const u of this.deployed) if (u.alive) this.placeAtHome(u, true);
+  }
+
+  // Summons the whole army out of the shadows, or sends it back.
+  toggleSummon() {
+    if (this.summonCd > 0) return false;
+    this.summonCd = CONFIG.shadows.summonCooldown;
+    this.out = !this.out;
+    const fx = this.game.effects;
+    for (const u of this.deployed) {
+      if (!u.alive) continue;
+      if (this.out) this.placeAtHome(u, true);
+      else {
+        u.target = -1;
+        u.windup = 0;
+        fx.burst(u.x, 0.6, u.z, 8, this.auraHex, 3, 0.2, 0.5);
+      }
+    }
+    this.version++;
+    return true;
   }
 
   // Ability of elite, champion and boss shadows (role decides which).
@@ -245,17 +251,10 @@ export class Army {
     let slot = -1;
     for (let i = 0; i < MAX_UNITS; i++) if (!this.units[i]) { slot = i; break; }
     if (slot < 0 || !this.hasRoom()) return null;
-    let squad = -1;
-    if (this.deployed.length < this.maxDeployed()) {
-      // the squad with the fewest members
-      const n = [0, 0, 0];
-      for (let i = 0; i < this.deployed.length; i++) n[this.deployed[i].squad]++;
-      squad = n[1] < n[0] ? (n[2] < n[1] ? 2 : 1) : n[2] < n[0] ? 2 : 0;
-    }
     const u = {
       slot, type, ti: this.game.enemies.typeIndex[type],
       role: role || CONFIG.enemies.types[type].shadowRole,
-      tier, zone, level: 1, xp: 0, totalXp: 0, stage: 0, squad,
+      tier, zone, level: 1, xp: 0, totalXp: 0, stage: 0,
       abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
@@ -269,21 +268,6 @@ export class Army {
     return u;
   }
 
-  // Moves a shadow to squad 0-2 or to the reserve (-1). False if the army is full.
-  move(slot, squad) {
-    const u = this.units[slot];
-    if (!u || u.squad === squad) return false;
-    if (squad >= 0 && u.squad < 0 && this.deployed.length >= this.maxDeployed()) return false;
-    if (squad < 0 && this.reserveCount >= CONFIG.shadows.reserveMax) return false;
-    const wasReserve = u.squad < 0;
-    u.squad = squad;
-    u.target = -1;
-    u.windup = 0;
-    this.rebuild();
-    if (squad >= 0 && wasReserve) this.placeAtHome(u, true);
-    return true;
-  }
-
   // Dismissing a shadow for good hands part of its XP to the player.
   dismiss(slot) {
     const u = this.units[slot];
@@ -293,48 +277,15 @@ export class Army {
     this.game.player.addXp(Math.round(u.totalXp * CONFIG.progression.dismissXpShare));
   }
 
-  dismissReserve() {
-    let xp = 0;
-    for (let i = 0; i < MAX_UNITS; i++) {
-      const u = this.units[i];
-      if (u && u.squad < 0) { xp += u.totalXp; this.units[i] = null; }
-    }
-    this.rebuild();
-    this.game.player.addXp(Math.round(xp * CONFIG.progression.dismissXpShare));
-  }
-
   rebuild() {
     this.deployed.length = 0;
-    this.reserveCount = 0;
-    for (let k = 0; k < 3; k++) {
-      for (let i = 0; i < MAX_UNITS; i++) {
-        const u = this.units[i];
-        if (u && u.squad === k) this.deployed.push(u);
-      }
-    }
-    for (let i = 0; i < MAX_UNITS; i++) if (this.units[i] && this.units[i].squad < 0) this.reserveCount++;
-    this.layout();
+    for (let i = 0; i < MAX_UNITS; i++) if (this.units[i]) this.deployed.push(this.units[i]);
+    this.assignRings(this.deployed);
     this.version++;
   }
 
   // ---- formation ------------------------------------------------------------
-  // Squads that follow the player share rings around the player; a squad on
-  // "Hold" forms its own rings around the held position.
-  layout() {
-    _list.length = 0;
-    for (let i = 0; i < this.deployed.length; i++) {
-      if (this.squads[this.deployed[i].squad].behavior !== B_HOLD) _list.push(this.deployed[i]);
-    }
-    this.assignRings(_list);
-    for (let k = 0; k < 3; k++) {
-      if (this.squads[k].behavior !== B_HOLD) continue;
-      _list.length = 0;
-      for (let i = 0; i < this.deployed.length; i++) if (this.deployed[i].squad === k) _list.push(this.deployed[i]);
-      this.assignRings(_list);
-    }
-    _list.length = 0;
-  }
-
+  // The army stands in rings around the player.
   assignRings(list) {
     const F = CONFIG.shadows.formation;
     let start = 0, ring = 0, cap = F.firstCount;
@@ -353,10 +304,9 @@ export class Army {
   }
 
   placeAtHome(u, rise) {
-    const sq = this.squads[u.squad], P = this.game.player;
-    const hold = sq.behavior === B_HOLD;
-    u.x = (hold ? sq.holdX : P.x) + u.ox;
-    u.z = (hold ? sq.holdZ : P.z) + u.oz;
+    const P = this.game.player;
+    u.x = P.x + u.ox;
+    u.z = P.z + u.oz;
     u.target = -1;
     u.windup = 0;
     if (rise) {
@@ -365,20 +315,10 @@ export class Army {
     }
   }
 
-  // ---- squads ---------------------------------------------------------------
-  setBehavior(k, b) {
-    const sq = this.squads[k];
-    sq.behavior = b;
-    if (b === B_HOLD) {
-      sq.holdX = this.game.player.x;
-      sq.holdZ = this.game.player.z;
-    }
-    this.layout();
+  // ---- behaviour --------------------------------------------------------------
+  toggleBehavior() {
+    this.behavior = this.behavior === B_ATTACK ? 1 : B_ATTACK;
     this.version++;
-  }
-
-  cycleBehavior(k) {
-    this.setBehavior(k, (this.squads[k].behavior + 1) % BEHAVIORS.length);
   }
 
   reviveCost(u) {
@@ -386,20 +326,20 @@ export class Army {
     return Math.round((R.cost + R.costPerLevel * u.level) * CONFIG.shadows.tierFactor[u.tier]);
   }
 
-  // Revives every fallen shadow of the squad that is ready, as far as the mana
-  // lasts. Returns how many came back.
-  reviveSquad(k) {
+  // Revives every fallen shadow that is ready, as far as the mana lasts.
+  // Returns how many came back.
+  reviveReady() {
     const P = this.game.player;
     let n = 0;
     for (let i = 0; i < this.deployed.length; i++) {
       const u = this.deployed[i];
-      if (u.squad !== k || u.alive || u.reviveT > 0) continue;
+      if (u.alive || u.reviveT > 0) continue;
       const cost = this.reviveCost(u);
       if (P.mana < cost) continue;
       P.mana -= cost;
       u.alive = true;
       u.hp = u.maxHp;
-      this.placeAtHome(u, true);
+      if (this.out) this.placeAtHome(u, true);
       n++;
     }
     if (n) this.version++;
@@ -408,7 +348,7 @@ export class Army {
 
   // ---- used by the enemies ---------------------------------------------------
   targetable(u) {
-    return !!u && u.alive && u.squad >= 0 && u.riseT <= 0 && !u.safe;
+    return !!u && this.out && u.alive && u.riseT <= 0 && !u.safe;
   }
 
   // Most attractive shadow for an enemy at (x, z): close and threatening
@@ -416,6 +356,8 @@ export class Army {
   // squared distance, comparable with the squared distance to the player.
   pickTarget(x, z, range) {
     const roles = CONFIG.shadows.roles;
+    this.pickW = 1e9;
+    if (!this.out) return -1;
     const r2 = range * range;
     let best = -1, bw = 1e9;
     for (let i = 0; i < this.deployed.length; i++) {
@@ -451,13 +393,16 @@ export class Army {
   }
 
   // ---- experience -----------------------------------------------------------
-  xpNeed(level) {
-    return Math.round(CONFIG.shadows.xpBase * Math.pow(level, CONFIG.shadows.xpGrowth));
+  xpNeed(level, u) {
+    const S = CONFIG.shadows;
+    const zone = CONFIG.world.zones[(u && u.zone) || 0];
+    return Math.round(S.xpBase * zone.power * Math.pow(S.xpGrowth, level - 1));
   }
 
   // killer = slot of the shadow that landed the kill (-1 = the player)
   grantXp(killer, xp) {
     const S = CONFIG.shadows;
+    if (!this.out) return; // resting shadows learn nothing
     for (let i = 0; i < this.deployed.length; i++) {
       const u = this.deployed[i];
       if (!u.alive || u.level >= S.maxLevel) continue;
@@ -465,8 +410,8 @@ export class Army {
       u.xp += gain;
       u.totalXp += gain;
       let leveled = false;
-      while (u.level < S.maxLevel && u.xp >= this.xpNeed(u.level)) {
-        u.xp -= this.xpNeed(u.level);
+      while (u.level < S.maxLevel && u.xp >= this.xpNeed(u.level, u)) {
+        u.xp -= this.xpNeed(u.level, u);
         u.level++;
         leveled = true;
       }
@@ -493,24 +438,27 @@ export class Army {
     if (this.buffT > 0) this.buffT -= dt;
     const dmgMult = 1 + P.armyDamage + (this.buffT > 0 ? this.buffDamage : 0);
 
-    for (let k = 0; k < 3; k++) {
-      const sq = this.squads[k];
-      sq.total = sq.alive = sq.ready = sq.readyCost = 0;
-      sq.nextReady = 0;
-    }
+    if (this.summonCd > 0) this.summonCd -= dt;
+    this.total = this.alive = this.ready = this.readyCost = 0;
+    this.nextReady = 0;
     for (let t2 = 0; t2 < this.types.length; t2++) this.types[t2].n = 0;
+    const out = this.out;
 
     for (let n = 0; n < D.length; n++) {
       const u = D[n];
-      const sq = this.squads[u.squad];
-      sq.total++;
+      this.total++;
       if (!u.alive) {
         if (u.reviveT > 0) u.reviveT -= dt;
-        if (u.reviveT <= 0) { sq.ready++; sq.readyCost += this.reviveCost(u); }
-        else if (sq.nextReady === 0 || u.reviveT < sq.nextReady) sq.nextReady = u.reviveT;
+        if (u.reviveT <= 0) { this.ready++; this.readyCost += this.reviveCost(u); }
+        else if (this.nextReady === 0 || u.reviveT < this.nextReady) this.nextReady = u.reviveT;
         continue;
       }
-      sq.alive++;
+      this.alive++;
+      if (!out) {
+        // resting in the shadows: slowly healed
+        if (u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * S.campRegen * 0.2 * dt);
+        continue;
+      }
       if (u.flash > 0) u.flash -= dt;
       if (u.lunge > 0) u.lunge -= dt * 5;
       if (u.atkCd > 0) u.atkCd -= dt;
@@ -523,16 +471,12 @@ export class Army {
       }
 
       const role = roles[u.role];
-      const beh = sq.behavior;
-      const hold = beh === B_HOLD;
-      const ax = hold ? sq.holdX : P.x, az = hold ? sq.holdZ : P.z;
-      const range = beh === B_ATTACK ? S.attackRange : hold ? S.holdRange : S.guardRange;
+      const ax = P.x, az = P.z;
+      const range = this.behavior === B_ATTACK ? S.attackRange : S.guardRange;
 
-      // never get lost: followers far behind are pulled to the player
-      if (!hold) {
-        const fxd = u.x - P.x, fzd = u.z - P.z;
-        if (fxd * fxd + fzd * fzd > tele2) this.placeAtHome(u, true);
-      }
+      // never get lost: shadows far behind are pulled to the player
+      const fxd = u.x - P.x, fzd = u.z - P.z;
+      if (fxd * fxd + fzd * fzd > tele2) this.placeAtHome(u, true);
       u.safe = game.gates.active < 0 && world.safeIndexAt(u.x, u.z) >= 0;
       if (u.hp < u.maxHp && u.safe) {
         u.hp = Math.min(u.maxHp, u.hp + u.maxHp * S.campRegen * dt);
@@ -559,10 +503,11 @@ export class Army {
             if (dx * dx + dz * dz <= r2 && P.hp / P.maxHp < bf) { healPlayer = true; best = null; }
           }
           if (best || healPlayer) {
-            const amount = Math.round(role.heal * S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus) * (1 + (u.level - 1) * role.healPerLevel));
+            // heals a share of the target's max health (stronger for elite healers)
+            const share = role.heal * (1 + (S.tierFactor[u.tier] - 1) * 0.3) * (1 + u.stage * 0.15);
             const tx = healPlayer ? P.x : best.x, tz = healPlayer ? P.z : best.z;
-            if (healPlayer) P.heal(amount);
-            else best.hp = Math.min(best.maxHp, best.hp + amount);
+            if (healPlayer) P.heal(P.maxHp * share);
+            else best.hp = Math.min(best.maxHp, best.hp + best.maxHp * share);
             u.yaw = Math.atan2(tx - u.x, tz - u.z);
             u.lunge = 0.6;
             u.atkCd = role.cooldown;
@@ -570,7 +515,7 @@ export class Army {
           }
         }
       } else {
-        // ---- fighters: pick a target inside the squad's range
+        // ---- fighters: pick a target in range (Attack: wide, Protect: close)
         let tg = u.target;
         if (tg >= 0) {
           if (!E.alive[tg]) tg = -1;
@@ -639,7 +584,7 @@ export class Army {
     const renderR2 = gfx.renderRadius * gfx.renderRadius;
     for (let a = 0; a < D.length; a++) {
       const u = D[a];
-      if (!u.alive) continue;
+      if (!u.alive || !out) continue;
       if (u.riseT <= 0) {
         for (let b = a + 1; b < D.length; b++) {
           const o = D[b];
@@ -685,11 +630,6 @@ export class Army {
       }
     }
 
-    for (let k = 0; k < 3; k++) {
-      const sq = this.squads[k], mark = this.holdMarks[k];
-      mark.visible = sq.behavior === B_HOLD && sq.total > 0;
-      if (mark.visible) mark.position.set(sq.holdX, 0.06, sq.holdZ);
-    }
   }
 
   draw(u) {

@@ -10,6 +10,7 @@ import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildEnemyGeometry } from '../render/models/enemies.js';
 import { arenaCenter } from '../world/gates.js';
+import { fmt } from '../core/format.js';
 
 export const ST_IDLE = 0, ST_CHASE = 1, ST_WINDUP = 2, ST_RETURN = 3, ST_CHARGE = 4;
 const B_MELEE = 0, B_RANGED = 1, B_CHARGER = 2, B_BOSS = 3;
@@ -175,6 +176,20 @@ export class Enemies {
       }
     });
 
+    // every outpost is held by a guard pack (an elite and its guards)
+    this.outpostPack = [];
+    world.safes.forEach((s, si) => {
+      if (s.zone < 0) return;
+      const zone = CONFIG.world.zones[s.zone];
+      const p = this.newPack(s.x, s.z);
+      this.outpostPack[si] = p;
+      const typeId = zone.enemyTypes[(rng() * zone.enemyTypes.length) | 0];
+      for (let k = 0; k < CONFIG.outposts.guards; k++) {
+        const i = this.newEnemy(typeId, p, k === 0 ? 1 : 0, s.zone, rng);
+        if (i >= 0) this.place(i);
+      }
+    });
+
     // reserved slots for the gate bosses and their helpers (asleep until used)
     const maxAdds = CONFIG.bossPatterns.summon.maxAdds;
     world.gates.forEach((g, gi) => {
@@ -233,6 +248,27 @@ export class Enemies {
     this.stun[i] = 0;
     this.retT[i] = Math.random() * 0.5;
     this.alive[i] = 1;
+  }
+
+  // After an outpost is taken its guards come back further out.
+  freeOutpost(si) {
+    const p = this.outpostPack[si];
+    if (p === undefined) return;
+    const x = this.packX[p], z = this.packZ[p], d = Math.hypot(x, z) || 1;
+    this.packX[p] = x + (x / d) * 30;
+    this.packZ[p] = z + (z / d) * 30;
+  }
+
+  // living enemies within r of (x, z) among the simulated ones
+  countNear(x, z, r) {
+    let n = 0;
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.active[k];
+      if (!this.alive[i]) continue;
+      const dx = this.x[i] - x, dz = this.z[i] - z;
+      if (dx * dx + dz * dz < r * r) n++;
+    }
+    return n;
   }
 
   // removes an arena enemy without a soul or loot
@@ -315,7 +351,7 @@ export class Enemies {
     this.x[i] += kx * kb;
     this.z[i] += kz * kb;
     if (src < 0) {
-      fx.number(this.x[i], 2.2 * this.scale[i], this.z[i], String(amount), crit ? 'crit' : undefined);
+      fx.number(this.x[i], 2.2 * this.scale[i], this.z[i], fmt(amount), crit ? 'crit' : undefined);
       fx.burst(this.x[i], 1, this.z[i], 4, 0xe8dcff, 5, 0.14, 0.3);
     } else {
       fx.burst(this.x[i], 1, this.z[i], 2, 0xb48cff, 4, 0.12, 0.25);

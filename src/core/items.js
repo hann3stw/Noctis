@@ -83,7 +83,6 @@ export function armorDefense(item) {
 export function armorBonus(item) {
   const I = CONFIG.items;
   const base = I.bonuses[item.bonus] * I.rarityStat[item.rarity];
-  if (item.bonus === 'hp' || item.bonus === 'mana') return Math.round(base * (1 + I.bonusLevelScale * (item.level - 1)));
   return base;
 }
 
@@ -110,7 +109,7 @@ export function itemName(item) {
 }
 
 export function bonusText(key, value) {
-  const flat = key === 'hp' || key === 'mana' || key === 'armySlots';
+  const flat = key === 'armySlots';
   const v = flat ? value : Math.round(Math.abs(value) * 100);
   return t('bonus.' + key, { v });
 }

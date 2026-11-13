@@ -6,6 +6,7 @@ import { input } from '../input/input.js';
 import { BEHAVIORS } from '../entities/army.js';
 import { skillDef } from '../combat/skills.js';
 import { RANKS } from '../world/gates.js';
+import { fmt } from '../core/format.js';
 
 const ICON_SWORD =
   '<svg viewBox="0 0 48 48"><path d="M36 6l6 0 0 6-20 20-6-6z" fill="currentColor"/><path d="M12 26l10 10-4 4-4-4-6 6-4-4 6-6-4-4z" fill="currentColor" opacity=".8"/></svg>';
@@ -32,6 +33,7 @@ export class Hud {
         </div>
         <div class="zone"><b></b><small></small></div>
         <div class="boss-bar"><b></b><div class="bar"><i></i><span></span></div></div>
+        <div class="capture"><b></b><div class="bar"><i></i></div></div>
         <canvas class="minimap"></canvas>
         <div class="gate-panel"><div class="gp-text"><b></b><small></small></div><div id="btn-gate" class="btn pill">${t('gate.enter')}</div></div>
         <div class="banner"><b></b><small></small></div>
@@ -43,7 +45,11 @@ export class Hud {
           <div id="btn-menu" class="btn pill">${t('hud.menu')}<i></i></div>
           <div id="btn-pause" class="btn pill" aria-label="${t('hud.pause')}"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg></div>
         </div>
-        <div class="squads">${[0, 1, 2].map((k) => `<div class="squad" data-k="${k}"><div class="sq-revive btn"></div><div class="sq-chip btn"><b>${t('squad.' + k)}</b><span></span><small></small></div></div>`).join('')}</div>
+        <div class="squads">
+          <div class="squad"><div class="sq-revive btn"></div>
+            <div class="sq-row"><div class="sq-summon btn"></div><div class="sq-chip btn"><b>${t('hud.army')}</b><span></span><small></small></div></div>
+          </div>
+        </div>
         <div id="joy"><div class="knob"></div></div>
         <div class="actions">
           <div id="btn-arise" class="btn round" aria-label="${t('hud.arise')}">${ICON_ARISE}<small></small><em></em></div>
@@ -102,6 +108,10 @@ export class Hud {
     this.gateTitle = $('.gate-panel b');
     this.gateInfo = $('.gate-panel small');
     this.bannerEl = $('.banner');
+    this.captureEl = $('.capture');
+    this.captureText = $('.capture b');
+    this.captureFill = $('.capture i');
+    this.vCap = -2;
     this.bannerT = 0;
     this.vGate = -2;
     this.vBoss = -2;
@@ -120,17 +130,18 @@ export class Hud {
     this.btnArise = $('#btn-arise');
     this.ariseCost = $('#btn-arise small');
     this.ariseInfo = $('#btn-arise em');
-    this.squads = [];
-    root.querySelectorAll('.squad').forEach((el, k) => {
-      const chip = el.querySelector('.sq-chip'), revive = el.querySelector('.sq-revive');
-      this.squads.push({
-        el, chip, revive,
+    {
+      const el = $('.squad'), chip = el.querySelector('.sq-chip'), revive = el.querySelector('.sq-revive');
+      const summon = el.querySelector('.sq-summon');
+      this.armyUi = {
+        el, chip, revive, summon,
         count: chip.querySelector('span'), beh: chip.querySelector('small'),
-        vCount: -1, vBeh: -1, vRev: -2, vCan: null,
-      });
-      chip.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.squadCycle = k; });
-      revive.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.reviveSquad = k; });
-    });
+        vCount: -1, vBeh: -1, vRev: -2, vCan: null, vOut: null,
+      };
+      chip.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.armyBehavior = true; });
+      summon.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.armySummon = true; });
+      revive.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.armyRevive = true; });
+    }
     this.btnArise.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.arise = true; });
     $('#btn-menu').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.menu.open(); });
     $('#btn-travel').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openTravel(); });
@@ -203,9 +214,22 @@ export class Hud {
       if (hp !== this.vBossHp) {
         this.vBossHp = hp;
         this.bossFill.style.transform = 'scaleX(' + Math.max(0, E.hp[show] / E.maxHp[show]).toFixed(3) + ')';
-        this.bossText.textContent = Math.max(0, hp) + ' / ' + E.maxHp[show];
+        this.bossText.textContent = fmt(Math.max(0, hp)) + ' / ' + fmt(E.maxHp[show]);
       }
     }
+    // outpost capture
+    const cap = game.capture;
+    const cv = cap.si < 0 ? -1 : cap.guards > 0 ? -10 - cap.guards : Math.floor(cap.p * 100);
+    if (cv !== this.vCap) {
+      this.vCap = cv;
+      this.captureEl.classList.toggle('on', cap.si >= 0);
+      this.captureEl.classList.toggle('blocked', cap.guards > 0);
+      if (cap.si >= 0) {
+        this.captureText.textContent = cap.guards > 0 ? t('capture.blocked', { n: cap.guards }) : t('capture.progress', { p: Math.floor(cap.p * 100) });
+        this.captureFill.style.transform = 'scaleX(' + cap.p.toFixed(3) + ')';
+      }
+    }
+
     if (this.bannerT > 0) {
       this.bannerT -= dt;
       if (this.bannerT <= 0) this.bannerEl.classList.remove('on');
@@ -303,13 +327,13 @@ export class Hud {
       this.btnArise.classList.toggle('cant', cant);
     }
 
-    // squads
-    for (let k = 0; k < 3; k++) {
-      const sq = army.squads[k], h = this.squads[k];
-      const count = sq.total * 100 + sq.alive;
+    // army: summon / recall, Attack / Protect, revive
+    {
+      const sq = army, h = this.armyUi, max = army.maxDeployed();
+      const count = sq.total * 10000 + sq.alive * 100 + max;
       if (count !== h.vCount) {
         h.vCount = count;
-        h.count.textContent = sq.alive + '/' + sq.total;
+        h.count.textContent = sq.alive + '/' + max;
         h.el.classList.toggle('empty', sq.total === 0);
         h.el.classList.toggle('hurt', sq.alive < sq.total);
       }
@@ -317,6 +341,11 @@ export class Hud {
         h.vBeh = sq.behavior;
         h.beh.textContent = t('behavior.' + BEHAVIORS[sq.behavior]);
         h.chip.dataset.b = BEHAVIORS[sq.behavior];
+      }
+      if (army.out !== h.vOut) {
+        h.vOut = army.out;
+        h.summon.textContent = army.out ? t('army.recall') : t('army.summon');
+        h.el.classList.toggle('resting', !army.out);
       }
       // revive button: cost when shadows are ready, countdown while they are not
       const rev = sq.ready > 0 ? sq.ready * 10000 + sq.readyCost : sq.total > sq.alive ? -Math.ceil(sq.nextReady) - 10 : -1;
@@ -358,7 +387,7 @@ export class Hud {
       const f = Math.max(0, P.hp / P.maxHp);
       this.hpFill.style.transform = 'scaleX(' + f.toFixed(3) + ')';
       this.ohHp.style.transform = 'scaleX(' + f.toFixed(3) + ')';
-      this.hpText.textContent = hp + ' / ' + P.maxHp;
+      this.hpText.textContent = fmt(hp) + ' / ' + fmt(P.maxHp);
     }
     const shield = P.shield > 0;
     if (shield !== this.vShield) {

@@ -2,6 +2,7 @@
 // (level and stat points), Skills and Army. The game is paused while it is
 // open. Equipment, skills and the army can only be changed in the camp.
 import { CONFIG } from '../config.js';
+import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
 import { STAT_KEYS } from '../entities/player.js';
@@ -224,8 +225,8 @@ export class Menu {
     const rows = STAT_KEYS.map((k) => `<div class="s-row"><div><b>${t('stat.' + k)}</b><small>${t('stat.' + k + '.desc')}</small></div>
       <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('');
     const d = [
-      ['hp', P.maxHp], ['hpRegen', P.hpRegen.toFixed(1)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
-      ['damage', Math.round(P.power())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
+      ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
+      ['damage', fmt(P.power())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
       ['reduction', pct(1 - P.takenFactor())], ['speed', P.speed.toFixed(1)], ['reload', P.reloadTime.toFixed(2) + 's'],
       ['drop', '+' + pct(P.drop)], ['slots', this.game.army.maxDeployed()],
     ].map(([k, v]) => `<div class="row"><span>${t('derived.' + k)}</span><b>${v}</b></div>`).join('');

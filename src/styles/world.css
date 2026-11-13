@@ -34,6 +34,36 @@
   white-space: nowrap;
 }
 
+.capture {
+  position: absolute;
+  top: calc(var(--st) + var(--u) * 25);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--u) * 70);
+  max-width: 44vw;
+  display: none;
+  text-align: center;
+}
+.capture.on {
+  display: block;
+}
+.capture b {
+  display: block;
+  font-size: calc(var(--u) * 3.2);
+  color: #7df0a0;
+  text-shadow: 0 1px 2px #000;
+}
+.capture.blocked b {
+  color: #ff8090;
+}
+.capture .bar {
+  margin-top: calc(var(--u) * 0.6);
+  height: calc(var(--u) * 2.4);
+}
+.capture .bar i {
+  background: linear-gradient(#7df0a0, #2fb85e);
+}
+
 /* ---- gate panel ------------------------------------------------------------- */
 .gate-panel {
   position: absolute;

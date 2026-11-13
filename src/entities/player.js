@@ -1,6 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
+import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
 import { fireWeapon } from '../combat/weapons.js';
@@ -84,6 +85,7 @@ export class Player {
     this.critDmg = 1.8;
     this.dodgeCdMax = c.dodge.cooldown;
     this.takenBonus = 1;
+    this.levelMult = 1;
     this.moving = false;
     this.hurtFlash = 0;
 
@@ -168,11 +170,13 @@ export class Player {
       }
     }
     const oldMax = this.maxHp;
-    this.maxHp = Math.round((c.baseHp + G.hpPerLevel * (this.level - 1)) * (1 + st.vit * S.vit.hpPct) + b.hp);
+    // every level and every Vitality point multiply the health
+    this.levelMult = Math.pow(G.levelGrowth, this.level - 1);
+    this.maxHp = Math.round(c.baseHp * this.levelMult * Math.pow(1 + S.vit.hp, st.vit) * (1 + b.hp));
     this.hpRegen = st.vit * S.vit.regen * this.maxHp;
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
-    this.maxMana = Math.round(c.baseMana + st.int * S.int.mana + b.mana);
+    this.maxMana = Math.round((c.baseMana + st.int * S.int.mana) * (1 + b.mana));
     if (this.mana > this.maxMana) this.mana = this.maxMana;
     this.manaRegen = c.manaRegen + st.int * S.int.manaRegen;
     this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
@@ -181,7 +185,7 @@ export class Player {
     this.critDmg = G.critDamage + st.per * S.per.critDamage;
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
     this.drop = st.per * S.per.drop;
-    this.damageMult = 1 + st.str * S.str.damage + b.damage;
+    this.damageMult = this.levelMult * Math.pow(1 + S.str.damage, st.str) * (1 + b.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;
     this.armyDamage = b.armyDamage;
@@ -195,7 +199,7 @@ export class Player {
   // (K grows with the zone's power), so new zones need new armour.
   takenFactor() {
     const zi = Math.max(0, this.game.curZone);
-    const K = CONFIG.progression.defenseK * CONFIG.world.zones[zi].power;
+    const K = CONFIG.progression.defenseK * Math.pow(CONFIG.items.levelGrowth, CONFIG.world.zones[zi].level - 1);
     return (K / (K + this.defense)) * this.takenBonus;
   }
 
@@ -208,7 +212,8 @@ export class Player {
 
   // ---- levels ---------------------------------------------------------------
   xpNeed() {
-    return Math.round(CONFIG.progression.xpBase * Math.pow(this.level, CONFIG.progression.xpGrowth));
+    const G = CONFIG.progression;
+    return Math.round(G.xpBase * Math.pow(G.xpGrowth, this.level - 1));
   }
 
   addXp(amount) {
@@ -327,7 +332,7 @@ export class Player {
     this.hp -= d;
     this.hurtFlash = 1;
     play('hurt');
-    fx.number(this.x, 2.6, this.z, String(d), 'hurt');
+    fx.number(this.x, 2.6, this.z, fmt(d), 'hurt');
     fx.burst(this.x, 1.2, this.z, 5, 0xff4a5a, 4, 0.14, 0.35);
     if (this.hp <= 0) {
       this.hp = 0;
@@ -477,7 +482,7 @@ export class Player {
 
     // ---- camp heals, mana comes back on its own
     if (this.hp < this.maxHp) {
-      const regen = this.hpRegen + (this.inCamp ? c.campRegenPerSec + this.maxHp * 0.1 : 0);
+      const regen = this.hpRegen + (this.inCamp ? this.maxHp * c.campRegen : 0);
       this.hp = Math.min(this.maxHp, this.hp + regen * dt);
     }
     if (this.mana < this.maxMana) {

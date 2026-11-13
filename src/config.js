@@ -14,10 +14,10 @@ export const CONFIG = {
     // Ring shaped zones from the camp outwards. Every zone is a big step up:
     //   level      item level of drops (and the level you should have there)
     //   gateLevel  recommended level for the gate boss
-    //   hp, dmg, xp  multipliers for every enemy of the zone (a normal enemy
-    //              one zone further out is stronger than an elite here)
-    //   power      damage and health of shadows raised there; also the armour
-    //              scale of the zone (your defence counts less further out)
+    //   hp, dmg, xp  multipliers for every enemy of the zone: x10 per rank, so
+    //              enemies two ranks above you kill you with one hit, and
+    //              they give 10x the XP
+    //   power      health and damage of shadows raised there
     //   packs, champions, chests  how many of each the zone gets
     //   decor      average decoration pieces per chunk
     //   light      sky, ground and sun colour while the player is in the zone
@@ -33,7 +33,7 @@ export const CONFIG = {
       },
       {
         id: 'forest', rank: 'D', level: 9, gateLevel: 15, inner: 280, outer: 520,
-        hp: 4.5, dmg: 1.8, xp: 3.5, power: 3, packs: 170, champions: 10, chests: 36,
+        hp: 10, dmg: 10, xp: 10, power: 10, packs: 170, champions: 10, chests: 36,
         groundColors: [0x2c5e2e, 0x356a32, 0x2a5428],
         decor: { grass: 16, fern: 9, mushroom: 2, bush: 3, rock: 1.2, tree: 3, pine: 6 },
         enemyTypes: ['mossback', 'hollowArcher', 'antlerstag'],
@@ -42,7 +42,7 @@ export const CONFIG = {
       },
       {
         id: 'swamp', rank: 'C', level: 17, gateLevel: 23, inner: 520, outer: 760,
-        hp: 20, dmg: 3.2, xp: 12, power: 9, packs: 240, champions: 13, chests: 48,
+        hp: 100, dmg: 100, xp: 100, power: 100, packs: 240, champions: 13, chests: 48,
         groundColors: [0x3e4a2c, 0x46512e, 0x35402a, 0x4a4630],
         decor: { reed: 16, puddle: 3, deadTree: 2.5, glowShroom: 3, bush: 1.5, rock: 0.8 },
         enemyTypes: ['bogshambler', 'sporemother', 'mirecrawler'],
@@ -51,7 +51,7 @@ export const CONFIG = {
       },
       {
         id: 'ruins', rank: 'B', level: 25, gateLevel: 31, inner: 760, outer: 1000,
-        hp: 90, dmg: 5.8, xp: 43, power: 27, packs: 300, champions: 15, chests: 56,
+        hp: 1000, dmg: 1000, xp: 1000, power: 1000, packs: 300, champions: 15, chests: 56,
         groundColors: [0x8a7d62, 0x7c7058, 0x948468],
         decor: { dryGrass: 18, rubble: 5, pillar: 1.6, wall: 1.1, rock: 1.2, deadTree: 0.8 },
         enemyTypes: ['sentinel', 'acolyte', 'ruinhound'],
@@ -60,7 +60,7 @@ export const CONFIG = {
       },
       {
         id: 'ice', rank: 'A', level: 33, gateLevel: 39, inner: 1000, outer: 1240,
-        hp: 410, dmg: 10.5, xp: 150, power: 81, packs: 350, champions: 17, chests: 64,
+        hp: 10000, dmg: 10000, xp: 10000, power: 10000, packs: 350, champions: 17, chests: 64,
         groundColors: [0xd8e4ee, 0xc4d6e6, 0xe6eef6],
         decor: { snowMound: 6, snowPine: 4, crystal: 2, iceRock: 1.6 },
         enemyTypes: ['frostTroll', 'iceWisp', 'snowram'],
@@ -69,7 +69,7 @@ export const CONFIG = {
       },
       {
         id: 'volcano', rank: 'S', level: 41, gateLevel: 47, inner: 1240, outer: 1480,
-        hp: 1850, dmg: 19, xp: 525, power: 243, packs: 400, champions: 19, chests: 70,
+        hp: 100000, dmg: 100000, xp: 100000, power: 100000, packs: 400, champions: 19, chests: 70,
         groundColors: [0x463634, 0x523c34, 0x3c302e, 0x5c4034],
         decor: { ash: 8, basalt: 2.2, lavaPool: 1.6, charredTree: 1.8, emberCrystal: 1.2 },
         enemyTypes: ['magmaBrute', 'emberImp', 'cinderhound'],
@@ -83,8 +83,15 @@ export const CONFIG = {
   // ring. Like the camp: no enemies, healing, equipment can be changed. The last
   // one visited is where you come back after dying; you can travel between
   // the ones you have found.
+  // Outposts start in enemy hands: a guard pack (one elite + guards) holds
+  // each one. Stand in the circle with no enemy inside for captureTime
+  // seconds to take it; then its chest opens.
   outposts: {
     radius: 10,
+    captureTime: 12,
+    guards: 5, // enemies guarding an outpost (the first one is an elite)
+    chestItems: 3,
+    chestMinRarity: 1, // at least rare
   },
 
   camera: {
@@ -101,7 +108,7 @@ export const CONFIG = {
     baseMana: 100,
     manaRegen: 3, // mana per second, everywhere
     campManaRegenPerSec: 25, // extra mana per second inside the camp
-    campRegenPerSec: 30, // health per second while inside the camp
+    campRegen: 0.15, // share of max health per second inside the camp or an outpost
     respawnDelay: 2.5,
     hurtInvuln: 0.0, // extra invulnerability after being hit
     startWeapon: 'sword',
@@ -126,13 +133,16 @@ export const CONFIG = {
 
   // ---- levels and stat points ---------------------------------------------
   progression: {
-    // XP for the next level = xpBase * xpGrowth ^ (level - 1): about 8 levels per zone
-    xpBase: 145,
-    xpGrowth: 1.17,
+    // Every level makes the hunter x levelGrowth stronger (health and damage):
+    // 8 levels per zone = x10, the same step as the enemies of the next rank.
+    levelGrowth: 1.334,
+    // XP for the next level = xpBase * xpGrowth ^ (level - 1). Enemies one rank
+    // higher give 10x the XP, so fighting above your rank levels you fast.
+    xpBase: 120,
+    xpGrowth: 1.334,
     maxLevel: 60,
     pointsPerLevel: 3,
-    rankPoints: 5, // extra stat points for every new rank
-    hpPerLevel: 14,
+    rankPoints: [0, 10, 12, 15, 18, 20], // stat points for reaching rank D, C, B, A, S
     // What one stat point does. The stats decide the play style:
     //   Strength      hard hitting hunter
     //   Agility       fast, quick reloads and dodges
@@ -140,15 +150,15 @@ export const CONFIG = {
     //   Intelligence  big army, lots of mana, better chance to raise shadows
     //   Perception    critical hits and loot
     stats: {
-      str: { damage: 0.04 }, // +4 % damage
+      str: { damage: 0.04 }, // x1.04 damage per point (multiplies: 20 points = x2.2)
       agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
-      vit: { hpPct: 0.04, regen: 0.0005 }, // +4 % health, regenerates 0.05 % of max health per second
-      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.006 }, // +1 army slot per 2 points, +0.6 % arise chance
+      vit: { hp: 0.04, regen: 0.0005 }, // x1.04 health per point (multiplies), regenerates 0.05 % of max health per second
+      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004 }, // +1 army slot per 2 points, +0.4 % arise chance
       per: { crit: 0.008, critDamage: 0.015, drop: 0.02 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops
     },
     baseCrit: 0.05,
     critDamage: 1.8,
-    defenseK: 60, // damage taken = K / (K + defence), K grows with the zone's power
+    defenseK: 90, // damage taken = K / (K + defence); K grows with the zone level like armour does
     ultCharge: { perHit: 3, max: 100 }, // every enemy hit charges the ultimate
     dismissXpShare: 0.5, // share of a dismissed shadow's XP that goes to the player
   },
@@ -165,9 +175,10 @@ export const CONFIG = {
   // ---- items ----------------------------------------------------------------
   items: {
     rarityWeights: [62, 27, 9, 2], // common, rare, epic, legendary
-    rarityStat: [1, 1.25, 1.6, 2.1], // stat factor per rarity
-    levelGrowth: 1.147, // damage and defence x1.147 per item level (x3 per zone)
-    bonusLevelScale: 0.25, // health and mana bonus of armour: +25 % per item level
+    // Rarity counts much more than the item level: a rarer item is nearly
+    // always better than a more common one from the next zone.
+    rarityStat: [1, 2, 4, 8], // stat factor per rarity
+    levelGrowth: 1.03, // damage and defence x1.03 per item level (x1.27 per zone)
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
     upgradeCost: [2, 4, 8, 16], // essence per rarity, times (upgrade + 1)
@@ -175,10 +186,10 @@ export const CONFIG = {
     inventorySize: 60,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
     // one bonus per armour piece, value times the rarity factor
-    bonuses: { hp: 14, speed: 0.025, mana: 12, crit: 0.02, reload: 0.04 },
+    bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04 }, // all as shares (0.05 = +5 %)
     sets: {
       stalker: { 2: { crit: 0.08 }, 4: { damage: 0.2 } },
-      bulwark: { 2: { hp: 60 }, 4: { damageTaken: -0.15 } },
+      bulwark: { 2: { hp: 0.15 }, 4: { damageTaken: -0.15 } },
       gravecaller: { 2: { armyDamage: 0.15 }, 4: { armyHp: 0.25, armySlots: 2 } },
     },
   },
@@ -303,21 +314,20 @@ export const CONFIG = {
   arise: {
     cost: [10, 25, 45, 80], // mana per try: normal, elite, champion, boss
     // Chance that a try works. Every soul allows a few tries, then it fades.
-    // enemy level = zone level + tierLevel; every level the enemy is above
-    // the player costs levelPenalty. Intelligence adds to the chance.
-    chance: [0.9, 0.65, 0.45, 0.3],
+    // enemy level = zone level + tierLevel. Enemies below your level always
+    // rise. Otherwise: chance[tier] * levelFalloff ^ (enemy level - your level),
+    // so the level difference matters most (one rank = 8 levels above you).
+    chance: [0.9, 0.8, 0.7, 0.6], // at the same level: normal, elite, champion, boss
     tierLevel: [0, 2, 4, 6],
-    levelPenalty: 0.04,
-    minChance: 0.05,
-    maxChance: 0.95,
+    levelFalloff: 0.72, // per level above you (8 levels: x0.07)
+    minChance: 0.01,
     tries: 3,
   },
 
   shadows: {
     baseSlots: 5, // army slots without Intelligence (each point adds progression.stats.int.slots)
     maxSlots: 40,
-    reserveMax: 40,
-    defaultBehaviors: ['attack', 'guard', 'guard'], // squads A, B, C
+    summonCooldown: 2, // seconds between summoning and recalling the army
     tierFactor: [1, 1.8, 2.6, 4], // stat factor: normal, elite, champion, boss
 
     hpFactor: 1.4, // shadow stats relative to the enemy it was raised from
@@ -328,19 +338,18 @@ export const CONFIG = {
     teleportDist: 30, // shadows this far from the player are pulled back
 
     attackRange: 24, // "Attack": hunts enemies this far around the player
-    guardRange: 9, // "Guard": only fights enemies this close to the player
-    holdRange: 13, // "Hold": fights enemies this close to the held position
+    guardRange: 9, // "Protect": only fights enemies this close to the player
 
     riseTime: 0.8,
-    campRegen: 0.25, // fraction of max health per second inside the camp
+    campRegen: 0.25, // share of max health per second inside the camp
     formation: { firstRadius: 2.8, ringGap: 1.8, firstCount: 6, countStep: 4 },
 
     xpShare: 0.3, // share of the kill XP for shadows that did not land the kill
-    xpBase: 30, // XP for the next level = xpBase * level ^ xpGrowth
-    xpGrowth: 1.35,
+    // XP for the next level = xpBase * power of its zone * xpGrowth ^ (level - 1)
+    xpBase: 40,
+    xpGrowth: 1.12,
     maxLevel: 40,
-    hpPerLevel: 0.1,
-    damagePerLevel: 0.08,
+    levelGrowth: 1.06, // health and damage per shadow level (x10 at level 40)
     evolveLevels: [5, 12, 22], // shadows evolve at these levels
     evolveScale: 0.18, // size gain per evolution
     evolveBonus: 0.25, // stat gain per evolution
@@ -362,7 +371,7 @@ export const CONFIG = {
       melee: { hp: 1.0, damage: 1.0, range: 1.9, windup: 0.3, cooldown: 1.1, threat: 1 },
       ranged: { hp: 0.7, damage: 0.9, range: 11, windup: 0.35, cooldown: 1.5, threat: 0.8, projectileSpeed: 22 },
       // healers do not attack; heal = health restored per cast
-      healer: { hp: 0.8, damage: 0, range: 9, windup: 0, cooldown: 2.5, threat: 0.6, heal: 14, healPerLevel: 0.08 },
+      healer: { hp: 0.8, damage: 0, range: 9, windup: 0, cooldown: 2.5, threat: 0.6, heal: 0.1 }, // heal = share of the target's max health
     },
   },
 

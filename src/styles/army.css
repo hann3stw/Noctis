@@ -99,12 +99,36 @@
   right: auto;
   left: max(calc(50% - var(--u) * 30 * var(--btn)), calc(var(--sl) + var(--u) * (8 + 52 * var(--btn))));
 }
+.sq-row {
+  display: flex;
+  gap: calc(var(--u) * 1.2);
+}
+.sq-summon {
+  position: relative;
+  min-width: calc(var(--u) * 17 * var(--btn));
+  height: calc(var(--u) * 11 * var(--btn));
+  padding: 0 calc(var(--u) * 2);
+  border-radius: calc(var(--u) * 2.2);
+  background: linear-gradient(#6a3ad8, #3a1a8a);
+  border: calc(var(--u) * 0.4) solid #d9c4ff;
+  font-weight: 800;
+  font-size: calc(var(--u) * 3.2 * var(--btn));
+}
+.squad.resting .sq-summon {
+  box-shadow: 0 0 calc(var(--u) * 3) var(--violet);
+}
+.squad.resting .sq-chip {
+  opacity: 0.55;
+}
+.sq-summon:active {
+  transform: scale(0.94);
+}
 .squad {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: calc(var(--u) * 1);
-  width: calc(var(--u) * 19 * var(--btn));
+  width: auto;
 }
 .squad.empty {
   opacity: 0.45;
@@ -128,7 +152,7 @@
 }
 .sq-chip b {
   grid-row: 1 / 3;
-  font-size: calc(var(--u) * 5.6 * var(--btn));
+  font-size: calc(var(--u) * 3.4 * var(--btn));
 }
 .sq-chip span {
   align-self: end;
@@ -312,4 +336,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* army tab: one grid with every shadow */
+.ap-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  touch-action: pan-y;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 42), 1fr));
+  align-content: start;
+  gap: calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 1.4);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(180, 140, 255, 0.2);
+  border-radius: calc(var(--u) * 2);
 }

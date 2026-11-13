@@ -45,9 +45,11 @@ export function initKeyboard() {
     else if (e.code === 'KeyR') input.keyCast = 2;
     else if (e.code === 'KeyF') input.keyCast = 3;
     else if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') {
-      const k = Number(e.code.slice(5)) - 1;
-      if (e.shiftKey) input.reviveSquad = k;
-      else input.squadCycle = k;
+      // 1 summon / recall, 2 Attack / Protect, 3 revive
+      const k = Number(e.code.slice(5));
+      if (k === 1) input.armySummon = true;
+      else if (k === 2) input.armyBehavior = true;
+      else input.armyRevive = true;
     }
     down.add(e.code);
     refresh();

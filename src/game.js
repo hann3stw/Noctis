@@ -24,7 +24,7 @@ import { skillDef } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
-import { setNextItemId, getNextItemId } from './core/items.js';
+import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
 
 const _v = new THREE.Vector3();
@@ -47,6 +47,8 @@ export class Game {
     this.discovered = new Set(save ? save.discovered || [] : []); // outposts found (index in world.safes)
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
     this.lastSafe = 0;
+    this.captureT = new Float32Array(64); // capture progress per outpost
+    this.capture = { si: -1, p: 0, guards: 0 }; // shown by the HUD
     this.curZone = 0; // zone the player is in (the camp counts as the first)
     this.input = input; // handy for debugging
     this.running = false;
@@ -97,6 +99,8 @@ export class Game {
       setNextItemId(Math.max(save.nextItemId || 1, getNextItemId()));
     }
 
+    // outposts taken in this world
+    for (const si of this.discovered) this.markCaptured(si);
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
@@ -217,6 +221,7 @@ export class Game {
     this.playTime += dt;
     this.saveT += dt;
     if (this.saveT >= CONFIG.save.autosaveInterval) this.save();
+    this.updateCapture(dt);
     this.updateSafe();
     this.resolveMouse();
     this.effects.beginFrame();
@@ -262,15 +267,55 @@ export class Game {
   updateSafe() {
     const si = this.player.safeIndex;
     if (si >= 0 && si !== this.lastSafe) {
-      if (si > 0 && !this.discovered.has(si)) {
-        this.discovered.add(si);
-        this.hud.toast(t('toast.outpostFound', { name: this.safeName(si) }));
-        play('chest');
-      }
       this.respawnIndex = si;
       this.save();
     }
     this.lastSafe = si;
+  }
+
+  // Outposts in enemy hands: stand in the circle while no enemy is inside.
+  updateCapture(dt) {
+    const P = this.player, W = this.world, C = CONFIG.outposts, cap = this.capture;
+    cap.si = -1;
+    for (let si = 1; si < W.safes.length; si++) {
+      const s = W.safes[si];
+      if (s.captured) continue;
+      const dx = P.x - s.x, dz = P.z - s.z;
+      const inside = !P.dead && this.gates.active < 0 && dx * dx + dz * dz < s.r * s.r;
+      if (!inside) {
+        if (this.captureT[si] > 0) this.captureT[si] = Math.max(0, this.captureT[si] - dt * 0.5);
+        continue;
+      }
+      cap.si = si;
+      cap.guards = this.enemies.countNear(s.x, s.z, s.r + 2);
+      if (cap.guards === 0) this.captureT[si] += dt;
+      cap.p = Math.min(1, this.captureT[si] / C.captureTime);
+      if (this.captureT[si] >= C.captureTime) this.captureOutpost(si);
+    }
+  }
+
+  markCaptured(si) {
+    const s = this.world.safes[si];
+    if (!s || s.zone < 0) return;
+    s.captured = true;
+    this.discovered.add(si);
+    this.enemies.freeOutpost(si);
+    this.world.outposts.setCaptured(si, true);
+  }
+
+  captureOutpost(si) {
+    const s = this.world.safes[si], C = CONFIG.outposts, P = this.player;
+    const zone = CONFIG.world.zones[s.zone];
+    this.markCaptured(si);
+    this.capture.si = -1;
+    // the chest opens
+    for (let k = 0; k < C.chestItems; k++) {
+      const a = (k / C.chestItems) * Math.PI * 2;
+      this.loot.drop(s.x + 0.5 + Math.cos(a) * 1.8, s.z - 3 + Math.sin(a) * 1.8, rollLoot(zone.level, P.drop + 0.8, P.known, C.chestMinRarity));
+    }
+    this.effects.burst(s.x, 1, s.z, 50, 0x8a4dff, 8, 0.26, 0.9);
+    this.hud.banner(t('toast.outpostCaptured'), this.safeName(si));
+    play('chest');
   }
 
   safeName(si) {
@@ -382,17 +427,17 @@ export class Game {
       input.enterGate = false;
       if (this.gates.near >= 0) this.gates.enter(this.gates.near);
     }
-    if (input.squadCycle >= 0) {
-      army.cycleBehavior(input.squadCycle);
-      input.squadCycle = -1;
+    if (input.armyBehavior) {
+      input.armyBehavior = false;
+      army.toggleBehavior();
     }
-    if (input.reviveSquad >= 0) {
-      const k = input.reviveSquad;
-      input.reviveSquad = -1;
-      if (!P.dead) {
-        const sq = army.squads[k];
-        if (sq.ready > 0 && army.reviveSquad(k) === 0) this.hud.toast(t('toast.noMana'));
-      }
+    if (input.armySummon) {
+      input.armySummon = false;
+      if (!P.dead && army.toggleSummon()) play('arise');
+    }
+    if (input.armyRevive) {
+      input.armyRevive = false;
+      if (!P.dead && army.ready > 0 && army.reviveReady() === 0) this.hud.toast(t('toast.noMana'));
     }
   }
 
@@ -400,9 +445,10 @@ export class Game {
   // for enemies above the player's level, higher with Intelligence.
   chanceFor(i) {
     const A = CONFIG.arise, souls = this.souls, P = this.player;
-    const over = Math.max(0, souls.level[i] - P.level);
-    const c = A.chance[souls.tier[i]] - over * A.levelPenalty + P.stats.int * CONFIG.progression.stats.int.arise;
-    return Math.max(A.minChance, Math.min(A.maxChance, c));
+    const over = souls.level[i] - P.level;
+    if (over < 0) return 1; // weaker than you: always rises
+    const c = A.chance[souls.tier[i]] * Math.pow(A.levelFalloff, over) + P.stats.int * CONFIG.progression.stats.int.arise;
+    return Math.max(A.minChance, Math.min(1, c));
   }
 
   tryArise() {
@@ -432,7 +478,7 @@ export class Game {
     souls.remove(i);
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
-    if (u.squad < 0) this.hud.toast(t('toast.toReserve', { name: army.name(u) }));
+    if (!army.out) this.hud.toast(t('toast.joinsArmy', { name: army.name(u) }));
   }
 
   setPaused(paused) {

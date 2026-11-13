@@ -212,10 +212,10 @@ export class Gates {
       const before = game.rankIndex;
       game.rankIndex = Math.min(RANKS.length - 1, game.defeatedGates.length);
       if (game.rankIndex > before) {
-        // a new rank: more stat points and a legendary item
-        P.points += CONFIG.progression.rankPoints;
-        game.loot.drop(x, z + 3, rollLoot(zone.level + 2, 0, P.known, 3, true));
-        game.hud.banner(t('toast.rankUp', { rank: RANKS[game.rankIndex] }), t('toast.rankUpSub', { n: CONFIG.progression.rankPoints }));
+        // a new rank: lots of stat points
+        const pts = CONFIG.progression.rankPoints[game.rankIndex] || 0;
+        P.points += pts;
+        game.hud.banner(t('toast.rankUp', { rank: RANKS[game.rankIndex] }), t('toast.rankUpSub', { n: pts }));
       } else {
         game.hud.banner(t('toast.gateCleared'), t('enemy.' + zone.boss));
       }

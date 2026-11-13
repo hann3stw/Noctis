@@ -11,7 +11,7 @@ import { play } from '../core/sfx.js';
 const MAX_PICKUPS = 32;
 const _c = new THREE.Color();
 
-function chestGeometry() {
+export function chestGeometry() {
   const wood = 0x6b4526, band = 0xd9a441, dark = 0x3a2412;
   return merge([
     box(1.3, 0.7, 0.9, wood, 0, 0.35, 0),

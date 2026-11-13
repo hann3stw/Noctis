@@ -28,8 +28,9 @@ export const input = {
   dodge: false,
   arise: false,
   enterGate: false,
-  squadCycle: -1, // squad whose behaviour should switch to the next one
-  reviveSquad: -1, // squad whose fallen shadows should be revived
+  armyBehavior: false, // switch Attack / Protect
+  armySummon: false, // summon or recall the army
+  armyRevive: false, // revive the fallen shadows that are ready
   keyCast: -1, // stick 1-3 triggered by the keyboard, aimed with the mouse
 
   // mouse (PC testing): the game converts screen position to an aim direction
@@ -43,7 +44,8 @@ export const input = {
 export function clearEvents() {
   for (const s of input.sticks) s.fire = false;
   input.dodge = input.arise = input.enterGate = input.mouseReleased = false;
-  input.squadCycle = input.reviveSquad = input.keyCast = -1;
+  input.armyBehavior = input.armySummon = input.armyRevive = false;
+  input.keyCast = -1;
 }
 
 export function resetInput() {

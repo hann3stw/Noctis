@@ -98,13 +98,12 @@ export class Minimap {
       g.stroke();
     }
 
-    // outposts (found ones bright, the respawn point with a ring)
+    // outposts (captured: green, in enemy hands: red; the respawn point has a ring)
     if (arena < 0) {
       const so = Math.max(2.5, S / 34);
       game.world.safes.forEach((s, si) => {
         if (si === 0) return;
-        const found = game.discovered.has(si);
-        g.fillStyle = found ? '#7df0a0' : 'rgba(255,255,255,0.35)';
+        g.fillStyle = s.captured ? '#7df0a0' : '#ff4050';
         g.beginPath();
         g.arc(X(s.x), Y(s.z), so, 0, Math.PI * 2);
         g.fill();

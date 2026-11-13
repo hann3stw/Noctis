@@ -23,8 +23,9 @@ Production build: `npm run build`, then `npm run preview`.
 | Attack | Drag the attack button to aim, release to strike. Quick tap = auto-aim | Hold left mouse button to aim, release to strike |
 | Dodge | Dodge button | Space / right mouse button |
 | Arise | Arise button (appears next to a fallen enemy's soul) | E |
-| Squad behaviour | Tap squad chip A / B / C: Attack -> Guard -> Hold | 1 / 2 / 3 |
-| Revive squad | Green button above the squad chip | Shift + 1 / 2 / 3 |
+| Summon / recall the army | Summon / Recall button (bottom centre) | 1 |
+| Army behaviour | Tap the Army chip: Attack <-> Protect | 2 |
+| Revive fallen shadows | Green button above the army chip | 3 |
 | Skills | Drag a skill button to aim, release to cast. Quick tap = auto-aim | Q / R (towards the mouse) |
 | Ultimate | Ultimate button (charges by landing hits) | F |
 | Menu | Menu button (top right): Gear, Stats, Skills, Army, Look. Equipment, skills, the army and your look can only be changed in the camp | click it |
@@ -36,40 +37,47 @@ Production build: `npm run build`, then `npm run preview`.
 
 - Six big ring shaped zones around the camp: Whispering Meadow (E), Gloomwood
   (D), Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera
-  (S). Every zone is a big step up (enemy health x4.5, damage x1.8): a normal
-  enemy of the next zone is stronger than an elite of the current one. Gear
-  from a zone is about 3x stronger than from the zone before, and armour counts
-  less in stronger zones, so you have to prepare before moving on. Every zone
-  has three enemy types (melee, ranged, charger).
-- Four outposts per zone (north, east, south, west): safe like the camp
-  (healing, gear, army, look). The last outpost you entered is where you come
-  back after dying, and the Travel button takes you to every outpost you have
-  found.
-- Elites (gold ring) and champions (red ring, with two escorts) are much
-  stronger and always drop loot. Their shadows get an ability: tanks taunt,
-  melee shadows cleave, ranged shadows fire a volley, healers heal everyone.
+  (S). Every rank multiplies enemy health, damage and XP by 10: enemies two
+  ranks above you kill you with one hit, but they also give 10x the XP.
+- The hunter grows x1.334 per level (health and damage), which is x10 over the
+  8 levels of a zone. Near the end of a rank you are far too strong for it.
+- Every zone has three enemy types (melee, ranged, charger). Elites (gold
+  ring) and champions (red ring, with two escorts) are much stronger and always
+  drop loot. Their shadows get an ability: tanks taunt, melee shadows cleave,
+  ranged shadows fire a volley, healers heal everyone.
+- Four outposts per zone (north, east, south, west) start in enemy hands: beat
+  the guards, then stay in the circle for 12 seconds. A captured outpost is
+  safe like the camp (healing, gear, army, look), opens its chest (3 items), is
+  your respawn point after dying, and you can travel between all captured
+  outposts.
 - One gate per zone leads into an arena with a boss (own attack patterns,
   telegraphed with red circles). The first win per gate raises the rank
-  (E -> S): +5 stat points and a legendary item. Gates can be repeated for
-  loot (3 items, at least epic, plus essence).
-- Raising a shadow can fail: the chance is lower for elites, champions and
-  bosses and for enemies above your level. Every soul allows 3 tries (each
-  costs mana); the Arise button shows the chance and the tries left.
+  (E -> S) and gives many stat points (10, 12, 15, 18, 20). Gates can be
+  repeated for loot (3 items, at least epic, plus essence).
 
-## Stats
+## Shadow army
+
+- Raise defeated enemies with Arise. Enemies below your level always rise;
+  above it the chance falls fast with every level (one rank above you: about
+  7 %). Elites, champions and bosses are a bit harder. Every soul allows 3
+  tries, each costs mana.
+- Summon the whole army or send it back into the shadows to fight alone.
+  Summoned, it either attacks on its own or protects you.
+- Army size comes from Intelligence (5 slots + 1 per 2 points, plus the
+  Gravecaller set). Shadows grow with their own levels and evolve.
+
+## Items and stats
+
+- Rarity counts much more than the item level: Common x1, Rare x2, Epic x4,
+  Legendary x8; the level adds only 3 % per level.
 
 | Stat | Effect |
 |---|---|
-| Strength | +4 % damage |
+| Strength | x1.04 damage per point (multiplies) |
 | Agility | speed, faster reload, shorter dodge cooldown |
-| Vitality | +4 % health, health regeneration |
-| Intelligence | +1 army slot per 2 points, mana, mana regeneration, arise chance |
+| Vitality | x1.04 health per point (multiplies), health regeneration |
+| Intelligence | +1 army slot per 2 points, mana, a little arise chance |
 | Perception | crit chance, crit damage, loot |
-
-The army starts with 5 slots; Intelligence is the only way to grow it (plus
-the Gravecaller set).
-- Minimap: camp, gates (also on the edge when far away; white outline =
-  cleared), elites, champions and your army.
 
 ## Saving
 
@@ -103,10 +111,10 @@ Milestone 5 of 6. Done so far:
 4. Title screen, 3 save slots, New World with skin editor (6 hairstyles,
    colour palettes, aura colour tints the army), Load Game, autosave, pause
    menu, settings (graphics, volume, button size, swap sides), sound effects
-5. Six big zones with their own look and steep difficulty steps, 18 enemy
-   types, elites and champions, six gates with arena bosses and rank ups,
-   24 outposts with respawn and fast travel, arise chance with 3 tries,
-   army size from Intelligence, minimap
+5. Six big zones (x10 per rank), 18 enemy types, elites and champions, six
+   gates with arena bosses and rank ups, 24 outposts to capture (respawn,
+   fast travel, chest), arise chance by level difference, one army to
+   summon or recall, army size from Intelligence, minimap
 
 Still to come: PWA setup,
 automatic graphics preset and performance check (6). Hosting and install

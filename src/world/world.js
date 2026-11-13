@@ -58,12 +58,13 @@ export class World {
 
     // Safe places: the camp (index 0) and 4 outposts per zone at north, east,
     // south and west, half way through the ring.
-    this.safes = [{ x: 0, z: 0, r: this.campRadius, zone: -1, dir: -1 }];
+    // captured: outposts start in enemy hands and only count as safe once taken
+    this.safes = [{ x: 0, z: 0, r: this.campRadius, zone: -1, dir: -1, captured: true }];
     const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // north, east, south, west
     this.zones.forEach((zone, zi) => {
       const r = (zone.inner + zone.outer) / 2;
       DIRS.forEach(([dx, dz], d) => {
-        this.safes.push({ x: dx * r, z: dz * r, r: CONFIG.outposts.radius, zone: zi, dir: d });
+        this.safes.push({ x: dx * r, z: dz * r, r: CONFIG.outposts.radius, zone: zi, dir: d, captured: false });
       });
     });
 
@@ -93,10 +94,11 @@ export class World {
     return -1;
   }
 
-  // index of the safe place (0 = camp) at (x, z), or -1
+  // index of the (captured) safe place (0 = camp) at (x, z), or -1
   safeIndexAt(x, z) {
     const S = this.safes;
     for (let i = 0; i < S.length; i++) {
+      if (!S[i].captured) continue;
       const dx = x - S[i].x, dz = z - S[i].z;
       if (dx * dx + dz * dz < S[i].r * S[i].r) return i;
     }
@@ -116,6 +118,7 @@ export class World {
   pushOutOfSafe(x, z, r) {
     const S = this.safes;
     for (let i = 0; i < S.length; i++) {
+      if (!S[i].captured) continue;
       const dx = x - S[i].x, dz = z - S[i].z, m = S[i].r + r + 1.2;
       const d2 = dx * dx + dz * dz;
       if (d2 < m * m && d2 > 1e-4) {
