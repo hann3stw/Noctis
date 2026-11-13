@@ -78,7 +78,10 @@ export class Minimap {
       const c = arenaCenter(arena);
       cx = c.x; cz = c.z; R = CONFIG.gates.arenaRadius + 3;
     } else if (this.world) {
-      cx = 0; cz = 0; R = game.world.radius + 10;
+      // the whole known world: grows with every new zone
+      let outer = CONFIG.world.campRadius;
+      CONFIG.world.zones.forEach((z, i) => { if (game.knownZones.has(i)) outer = Math.max(outer, z.outer); });
+      cx = 0; cz = 0; R = outer + 10;
     } else {
       cx = P.x; cz = P.z; R = CONFIG.minimap.localRadius;
     }
@@ -100,19 +103,20 @@ export class Minimap {
       g.arc(half, half, CONFIG.gates.arenaRadius * k, 0, Math.PI * 2);
       g.fill();
     } else {
-      // zones from the outside in
+      // zones from the outside in; unknown zones stay dark
       const zones = CONFIG.world.zones;
       for (let i = zones.length - 1; i >= 0; i--) {
-        g.fillStyle = this.zoneColors[i];
+        g.fillStyle = game.knownZones.has(i) ? this.zoneColors[i] : '#141019';
         g.beginPath();
         g.arc(X(0), Y(0), zones[i].outer * k, 0, Math.PI * 2);
         g.fill();
       }
       g.strokeStyle = 'rgba(0,0,0,0.35)';
       g.lineWidth = Math.max(1, S / 120);
-      for (const z of zones) {
+      for (let i = 0; i < zones.length; i++) {
+        if (!game.knownZones.has(i)) break;
         g.beginPath();
-        g.arc(X(0), Y(0), z.outer * k, 0, Math.PI * 2);
+        g.arc(X(0), Y(0), zones[i].outer * k, 0, Math.PI * 2);
         g.stroke();
       }
       // camp
@@ -149,13 +153,14 @@ export class Minimap {
     // gates (always visible: on the edge when they are out of view)
     if (arena < 0) {
       for (const gt of gates.list) {
+        if (!game.knownZones.has(gt.zone)) continue;
         const zone = CONFIG.world.zones[gt.zone];
         let x = X(gt.x), y = Y(gt.z);
         const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 14;
         const out = d > lim;
         if (out) { x = half + (dx / d) * lim; y = half + (dy / d) * lim; }
         const cleared = game.defeatedGates.includes(zone.id);
-        const s = S / (out ? 24 : 18);
+        const s = S / (out ? 24 : this.world ? 30 : 18);
         g.save();
         g.translate(x, y);
         g.rotate(Math.PI / 4);
@@ -168,13 +173,30 @@ export class Minimap {
       }
     }
 
-    // outposts: a tent badge (green = captured, red = held by enemies, gold
-    // ring = respawn point). Nearby ones out of view sit on the edge.
+    // outposts: a tent badge in the close view (green = captured, red = held
+    // by enemies, gold ring = respawn point; nearby ones out of view sit on the
+    // edge), small dots in the world view
     if (arena < 0) {
       const r = Math.max(4, S / 19);
       game.world.safes.forEach((s, si) => {
-        if (si === 0) return;
+        if (si === 0 || !game.knownZones.has(s.zone)) return;
         let x = X(s.x), y = Y(s.z);
+        if (this.world) {
+          g.fillStyle = s.captured ? '#5cf08a' : '#ff4050';
+          g.strokeStyle = '#0d0716';
+          g.lineWidth = Math.max(1, S / 140);
+          g.beginPath();
+          g.arc(x, y, Math.max(1.8, S / 70), 0, Math.PI * 2);
+          g.fill();
+          g.stroke();
+          if (si === game.respawnIndex) {
+            g.strokeStyle = '#e9c77b';
+            g.beginPath();
+            g.arc(x, y, Math.max(3.5, S / 40), 0, Math.PI * 2);
+            g.stroke();
+          }
+          return;
+        }
         const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - r * 1.25;
         if (d > lim) {
           if (d > lim * 2.5) return; // far away
@@ -185,8 +207,8 @@ export class Minimap {
       });
     }
 
-    // player arrow
-    const ax = X(P.x), ay = Y(P.z), a = Math.atan2(P.dirZ, P.dirX), r = S / 18;
+    // player arrow (smaller in the world view)
+    const ax = X(P.x), ay = Y(P.z), a = Math.atan2(P.dirZ, P.dirX), r = S / (this.world ? 24 : 18);
     g.save();
     g.translate(ax, ay);
     g.rotate(a);

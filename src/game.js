@@ -48,7 +48,9 @@ export class Game {
     this.fpsN = 0;
     this.hitStopT = 0;
     this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
-    this.discovered = new Set(save ? save.discovered || [] : []); // outposts found (index in world.safes)
+    this.discovered = new Set(save ? save.discovered || [] : []); // outposts captured (index in world.safes)
+    // zones the player has set foot in (the minimap only shows these)
+    this.knownZones = new Set(save && save.knownZones ? save.knownZones : [0]);
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
     this.lastSafe = 0;
     this.captureT = new Float32Array(64); // capture progress per outpost
@@ -105,6 +107,10 @@ export class Game {
 
     // outposts taken in this world
     for (const si of this.discovered) this.markCaptured(si);
+    if (save && !save.knownZones) {
+      for (const si of this.discovered) this.knownZones.add(this.world.safes[si].zone);
+      CONFIG.world.zones.forEach((z, i) => { if (this.defeatedGates.includes(z.id)) this.knownZones.add(i); });
+    }
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
@@ -148,6 +154,7 @@ export class Game {
       rankIndex: this.rankIndex,
       defeatedGates: [...this.defeatedGates],
       discovered: [...this.discovered],
+      knownZones: [...this.knownZones],
       respawnIndex: this.respawnIndex,
       kills: this.kills,
       appearance: { ...this.appearance },
@@ -274,6 +281,7 @@ export class Game {
 
     const zi = this.gates.active >= 0 ? this.gates.active : this.world.zoneIndexAt(Math.sqrt(P.x * P.x + P.z * P.z));
     this.curZone = Math.max(0, zi);
+    if (zi >= 0 && !this.knownZones.has(zi)) this.knownZones.add(zi);
     if (zi >= 0) {
       const zone = CONFIG.world.zones[zi];
       this.zoneId = zone.id;
