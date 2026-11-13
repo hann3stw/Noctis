@@ -1,5 +1,7 @@
 import './styles/base.css';
 import './styles/hud.css';
+import './styles/army.css';
+import './styles/menu.css';
 import { Game } from './game.js';
 import { randomSeed } from './core/rng.js';
 

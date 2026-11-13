@@ -54,6 +54,7 @@ body {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  overflow: clip; /* unlike hidden, this can never be scrolled by accident */
 }
 
 /* "Please rotate your device" – only on touch devices held upright */

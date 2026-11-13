@@ -28,3 +28,17 @@ const BUILDERS = { gloomfang };
 export function buildEnemyGeometry(typeId) {
   return BUILDERS[typeId]();
 }
+
+// Shadow version of an enemy: the same shape in near-black, only the eyes
+// glow. The aura colour is applied per instance.
+export function buildShadowGeometry(typeId) {
+  const g = BUILDERS[typeId]();
+  const c = g.attributes.color.array;
+  for (let i = 0; i < c.length; i += 3) {
+    const r = c[i], gr = c[i + 1], b = c[i + 2];
+    const glow = r > 0.5 && gr < 0.25; // eyes
+    const v = glow ? 6 : 0.012 + ((r + gr + b) / 3) * 0.16;
+    c[i] = c[i + 1] = c[i + 2] = v;
+  }
+  return g;
+}

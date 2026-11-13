@@ -1,10 +1,17 @@
-// The player: movement, dodge, attack charges, health and respawn.
+// The player: movement, dodge, attack charges, skills, health, mana, levels,
+// stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
 import { fireWeapon } from '../combat/weapons.js';
+import { castSkill, skillDef } from '../combat/skills.js';
+import {
+  makeWeapon, weaponDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS,
+} from '../core/items.js';
+import { t } from '../strings.js';
 
 const ANIM = { moving: false, attack: 0, dodging: false, dead: false };
+export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
 
 export class Player {
   constructor(game, appearance) {
@@ -15,10 +22,34 @@ export class Player {
     this.dirX = 0; // facing
     this.dirZ = 1;
     this.radius = c.radius;
+
+    // ---- progression (everything in this block is saved later)
+    this.level = 1;
+    this.xp = 0;
+    this.points = 0;
+    this.stats = { str: 0, agi: 0, vit: 0, int: 0, per: 0 };
+    this.essence = 0; // upgrade material from dismantled items
+    this.inventory = [];
+    this.equip = { weapon: makeWeapon(c.startWeapon, 0, 1), helmet: null, chest: null, gloves: null, boots: null };
+    this.known = [...c.startSkills, c.startUltimate]; // learned skills and ultimates
+    this.slots = [c.startSkills[0] || null, c.startSkills[1] || null, c.startUltimate]; // skill 1, skill 2, ultimate
+
+    // ---- derived values, see recalc()
+    this.bonus = {};
+    this.setCount = {};
     this.maxHp = c.baseHp;
-    this.hp = this.maxHp;
+    this.maxMana = c.baseMana;
+    this.manaRegen = c.manaRegen;
     this.speed = c.baseSpeed;
-    this.weapon = c.startWeapon;
+    this.reloadTime = 1;
+    this.crit = 0;
+    this.drop = 0;
+    this.damageMult = 1;
+    this.defense = 0;
+    this.taken = 1;
+    this.armyDamage = 0;
+    this.armyHp = 0;
+    this.armySlots = 0;
 
     this.charges = c.charges.max;
     this.maxCharges = c.charges.max;
@@ -29,7 +60,14 @@ export class Player {
     this.pendingAuto = false;
     this.pendingX = 0;
     this.pendingZ = 1;
+    this.pendingP = 1;
     this.noAmmoFlash = 0;
+
+    this.cds = [0, 0]; // skill cooldowns
+    this.ult = 0; // ultimate charge
+    this.shield = 0;
+    this.shieldT = 0;
+    this.eclipseT = 0;
 
     this.dodgeT = 0;
     this.dodgeCd = 0;
@@ -45,19 +83,191 @@ export class Player {
 
     this.model = createPlayerModel(appearance);
     game.scene.add(this.model.root);
+    this.recalc();
+    this.hp = this.maxHp;
+    this.mana = this.maxMana;
+  }
+
+  get weapon() {
+    return this.equip.weapon.type;
+  }
+
+  // ---- derived values -------------------------------------------------------
+  recalc() {
+    const c = CONFIG.player, G = CONFIG.progression, S = G.stats, st = this.stats;
+    const b = this.bonus;
+    b.hp = b.speed = b.mana = b.crit = b.reload = b.damage = b.damageTaken = b.armyDamage = b.armyHp = b.armySlots = 0;
+    for (const set in CONFIG.items.sets) this.setCount[set] = 0;
+    let def = 0;
+    for (const slot of ARMOR_SLOTS) {
+      const it = this.equip[slot];
+      if (!it) continue;
+      def += armorDefense(it);
+      b[it.bonus] += armorBonus(it);
+      this.setCount[it.set]++;
+    }
+    for (const set in CONFIG.items.sets) {
+      const tiers = CONFIG.items.sets[set];
+      for (const need in tiers) {
+        if (this.setCount[set] >= Number(need)) for (const k in tiers[need]) b[k] += tiers[need][k];
+      }
+    }
+    const oldMax = this.maxHp;
+    this.maxHp = Math.round(c.baseHp + G.hpPerLevel * (this.level - 1) + st.vit * S.vit.hp + b.hp);
+    if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
+    if (this.hp > this.maxHp) this.hp = this.maxHp;
+    this.maxMana = Math.round(c.baseMana + st.int * S.int.mana + b.mana);
+    if (this.mana > this.maxMana) this.mana = this.maxMana;
+    this.manaRegen = c.manaRegen + st.int * S.int.manaRegen;
+    this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
+    this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
+    this.crit = G.baseCrit + st.per * S.per.crit + b.crit;
+    this.drop = st.per * S.per.drop;
+    this.damageMult = 1 + st.str * S.str.damage + b.damage;
+    this.defense = def;
+    this.taken = (G.defenseK / (G.defenseK + def)) * (1 + b.damageTaken);
+    this.armyDamage = b.armyDamage;
+    this.armyHp = b.armyHp;
+    this.armySlots = b.armySlots;
+    this.model.setEquipment(this.equip);
+    if (this.game.army) this.game.army.recalcAll();
+  }
+
+  // damage of one basic attack before variance and crit
+  power() {
+    let p = weaponDamage(this.equip.weapon) * this.damageMult;
+    if (this.eclipseT > 0) p *= 1 + CONFIG.ultimates.eclipse.damage;
+    return p;
+  }
+
+  // ---- levels ---------------------------------------------------------------
+  xpNeed() {
+    return Math.round(CONFIG.progression.xpBase * Math.pow(this.level, CONFIG.progression.xpGrowth));
+  }
+
+  addXp(amount) {
+    const G = CONFIG.progression;
+    if (this.level >= G.maxLevel) return;
+    this.xp += amount;
+    let gained = 0;
+    while (this.level < G.maxLevel && this.xp >= this.xpNeed()) {
+      this.xp -= this.xpNeed();
+      this.level++;
+      this.points += G.pointsPerLevel;
+      gained += G.pointsPerLevel;
+    }
+    if (!gained) return;
+    this.recalc();
+    if (!this.dead) { this.hp = this.maxHp; this.mana = this.maxMana; }
+    this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
+    this.game.hud.toast(t('toast.levelUp', { level: this.level, points: gained }));
+  }
+
+  spendPoint(stat) {
+    if (this.points <= 0) return false;
+    this.points--;
+    this.stats[stat]++;
+    this.recalc();
+    return true;
+  }
+
+  // ---- items ----------------------------------------------------------------
+  // Takes a dropped item. Skills are learned at once. False = inventory full.
+  addItem(item) {
+    const hud = this.game.hud;
+    if (item.kind === 'skill') {
+      if (this.known.includes(item.type)) {
+        this.essence += 5;
+        hud.toast(t('toast.essence', { n: 5 }));
+      } else {
+        this.learn(item.type);
+        hud.toast(t('toast.learned', { name: itemName(item) }));
+      }
+      return true;
+    }
+    if (this.inventory.length >= CONFIG.items.inventorySize) return false;
+    this.inventory.push(item);
+    hud.toast(t('toast.found', { name: t('rarity.' + item.rarity) + ' ' + itemName(item) }));
+    return true;
+  }
+
+  learn(id) {
+    if (this.known.includes(id)) return;
+    this.known.push(id);
+    // new skills go straight into a free slot
+    if (CONFIG.ultimates[id]) { if (!this.slots[2]) this.slots[2] = id; }
+    else if (!this.slots[0]) this.slots[0] = id;
+    else if (!this.slots[1]) this.slots[1] = id;
+  }
+
+  // slot: 0 / 1 = skills, 2 = ultimate
+  setSlot(slot, id) {
+    if (!this.known.includes(id)) return;
+    const isUlt = !!CONFIG.ultimates[id];
+    if (isUlt !== (slot === 2)) return;
+    if (slot < 2) {
+      const other = 1 - slot;
+      if (this.slots[other] === id) this.slots[other] = this.slots[slot]; // swap
+    }
+    this.slots[slot] = id;
+  }
+
+  equipItem(item) {
+    const i = this.inventory.indexOf(item);
+    if (i < 0) return;
+    const slot = slotOf(item);
+    const old = this.equip[slot];
+    if (old) this.inventory[i] = old;
+    else this.inventory.splice(i, 1);
+    this.equip[slot] = item;
+    this.recalc();
+  }
+
+  upgradeItem(item) {
+    const cost = upgradeCost(item);
+    if (item.up >= CONFIG.items.maxUpgrade || this.essence < cost) return false;
+    this.essence -= cost;
+    item.up++;
+    this.recalc();
+    return true;
+  }
+
+  dismantleItem(item) {
+    const i = this.inventory.indexOf(item);
+    if (i < 0) return;
+    this.inventory.splice(i, 1);
+    this.essence += dismantleValue(item);
+  }
+
+  // ---- health ---------------------------------------------------------------
+  heal(amount) {
+    if (this.dead) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
   }
 
   damage(amount) {
     if (this.dead || this.invuln > 0) return;
-    this.hp -= amount;
+    const fx = this.game.effects;
+    let d = amount * this.taken;
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, d);
+      this.shield -= absorbed;
+      d -= absorbed;
+      fx.burst(this.x, 1.2, this.z, 4, 0x6aa8ff, 4, 0.14, 0.3);
+      if (d < 0.5) return;
+    }
+    d = Math.max(1, Math.round(d));
+    this.hp -= d;
     this.hurtFlash = 1;
-    this.game.effects.number(this.x, 2.6, this.z, String(amount), 'hurt');
-    this.game.effects.burst(this.x, 1.2, this.z, 5, 0xff4a5a, 4, 0.14, 0.35);
+    fx.number(this.x, 2.6, this.z, String(d), 'hurt');
+    fx.burst(this.x, 1.2, this.z, 5, 0xff4a5a, 4, 0.14, 0.35);
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
+      this.shield = 0;
+      this.eclipseT = 0;
       this.respawnT = CONFIG.player.respawnDelay;
-      this.game.effects.burst(this.x, 1.2, this.z, 24, 0x8a4dff, 6, 0.22, 0.8);
+      fx.burst(this.x, 1.2, this.z, 24, 0x8a4dff, 6, 0.22, 0.8);
     }
   }
 
@@ -75,14 +285,17 @@ export class Player {
     this.game.onPlayerRespawn();
   }
 
+  // ---- per frame ------------------------------------------------------------
   update(dt) {
     const c = CONFIG.player;
     const game = this.game;
+    const sticks = input.sticks;
     if (this.hurtFlash > 0) this.hurtFlash -= dt * 2.5;
     if (this.noAmmoFlash > 0) this.noAmmoFlash -= dt;
 
     if (this.dead) {
-      input.fire = input.dodge = false;
+      input.dodge = false;
+      for (let k = 0; k < 4; k++) sticks[k].fire = false;
       this.moving = false;
       this.respawnT -= dt;
       if (this.respawnT <= 0) this.respawn();
@@ -94,6 +307,13 @@ export class Player {
     if (this.attackAnim > 0) this.attackAnim -= dt * 4.5;
     if (this.invuln > 0) this.invuln -= dt;
     if (this.dodgeCd > 0) this.dodgeCd -= dt;
+    if (this.cds[0] > 0) this.cds[0] -= dt;
+    if (this.cds[1] > 0) this.cds[1] -= dt;
+    if (this.eclipseT > 0) this.eclipseT -= dt;
+    if (this.shieldT > 0) {
+      this.shieldT -= dt;
+      if (this.shieldT <= 0) this.shield = 0;
+    }
 
     // ---- movement
     let mx = input.touchX + input.keyX, mz = input.touchZ + input.keyZ;
@@ -140,20 +360,22 @@ export class Player {
 
     // ---- charges reload one after another
     if (this.charges < this.maxCharges) {
-      this.reloadT += dt / c.charges.reload;
+      this.reloadT += dt / this.reloadTime;
       if (this.reloadT >= 1) { this.charges++; this.reloadT = this.charges < this.maxCharges ? this.reloadT - 1 : 0; }
     }
 
-    // ---- attack
-    if (input.fire) {
-      input.fire = false;
+    // ---- basic attack
+    const s0 = sticks[0];
+    if (s0.fire) {
+      s0.fire = false;
       this.pendingFire = true;
-      this.pendingAuto = input.fireAuto;
-      this.pendingX = input.fireX;
-      this.pendingZ = input.fireZ;
+      this.pendingAuto = s0.auto;
+      this.pendingX = s0.fx;
+      this.pendingZ = s0.fz;
+      this.pendingP = s0.fp;
     }
     if (this.pendingFire) {
-      if (this.charges <= 0) {
+      if (this.charges <= 0 && this.eclipseT <= 0) {
         this.pendingFire = false;
         this.noAmmoFlash = 0.3;
       } else if (this.atkCd <= 0 && this.dodgeT <= 0) {
@@ -162,39 +384,84 @@ export class Player {
       }
     }
 
+    // ---- skills and ultimate
+    for (let k = 1; k < 4; k++) {
+      const s = sticks[k];
+      if (!s.fire) continue;
+      s.fire = false;
+      this.cast(k - 1, s.auto, s.fx, s.fz, s.fp);
+    }
+
     // ---- facing
-    if (input.aiming) { this.dirX = input.aimX; this.dirZ = input.aimZ; }
+    let aim = null;
+    for (let k = 0; k < 4; k++) if (sticks[k].aiming) { aim = sticks[k]; break; }
+    if (aim) { this.dirX = aim.x; this.dirZ = aim.z; }
     else if (this.attackAnim <= 0 && this.dodgeT <= 0 && ml > 0.01) { this.dirX = mx / ml; this.dirZ = mz / ml; }
 
-    // ---- camp heals
+    // ---- camp heals, mana comes back on its own
     if (this.inCamp && this.hp < this.maxHp) {
       this.hp = Math.min(this.maxHp, this.hp + c.campRegenPerSec * dt);
+    }
+    if (this.mana < this.maxMana) {
+      const regen = this.manaRegen + (this.inCamp ? c.campManaRegenPerSec : 0);
+      this.mana = Math.min(this.maxMana, this.mana + regen * dt);
     }
 
     this.sync(dt);
   }
 
-  attack() {
-    const game = this.game;
-    const w = CONFIG.weapons[this.weapon];
-    let dx = this.pendingX, dz = this.pendingZ;
-    if (this.pendingAuto) {
-      const i = game.enemies.nearest(this.x, this.z, w.range + CONFIG.player.autoAimExtraRange);
-      if (i >= 0) {
-        dx = game.enemies.x[i] - this.x;
-        dz = game.enemies.z[i] - this.z;
-        const d = Math.sqrt(dx * dx + dz * dz) || 1;
-        dx /= d; dz /= d;
-      } else {
-        dx = this.dirX; dz = this.dirZ;
-      }
+  // Auto aim: direction to the nearest enemy, result in pendingX/Z/P.
+  autoAim(range) {
+    const E = this.game.enemies;
+    const i = E.nearest(this.x, this.z, range + CONFIG.player.autoAimExtraRange);
+    if (i < 0) {
+      this.pendingX = this.dirX;
+      this.pendingZ = this.dirZ;
+      this.pendingP = 0.6;
+      return;
     }
-    this.dirX = dx;
-    this.dirZ = dz;
-    this.charges--;
+    const dx = E.x[i] - this.x, dz = E.z[i] - this.z;
+    const d = Math.sqrt(dx * dx + dz * dz) || 1;
+    this.pendingX = dx / d;
+    this.pendingZ = dz / d;
+    this.pendingP = Math.min(1, d / range);
+  }
+
+  attack() {
+    const w = CONFIG.weapons[this.weapon];
+    if (this.pendingAuto) this.autoAim(w.range);
+    this.dirX = this.pendingX;
+    this.dirZ = this.pendingZ;
+    if (this.eclipseT <= 0) this.charges--;
     this.atkCd = w.cooldown;
     this.attackAnim = 1;
-    fireWeapon(game, this.weapon, dx, dz);
+    fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
+  }
+
+  // slot 0 / 1 = skills, 2 = ultimate
+  cast(slot, auto, dx, dz, power) {
+    const id = this.slots[slot];
+    if (!id || this.dodgeT > 0) return;
+    const def = skillDef(id);
+    const hud = this.game.hud;
+    if (slot === 2) {
+      if (this.ult < CONFIG.progression.ultCharge.max) { hud.deny(slot); return; }
+    } else {
+      if (this.cds[slot] > 0) { hud.deny(slot); return; }
+      if (this.mana < def.mana) { hud.deny(slot); hud.toast(t('toast.noMana')); return; }
+    }
+    this.pendingX = dx;
+    this.pendingZ = dz;
+    this.pendingP = power;
+    if (def.aim === 'self') { this.pendingX = this.dirX; this.pendingZ = this.dirZ; }
+    else if (auto) this.autoAim(def.range);
+    if (slot === 2) this.ult = 0;
+    else { this.mana -= def.mana; this.cds[slot] = def.cooldown; }
+    this.dirX = this.pendingX;
+    this.dirZ = this.pendingZ;
+    this.attackAnim = 1;
+    castSkill(this.game, id, this.pendingX, this.pendingZ, this.pendingP);
+    if (slot === 2) this.ult = 0; // the ultimate does not charge itself
   }
 
   sync(dt) {

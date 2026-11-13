@@ -23,6 +23,15 @@ export function initKeyboard() {
       e.preventDefault();
       return;
     }
+    if (e.code === 'KeyE') input.arise = true;
+    else if (e.code === 'KeyQ') input.keyCast = 1;
+    else if (e.code === 'KeyR') input.keyCast = 2;
+    else if (e.code === 'KeyF') input.keyCast = 3;
+    else if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') {
+      const k = Number(e.code.slice(5)) - 1;
+      if (e.shiftKey) input.reviveSquad = k;
+      else input.squadCycle = k;
+    }
     down.add(e.code);
     refresh();
   });

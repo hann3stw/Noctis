@@ -35,6 +35,9 @@ export class Enemies {
     this.tz = new Float32Array(N);
     this.respawnT = new Float32Array(N);
     this.deathT = new Float32Array(N);
+    this.tgt = new Int16Array(N).fill(-1); // -1 = the player, otherwise a shadow slot
+    this.retT = new Float32Array(N); // time until the target is re-evaluated
+    this.stun = new Float32Array(N); // seconds the enemy cannot act
 
     this.active = new Uint16Array(N);
     this.activeCount = 0;
@@ -121,6 +124,9 @@ export class Enemies {
     this.flash[i] = 0;
     this.lunge[i] = 0;
     this.deathT[i] = 0;
+    this.tgt[i] = -1;
+    this.stun[i] = 0;
+    this.retT[i] = Math.random() * 0.5;
     this.alive[i] = 1;
   }
 
@@ -142,34 +148,68 @@ export class Enemies {
     return best;
   }
 
-  damage(i, amount, kx, kz) {
+  // nearest living enemy to (x, z) that is within `range` of the anchor point
+  nearestAround(x, z, ax, az, range) {
+    let best = -1, bd = 1e9;
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.active[k];
+      if (!this.alive[i]) continue;
+      const hx = this.x[i] - ax, hz = this.z[i] - az;
+      const reach = range + this.radius[i];
+      if (hx * hx + hz * hz > reach * reach) continue;
+      const dx = this.x[i] - x, dz = this.z[i] - z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < bd) { bd = d2; best = i; }
+    }
+    return best;
+  }
+
+  // Drags every enemy in the circle towards its centre (k = 0..1 of the way).
+  pull(x, z, radius, k) {
+    for (let n = 0; n < this.activeCount; n++) {
+      const i = this.active[n];
+      if (!this.alive[i]) continue;
+      const dx = x - this.x[i], dz = z - this.z[i];
+      if (dx * dx + dz * dz > radius * radius) continue;
+      this.x[i] += dx * k;
+      this.z[i] += dz * k;
+    }
+  }
+
+  // src: -1 = the player, otherwise the slot of the shadow that dealt the hit
+  damage(i, amount, kx, kz, src = -1, crit = false) {
     if (!this.alive[i]) return;
     const fx = this.game.effects;
     this.hp[i] -= amount;
     this.flash[i] = 0.12;
     this.packAggro[this.pack[i]] = 1;
     if (this.state[i] === ST_RETURN || this.state[i] === ST_IDLE) this.state[i] = ST_CHASE;
-    const kb = CONFIG.combat.knockback;
+    const kb = CONFIG.combat.knockback * (src < 0 ? 1 : 0.25);
     this.x[i] += kx * kb;
     this.z[i] += kz * kb;
-    fx.number(this.x[i], 2.2, this.z[i], String(amount));
-    fx.burst(this.x[i], 1, this.z[i], 4, 0xe8dcff, 5, 0.14, 0.3);
-    if (this.hp[i] <= 0) this.kill(i);
+    if (src < 0) {
+      fx.number(this.x[i], 2.2, this.z[i], String(amount), crit ? 'crit' : undefined);
+      fx.burst(this.x[i], 1, this.z[i], 4, 0xe8dcff, 5, 0.14, 0.3);
+    } else {
+      fx.burst(this.x[i], 1, this.z[i], 2, 0xb48cff, 4, 0.12, 0.25);
+    }
+    if (this.hp[i] <= 0) this.kill(i, src);
   }
 
-  kill(i) {
+  kill(i, src = -1) {
     this.alive[i] = 0;
     this.deathT[i] = DEATH_TIME;
     this.respawnT[i] = CONFIG.sim.respawnTime;
     this.game.effects.burst(this.x[i], 0.9, this.z[i], 14, 0x6a4dbf, 5, 0.24, 0.6);
-    this.game.onEnemyKilled(i);
+    this.game.onEnemyKilled(i, src);
   }
 
   // ---- simulation ---------------------------------------------------------
   update(dt) {
     const game = this.game, P = game.player, world = game.world, S = CONFIG.sim, E = CONFIG.enemies;
     const px = P.x, pz = P.z;
-    const targetable = !P.dead && !P.inCamp;
+    const army = game.army;
+    const playerOk = !P.dead && !P.inCamp;
     const activeR2 = S.activeRadius * S.activeRadius;
     const renderR2 = S.renderRadius * S.renderRadius;
     const campR = world.campRadius + 1.2;
@@ -193,19 +233,45 @@ export class Enemies {
         }
         continue;
       }
-      let dx = px - this.x[i], dz = pz - this.z[i];
-      const d2 = dx * dx + dz * dz;
-      if (d2 > activeR2) continue;
+      const pdx = px - this.x[i], pdz = pz - this.z[i];
+      const pd2 = pdx * pdx + pdz * pdz;
+      if (pd2 > activeR2) continue;
       this.active[nAct++] = i;
 
       const def = this.types[this.type[i]].def;
       const p = this.pack[i];
-      const dist = Math.sqrt(d2);
       if (this.atkCd[i] > 0) this.atkCd[i] -= dt;
       if (this.flash[i] > 0) this.flash[i] -= dt;
       if (this.lunge[i] > 0) this.lunge[i] -= dt * 5;
       let st = this.state[i];
       let mvx = 0, mvz = 0, speed = 0;
+
+      // ---- target: the player or the most threatening shadow nearby
+      let tg = this.tgt[i];
+      if (tg >= 0 && !army.targetable(army.units[tg])) tg = -1;
+      this.retT[i] -= dt;
+      if (this.retT[i] <= 0 && st !== ST_WINDUP) {
+        this.retT[i] = 0.35 + Math.random() * 0.25;
+        const s = army.pickTarget(this.x[i], this.z[i], E.targetRange);
+        tg = s >= 0 && (!playerOk || army.pickW < pd2) ? s : -1;
+      }
+      this.tgt[i] = tg;
+      let dx = pdx, dz = pdz, tr = P.radius, targetable = playerOk;
+      if (tg >= 0) {
+        const u = army.units[tg];
+        dx = u.x - this.x[i];
+        dz = u.z - this.z[i];
+        tr = u.radius;
+        targetable = true;
+      }
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (this.stun[i] > 0) {
+        this.stun[i] -= dt;
+        if (st === ST_WINDUP) this.state[i] = ST_CHASE;
+        this.moving[i] = 0;
+        continue;
+      }
 
       if (st === ST_IDLE) {
         if (targetable && dist < def.aggroRange) this.packAggro[p] = 1;
@@ -230,7 +296,7 @@ export class Enemies {
         if (!this.packAggro[p]) {
           st = ST_RETURN;
         } else {
-          const reach = def.attackRange + P.radius;
+          const reach = def.attackRange + tr;
           if (dist > reach * 0.85) { mvx = dx; mvz = dz; speed = def.speed; }
           else if (dist > 0.01) this.yaw[i] = Math.atan2(dx, dz);
           if (dist <= reach && this.atkCd[i] <= 0) {
@@ -244,7 +310,10 @@ export class Enemies {
         if (this.timer[i] <= 0) {
           this.lunge[i] = 1;
           this.atkCd[i] = def.attackCooldown * (0.85 + Math.random() * 0.3);
-          if (dist <= def.attackRange + P.radius + 0.9) P.damage(def.damage);
+          if (targetable && dist <= def.attackRange + tr + 0.9) {
+            if (tg >= 0) army.damage(tg, def.damage);
+            else P.damage(def.damage);
+          }
           st = ST_CHASE;
         }
       }

@@ -5,7 +5,7 @@ import { sectorGeometry } from './geo.js';
 
 const MAX_PARTICLES = 320;
 const MAX_BLOBS = 256;
-const MAX_BARS = 96;
+const MAX_BARS = 160;
 const MAX_NUMBERS = 24;
 const MAX_SLASHES = 6;
 
@@ -67,9 +67,9 @@ export class Effects {
     );
     this.barFill = dynamicInstanced(
       barGeo,
-      new THREE.MeshBasicMaterial({ color: 0xff4a5a, depthTest: false, depthWrite: false, transparent: true }),
+      new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false, transparent: true }),
       MAX_BARS,
-      false,
+      true,
     );
     this.barBg.renderOrder = 20;
     this.barFill.renderOrder = 21;
@@ -103,6 +103,22 @@ export class Effects {
       this.slashes.push(m);
     }
     this.slashNext = 0;
+
+    // --- beams (piercing line attacks)
+    this.beams = [];
+    const beamGeo = new THREE.BoxGeometry(1, 0.12, 1);
+    for (let i = 0; i < 4; i++) {
+      const m = new THREE.Mesh(
+        beamGeo,
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
+      );
+      m.visible = false;
+      m.renderOrder = 5;
+      m.userData.life = 0;
+      scene.add(m);
+      this.beams.push(m);
+    }
+    this.beamNext = 0;
 
     // --- damage numbers (DOM)
     this.numbers = [];
@@ -155,6 +171,17 @@ export class Effects {
     m.visible = true;
   }
 
+  beam(x, z, dx, dz, len, width, color) {
+    const m = this.beams[this.beamNext];
+    this.beamNext = (this.beamNext + 1) % this.beams.length;
+    m.material.color.setHex(color);
+    m.position.set(x + dx * len * 0.5, 1, z + dz * len * 0.5);
+    m.rotation.y = Math.atan2(dx, dz);
+    m.scale.set(width, 1, len);
+    m.userData.life = 1;
+    m.visible = true;
+  }
+
   // ---- blob shadows -------------------------------------------------------
   beginFrame() {
     this.blobCount = 0;
@@ -170,8 +197,11 @@ export class Effects {
   }
 
   // ---- health bars --------------------------------------------------------
-  bar(x, y, z, frac, width = 1.5) {
+  // ally = true draws the bar in violet (shadows) instead of red (enemies)
+  bar(x, y, z, frac, width = 1.5, ally = false) {
     if (this.barCount >= MAX_BARS) return;
+    const c = this.barFill.instanceColor.array, k = this.barCount * 3;
+    if (ally) { c[k] = 0.45; c[k + 1] = 0.2; c[k + 2] = 1; } else { c[k] = 1; c[k + 1] = 0.07; c[k + 2] = 0.1; }
     const o = this.barCount++ * 16;
     const h = 0.2;
     this._bar(this.barBg.instanceMatrix.array, o, x, y, z, width + 0.1, h + 0.1);
@@ -238,11 +268,20 @@ export class Effects {
       m.scale.setScalar(m.userData.range * (1.08 - l * 0.2));
     }
 
+    for (let i = 0; i < this.beams.length; i++) {
+      const m = this.beams[i];
+      if (!m.visible) continue;
+      m.userData.life -= dt * 4;
+      if (m.userData.life <= 0) { m.visible = false; continue; }
+      m.material.opacity = m.userData.life * 0.85;
+    }
+
     this.blobMesh.count = this.blobCount;
     this.blobMesh.instanceMatrix.needsUpdate = true;
     this.barBg.count = this.barFill.count = this.barCount;
     this.barBg.instanceMatrix.needsUpdate = true;
     this.barFill.instanceMatrix.needsUpdate = true;
+    this.barFill.instanceColor.needsUpdate = true;
 
     // damage numbers
     for (let i = 0; i < MAX_NUMBERS; i++) {

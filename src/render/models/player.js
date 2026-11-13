@@ -1,5 +1,7 @@
-// The player character, built from simple boxes. Faces +Z.
+// The player character, built from simple boxes. Faces +Z. Equipped weapon
+// and armour are shown on top of the skin.
 import * as THREE from 'three';
+import { RARITY_COLORS } from '../../core/items.js';
 
 function mat(color) {
   return new THREE.MeshLambertMaterial({ color, flatShading: true });
@@ -11,14 +13,54 @@ function mesh(w, h, d, material, x, y, z) {
   return m;
 }
 
-function buildSword() {
+const SET_COLORS = { stalker: 0x23464f, bulwark: 0x8a93a6, gravecaller: 0x3d2466 };
+const STEEL = 0xcfd6e6, DARK = 0x22202c, WOOD = 0x5a3d28;
+
+// ---- weapons (held in the right hand, grip at the origin, pointing +Y) -------
+function buildWeapon(type, glow) {
   const g = new THREE.Group();
-  const blade = mesh(0.09, 1.25, 0.2, mat(0xcfd6e6), 0, 0.85, 0);
-  const edge = mesh(0.03, 1.1, 0.24, new THREE.MeshBasicMaterial({ color: 0xb48cff }), 0, 0.85, 0);
-  const guard = mesh(0.12, 0.08, 0.5, mat(0x3a2f55), 0, 0.2, 0);
-  const grip = mesh(0.08, 0.3, 0.08, mat(0x22202c), 0, 0.02, 0);
-  g.add(blade, edge, guard, grip);
+  const glowMat = new THREE.MeshBasicMaterial({ color: glow });
+  if (type === 'sword') {
+    g.add(mesh(0.09, 1.25, 0.2, mat(STEEL), 0, 0.85, 0));
+    g.add(mesh(0.03, 1.1, 0.24, glowMat, 0, 0.85, 0));
+    g.add(mesh(0.12, 0.08, 0.5, mat(0x3a2f55), 0, 0.2, 0));
+    g.add(mesh(0.08, 0.3, 0.08, mat(DARK), 0, 0.02, 0));
+  } else if (type === 'daggers') {
+    g.add(mesh(0.07, 0.6, 0.16, mat(STEEL), 0, 0.48, 0));
+    g.add(mesh(0.03, 0.5, 0.19, glowMat, 0, 0.48, 0));
+    g.add(mesh(0.1, 0.06, 0.3, mat(0x3a2f55), 0, 0.16, 0));
+    g.add(mesh(0.07, 0.24, 0.07, mat(DARK), 0, 0.02, 0));
+  } else if (type === 'bow') {
+    g.add(mesh(0.07, 0.5, 0.1, mat(WOOD), 0, 0, 0.12));
+    const top = mesh(0.07, 0.5, 0.1, mat(WOOD), 0, 0.42, 0.02);
+    const bottom = mesh(0.07, 0.5, 0.1, mat(WOOD), 0, -0.42, 0.02);
+    top.rotation.x = 0.45;
+    bottom.rotation.x = -0.45;
+    g.add(top, bottom);
+    g.add(mesh(0.025, 1.3, 0.025, glowMat, 0, 0, -0.1));
+    g.rotation.x = -Math.PI / 2; // held upright in front of the body
+  } else if (type === 'scythe') {
+    g.add(mesh(0.08, 2.0, 0.08, mat(WOOD), 0, 0.7, 0));
+    g.add(mesh(0.06, 0.2, 0.9, mat(STEEL), 0, 1.62, 0.4));
+    g.add(mesh(0.03, 0.08, 0.95, glowMat, 0, 1.52, 0.42));
+    const tip = mesh(0.06, 0.14, 0.3, mat(STEEL), 0, 1.5, 0.95);
+    tip.rotation.x = 0.7;
+    g.add(tip);
+  } else {
+    // staff
+    g.add(mesh(0.09, 1.9, 0.09, mat(WOOD), 0, 0.6, 0));
+    g.add(mesh(0.26, 0.1, 0.26, mat(DARK), 0, 1.5, 0));
+    const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), glowMat);
+    orb.position.set(0, 1.78, 0);
+    g.add(orb);
+  }
   return g;
+}
+
+function dispose(group) {
+  group.traverse((o) => {
+    if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
+  });
 }
 
 export function createPlayerModel(appearance) {
@@ -41,8 +83,10 @@ export function createPlayerModel(appearance) {
   const head = new THREE.Group();
   head.position.set(0, 1.88, 0);
   head.add(mesh(0.5, 0.5, 0.5, mats.skin, 0, 0, 0));
-  head.add(mesh(0.56, 0.2, 0.56, mats.hair, 0, 0.28, -0.02));
-  head.add(mesh(0.56, 0.4, 0.16, mats.hair, 0, 0.05, -0.24));
+  const hair = new THREE.Group();
+  hair.add(mesh(0.56, 0.2, 0.56, mats.hair, 0, 0.28, -0.02));
+  hair.add(mesh(0.56, 0.4, 0.16, mats.hair, 0, 0.05, -0.24));
+  head.add(hair);
   head.add(mesh(0.1, 0.07, 0.04, mats.eyes, 0.12, 0.02, 0.26));
   head.add(mesh(0.1, 0.07, 0.04, mats.eyes, -0.12, 0.02, 0.26));
   body.add(head);
@@ -59,22 +103,93 @@ export function createPlayerModel(appearance) {
   const legL = limb(0.19, 0.8, 0.26, 0.8, 0.28, mats.boots);
   const legR = limb(-0.19, 0.8, 0.26, 0.8, 0.28, mats.boots);
 
-  const weapon = buildSword();
-  weapon.position.set(0, -0.7, 0.05);
-  weapon.rotation.x = Math.PI / 2;
-  armR.add(weapon);
-
   const cape = new THREE.Group();
   cape.position.set(0, 1.58, -0.24);
   cape.add(mesh(0.7, 1.15, 0.05, mats.cape, 0, -0.57, 0));
   cape.visible = appearance.cape;
   body.add(cape);
 
+  // ---- equipment: rebuilt whenever it changes ---------------------------------
+  let gear = []; // { group, parent }
+  let gearKey = '';
+
+  function attach(parent, group) {
+    parent.add(group);
+    gear.push({ group, parent });
+  }
+
+  function armorMats(item) {
+    return [mat(SET_COLORS[item.set]), new THREE.MeshBasicMaterial({ color: RARITY_COLORS[item.rarity] })];
+  }
+
+  function setEquipment(equip) {
+    let key = '';
+    for (const slot in equip) key += equip[slot] ? equip[slot].type + (equip[slot].set || '') + equip[slot].rarity + '|' : '-|';
+    if (key === gearKey) return;
+    gearKey = key;
+    for (const g of gear) { g.parent.remove(g.group); dispose(g.group); }
+    gear = [];
+
+    const w = equip.weapon;
+    const weapon = buildWeapon(w.type, RARITY_COLORS[w.rarity]);
+    const hold = new THREE.Group();
+    hold.position.set(0, -0.7, 0.05);
+    hold.rotation.x = Math.PI / 2;
+    hold.add(weapon);
+    attach(armR, hold);
+    if (w.type === 'daggers') {
+      const off = new THREE.Group();
+      off.position.set(0, -0.7, 0.05);
+      off.rotation.x = Math.PI / 2;
+      off.add(buildWeapon('daggers', RARITY_COLORS[w.rarity]));
+      attach(armL, off);
+    }
+
+    hair.visible = !equip.helmet;
+    if (equip.helmet) {
+      const [m, trim] = armorMats(equip.helmet);
+      const g = new THREE.Group();
+      g.add(mesh(0.58, 0.34, 0.58, m, 0, 0.2, 0));
+      g.add(mesh(0.58, 0.3, 0.14, m, 0, -0.06, -0.24));
+      g.add(mesh(0.6, 0.06, 0.6, trim, 0, 0.05, 0));
+      g.add(mesh(0.08, 0.2, 0.08, trim, 0, 0.45, 0));
+      attach(head, g);
+    }
+    if (equip.chest) {
+      const [m, trim] = armorMats(equip.chest);
+      const g = new THREE.Group();
+      g.add(mesh(0.8, 0.6, 0.5, m, 0, 1.3, 0));
+      g.add(mesh(0.3, 0.2, 0.3, m, 0.48, 1.58, 0));
+      g.add(mesh(0.3, 0.2, 0.3, m, -0.48, 1.58, 0));
+      g.add(mesh(0.2, 0.2, 0.04, trim, 0, 1.36, 0.26));
+      attach(body, g);
+    }
+    if (equip.gloves) {
+      for (const arm of [armL, armR]) {
+        const [m, trim] = armorMats(equip.gloves);
+        const g = new THREE.Group();
+        g.add(mesh(0.26, 0.3, 0.28, m, 0, -0.55, 0));
+        g.add(mesh(0.28, 0.05, 0.3, trim, 0, -0.42, 0));
+        attach(arm, g);
+      }
+    }
+    if (equip.boots) {
+      for (const leg of [legL, legR]) {
+        const [m, trim] = armorMats(equip.boots);
+        const g = new THREE.Group();
+        g.add(mesh(0.32, 0.36, 0.36, m, 0, -0.62, 0.02));
+        g.add(mesh(0.34, 0.05, 0.38, trim, 0, -0.46, 0.02));
+        attach(leg, g);
+      }
+    }
+  }
+
   let walk = 0;
   let fall = 0;
 
   return {
     root,
+    setEquipment,
     // st: { moving, attack (1 -> 0 while swinging), dodging, dead }
     animate(dt, st) {
       fall += ((st.dead ? 1 : 0) - fall) * Math.min(1, dt * 8);

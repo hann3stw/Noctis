@@ -1,11 +1,11 @@
-// Touch controls: floating movement joystick on one half of the screen and an
-// attack stick on the attack button. Every finger is tracked by pointer id so
-// moving, aiming and dodging work at the same time.
+// Touch controls: floating movement joystick on one half of the screen and
+// aim sticks on the attack, skill and ultimate buttons. Every finger is tracked
+// by pointer id so moving, aiming and dodging work at the same time.
 import { CONFIG } from '../config.js';
 import { input } from './input.js';
 
 export function initTouch(els) {
-  const { layer, joyBase, joyKnob, btnAttack, attackKnob, btnDodge } = els;
+  const { layer, joyBase, joyKnob, btnDodge } = els;
 
   // ---- movement joystick --------------------------------------------------
   let moveId = -1, baseX = 0, baseY = 0, baseR = 1;
@@ -63,6 +63,9 @@ export function initTouch(els) {
     }
     if (e.pointerId === moveId) moveTo(e.clientX, e.clientY);
   });
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse') { input.mouseX = e.clientX; input.mouseY = e.clientY; }
+  });
 
   function layerUp(e) {
     if (e.pointerType === 'mouse') {
@@ -80,67 +83,77 @@ export function initTouch(els) {
     else if (e.pointerId === moveId) endMove();
   });
 
-  // ---- attack stick -------------------------------------------------------
-  let atkId = -1, atkX = 0, atkY = 0, atkR = 1, aimed = false;
+  // ---- aim sticks (attack, skills, ultimate) --------------------------------
+  const cancels = [];
 
-  function aimTo(x, y) {
-    let dx = x - atkX, dy = y - atkY;
-    const d = Math.hypot(dx, dy);
-    const max = atkR * 0.9;
-    const k = d > max ? max / d : 1;
-    attackKnob.style.transform = 'translate(' + (dx * k).toFixed(1) + 'px,' + (dy * k).toFixed(1) + 'px)';
-    if (d / atkR >= CONFIG.input.aimDeadzone) {
-      aimed = true;
-      input.aiming = true;
-      input.aimX = dx / d;
-      input.aimZ = dy / d;
-    } else {
-      input.aiming = false;
-    }
-  }
+  function makeStick(btn, knob, index) {
+    const st = input.sticks[index];
+    let id = -1, ox = 0, oy = 0, radius = 1, aimed = false;
 
-  function endAim(fire) {
-    if (fire) {
-      if (input.aiming) {
-        input.fire = true;
-        input.fireAuto = false;
-        input.fireX = input.aimX;
-        input.fireZ = input.aimZ;
-      } else if (!aimed) {
-        // quick tap: auto aim at the nearest enemy
-        input.fire = true;
-        input.fireAuto = true;
+    function aimTo(x, y) {
+      const dx = x - ox, dy = y - oy;
+      const d = Math.hypot(dx, dy);
+      const max = radius * 0.9;
+      const k = d > max ? max / d : 1;
+      knob.style.transform = 'translate(' + (dx * k).toFixed(1) + 'px,' + (dy * k).toFixed(1) + 'px)';
+      if (d / radius >= CONFIG.input.aimDeadzone) {
+        aimed = true;
+        st.aiming = true;
+        st.x = dx / d;
+        st.z = dy / d;
+        st.power = Math.min(1, d / max);
+      } else {
+        st.aiming = false;
       }
-      // dragged out and back to the centre = cancelled
     }
-    atkId = -1;
-    input.aiming = false;
-    attackKnob.style.transform = '';
-    btnAttack.classList.remove('held');
+
+    function end(fire) {
+      if (fire) {
+        if (st.aiming) {
+          st.fire = true;
+          st.auto = false;
+          st.fx = st.x;
+          st.fz = st.z;
+          st.fp = st.power;
+        } else if (!aimed) {
+          // quick tap: auto aim at the nearest enemy
+          st.fire = true;
+          st.auto = true;
+        }
+        // dragged out and back to the centre = cancelled
+      }
+      id = -1;
+      st.aiming = false;
+      knob.style.transform = '';
+      btn.classList.remove('held');
+    }
+
+    btn.addEventListener('pointerdown', (e) => {
+      if (id !== -1) return;
+      e.stopPropagation();
+      id = e.pointerId;
+      try { btn.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      // The stick is centred where the finger lands, so touching anywhere on
+      // the button is a tap and only a real drag starts aiming.
+      ox = e.clientX;
+      oy = e.clientY;
+      radius = Math.max(btn.offsetWidth / 2, 40);
+      aimed = false;
+      btn.classList.add('held');
+    });
+    btn.addEventListener('pointermove', (e) => {
+      if (e.pointerId === id) aimTo(e.clientX, e.clientY);
+    });
+    btn.addEventListener('pointerup', (e) => {
+      if (e.pointerId === id) end(true);
+    });
+    btn.addEventListener('pointercancel', (e) => {
+      if (e.pointerId === id) end(false);
+    });
+    cancels.push(() => { if (id !== -1) end(false); });
   }
 
-  btnAttack.addEventListener('pointerdown', (e) => {
-    if (atkId !== -1) return;
-    e.stopPropagation();
-    atkId = e.pointerId;
-    try { btnAttack.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-    // The stick is centred where the finger lands, so touching anywhere on
-    // the button is a tap and only a real drag starts aiming.
-    atkX = e.clientX;
-    atkY = e.clientY;
-    atkR = btnAttack.offsetWidth / 2 || 60;
-    aimed = false;
-    btnAttack.classList.add('held');
-  });
-  btnAttack.addEventListener('pointermove', (e) => {
-    if (e.pointerId === atkId) aimTo(e.clientX, e.clientY);
-  });
-  btnAttack.addEventListener('pointerup', (e) => {
-    if (e.pointerId === atkId) endAim(true);
-  });
-  btnAttack.addEventListener('pointercancel', (e) => {
-    if (e.pointerId === atkId) endAim(false);
-  });
+  els.sticks.forEach((s, i) => makeStick(s.btn, s.knob, i));
 
   // ---- dodge --------------------------------------------------------------
   btnDodge.addEventListener('pointerdown', (e) => {
@@ -156,6 +169,6 @@ export function initTouch(els) {
   window.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('blur', () => {
     if (moveId !== -1) endMove();
-    if (atkId !== -1) endAim(false);
+    for (const c of cancels) c();
   });
 }

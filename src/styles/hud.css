@@ -28,6 +28,11 @@
   text-shadow: 0 0 0.5em var(--violet), 0 0.08em 0 #000;
   will-change: transform, opacity;
 }
+.dmg.crit {
+  color: #ffd24a;
+  font-size: calc(var(--u) * 6.4);
+  text-shadow: 0 0 0.5em #ff7a2a, 0 0.08em 0 #000;
+}
 .dmg.hurt {
   color: #ff6070;
   text-shadow: 0 0.08em 0 #000;
