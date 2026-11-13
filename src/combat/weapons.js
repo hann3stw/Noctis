@@ -2,6 +2,7 @@
 // of every weapon type.
 import { CONFIG } from '../config.js';
 import { play } from '../core/sfx.js';
+import { SWEEP, EXPAND } from '../render/effects.js';
 
 const DEG = Math.PI / 180;
 
@@ -13,7 +14,15 @@ export function playerHit(game, i, base, kx, kz) {
   if (crit) dmg *= P.critDmg;
   P.ult = Math.min(C.ultCharge.max, P.ult + C.ultCharge.perHit);
   play(crit ? 'crit' : 'hit');
-  game.enemies.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);
+  const E = game.enemies, fx = game.effects;
+  if (crit) {
+    fx.ring(E.x[i], E.z[i], 0.4, 2.6, 0xffc040, 0.3, 0, 1.0);
+    game.cam.shake(0.18, 0.15);
+    game.hitStop(0.045);
+  } else {
+    fx.ring(E.x[i], E.z[i], 0.3, 1.5, 0xffffff, 0.18, 0, 1.0);
+  }
+  E.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);
 }
 
 // All of these return the number of enemies hit.
@@ -78,10 +87,14 @@ export function fireWeapon(game, weaponId, dx, dz, power) {
   const base = P.power();
   if (w.shape === 'arc') {
     hitArc(game, P.x, P.z, dx, dz, w.range, w.arcDeg, base);
-    fx.slash(P.x, P.z, Math.atan2(dx, dz), w.range, w.arcDeg);
+    // the trail sweeps the way the arm swings (alternates every attack)
+    const dir = P.combo ? -1 : 1;
+    const color = weaponId === 'daggers' ? 0xe8dcff : 0xc9a8ff;
+    fx.slash(P.x, P.z, Math.atan2(dx, dz), w.range, w.arcDeg, color, SWEEP, dir, weaponId === 'daggers' ? 0.16 : 0.26);
   } else if (w.shape === 'circle') {
     hitCircle(game, P.x, P.z, w.range, base);
-    fx.slash(P.x, P.z, 0, w.range, 360);
+    fx.slash(P.x, P.z, Math.atan2(dx, dz), w.range, 360, 0xc9a8ff, SWEEP, -1, 0.34);
+    fx.ring(P.x, P.z, 1, w.range + 0.5, 0xb48cff, 0.3);
   } else if (w.shape === 'line') {
     game.projectiles.shoot(P.x + dx * 0.8, P.z + dz * 0.8, dx, dz, w.speed, w.range, base, w.width);
   } else if (w.shape === 'blast') {

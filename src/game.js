@@ -46,6 +46,7 @@ export class Game {
     this.saveT = 0;
     this.fpsT = 0;
     this.fpsN = 0;
+    this.hitStopT = 0;
     this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
     this.discovered = new Set(save ? save.discovered || [] : []); // outposts found (index in world.safes)
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
@@ -163,11 +164,16 @@ export class Game {
     return d;
   }
 
+  hitStop(t) {
+    if (t > this.hitStopT) this.hitStopT = t;
+  }
+
   // Writes the world into its slot. Returns a promise (true = saved).
   save(manual = false) {
     this.saveT = 0;
     this.fpsT = 0;
     this.fpsN = 0;
+    this.hitStopT = 0;
     if (this.slot < 0 || !this.running) return Promise.resolve(false);
     const data = this.serialize();
     this.hud.showSaving();
@@ -228,6 +234,11 @@ export class Game {
       }
     }
     if (dt > 0.05) dt = 0.05;
+    // hit stop: the world nearly freezes for a moment on heavy hits
+    if (this.hitStopT > 0) {
+      this.hitStopT -= dt;
+      dt *= 0.08;
+    }
     this.update(dt);
     this.renderer.render(this.scene, this.cam.camera);
   }
@@ -499,6 +510,8 @@ export class Game {
     souls.remove(i);
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
+    this.effects.ring(u.x, u.z, 0.5, 4, this.appearance.aura, 0.55);
+    this.effects.ring(u.x, u.z, 3.5, 0.3, 0xffffff, 0.5, 0.05);
     if (!army.out) this.hud.toast(t('toast.joinsArmy', { name: army.name(u) }));
   }
 

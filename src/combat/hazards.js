@@ -3,6 +3,7 @@
 // dodge's invulnerability) avoids the hit.
 import * as THREE from 'three';
 import { sectorGeometry } from '../render/geo.js';
+import { EXPAND } from '../render/effects.js';
 
 const MAX = 24;
 
@@ -67,7 +68,11 @@ export class Hazards {
         const dx = u.x - h.x, dz = u.z - h.z;
         if (dx * dx + dz * dz < r2) army.damage(u.slot, h.dmg);
       }
-      game.effects.slash(h.x, h.z, 0, h.r, 360, h.color);
+      game.effects.slash(h.x, h.z, 0, h.r, 360, h.color, EXPAND, 1, 0.35);
+      game.effects.ring(h.x, h.z, h.r * 0.4, h.r * 1.3, h.color, 0.4);
+      // the ground shakes when it is close
+      const pd = Math.hypot(P.x - h.x, P.z - h.z);
+      if (pd < h.r + 10) game.cam.shake(0.35 * (1 - pd / (h.r + 10)) + 0.1, 0.3);
       game.effects.burst(h.x, 0.4, h.z, 16, h.color, 7, 0.24, 0.5);
       h.live = false;
       h.fill.visible = h.edge.visible = false;

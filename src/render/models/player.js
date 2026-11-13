@@ -238,15 +238,58 @@ export function createPlayerModel(appearance) {
 
   let walk = 0;
   let fall = 0;
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+
+  // p: 0 -> 1 through the attack
+  function attackPose(weapon, p, combo) {
+    const side = combo ? -1 : 1;
+    if (weapon === 'daggers') {
+      // quick stab, left and right hand in turn
+      const arm = combo ? armL : armR, other = combo ? armR : armL;
+      const k = Math.sin(p * Math.PI);
+      arm.rotation.x = -0.3 - 1.4 * k;
+      arm.rotation.z = 0;
+      other.rotation.x += (0.4 - other.rotation.x) * 0.5;
+      body.rotation.y = 0.35 * side * k;
+      body.rotation.x += 0.18 * k;
+    } else if (weapon === 'bow') {
+      // bow arm forward, string hand pulls back and lets go
+      armR.rotation.x = -1.55;
+      armR.rotation.z = 0.15;
+      armL.rotation.x = p < 0.55 ? -1.5 : -1.5 + (p - 0.55) * 3;
+      armL.rotation.z = p < 0.55 ? -0.9 * (p / 0.55) : -0.9 * (1 - (p - 0.55) / 0.45);
+      body.rotation.y = 0.35;
+    } else if (weapon === 'scythe') {
+      // full spin with the blade held out
+      body.rotation.y = -ease(p) * Math.PI * 2;
+      armR.rotation.x = -0.6;
+      armR.rotation.z = -1.3;
+    } else if (weapon === 'staff') {
+      // raise over the head, then slam forward
+      const up = p < 0.45 ? p / 0.45 : 1 - (p - 0.45) / 0.55;
+      const x = p < 0.45 ? -2.9 * up : -2.9 + ((p - 0.45) / 0.55) * 1.9;
+      armR.rotation.x = x;
+      armL.rotation.x = x;
+      armR.rotation.z = 0;
+      body.rotation.x += p > 0.45 ? 0.25 * (1 - p) * 2 : 0;
+      body.rotation.y *= 0.5;
+    } else {
+      // sword: wide slash, alternating direction
+      const e = ease(p);
+      armR.rotation.x = -2.2 + e * 2.6;
+      armR.rotation.z = (-0.6 + e * 1.2) * side;
+      body.rotation.y = (0.6 - e * 1.2) * side;
+    }
+  }
 
   return {
     root,
     setEquipment,
-    // st: { moving, attack (1 -> 0 while swinging), dodging, dead }
+    // st: { moving, attack (1 -> 0 while swinging), weapon, combo (0 / 1,
+    // alternates every attack), cast (1 -> 0 while casting a skill), dodging, dead }
     animate(dt, st) {
       fall += ((st.dead ? 1 : 0) - fall) * Math.min(1, dt * 8);
       body.rotation.x = -fall * 1.45 + (st.dodging ? 0.55 : 0);
-      body.position.y = fall * 0.25;
 
       if (st.moving && !st.dead) walk += dt * 13;
       const swing = st.moving && !st.dead ? Math.sin(walk) * 0.75 : 0;
@@ -254,14 +297,22 @@ export function createPlayerModel(appearance) {
       legR.rotation.x += (-swing - legR.rotation.x) * 0.5;
       armL.rotation.x += (-swing * 0.7 - armL.rotation.x) * 0.5;
 
+      body.position.y = fall * 0.25;
       if (st.attack > 0) {
-        const p = 1 - st.attack; // 0 -> 1
-        armR.rotation.x = -2.4 + p * 2.9;
-        armR.rotation.z = -0.5 + p * 1.0;
-        body.rotation.y = 0.5 - p * 1.0;
+        attackPose(st.weapon, 1 - st.attack, st.combo);
+      } else if (st.cast > 0) {
+        // skill: both arms thrown up and out, a small hop
+        const k = Math.sin((1 - st.cast) * Math.PI);
+        armR.rotation.x = -2.7 * k;
+        armL.rotation.x = -2.7 * k;
+        armR.rotation.z = -0.5 * k;
+        armL.rotation.z = 0.5 * k;
+        body.position.y += 0.18 * k;
+        body.rotation.y *= 0.6;
       } else {
         armR.rotation.x += (swing * 0.7 - 0.25 - armR.rotation.x) * 0.4;
         armR.rotation.z *= 0.6;
+        armL.rotation.z *= 0.6;
         body.rotation.y *= 0.6;
       }
       aura.material.opacity = st.dead ? 0 : 0.35 + Math.sin(walk * 0.3 + fall) * 0.1;

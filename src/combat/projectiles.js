@@ -16,6 +16,7 @@ export class Projectiles {
     this.dmg = new Float32Array(MAX);
     this.src = new Int16Array(MAX);
     this.next = 0;
+    this.trailHex = game.appearance.aura;
 
     // straight shots of the player (bow): fly along a direction, hit the first enemy
     this.sLive = new Uint8Array(MAX);
@@ -43,6 +44,7 @@ export class Projectiles {
   }
 
   setAura(hex) {
+    this.trailHex = hex;
     this.mesh.material.color.setHex(hex).lerp(new THREE.Color(0xffffff), 0.5);
   }
 
@@ -91,6 +93,7 @@ export class Projectiles {
       }
       this.x[i] += dx * step;
       this.z[i] += dz * step;
+      if (Math.random() < 0.6) this.game.effects.burst(this.x[i], 1.1, this.z[i], 1, this.trailHex, 0.4, 0.12, 0.22);
       const o = n++ * 16;
       // stretched along the flight direction
       a[o] = dz; a[o + 2] = -dx;
@@ -119,6 +122,7 @@ export class Projectiles {
         continue;
       }
       if (this.sLeft[i] <= 0) { this.sLive[i] = 0; continue; }
+      this.game.effects.burst(this.sx[i], 1.2, this.sz[i], 1, 0xe8dcff, 0.3, 0.1, 0.18);
       const o = n++ * 16;
       a[o] = dz; a[o + 2] = -dx;
       a[o + 8] = dx * 5; a[o + 10] = dz * 5;

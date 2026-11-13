@@ -12,7 +12,9 @@ import {
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
-const ANIM = { moving: false, attack: 0, dodging: false, dead: false };
+const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false };
+// how fast the attack animation plays per weapon (1 / seconds)
+const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4 };
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
 
 export class Player {
@@ -58,6 +60,8 @@ export class Player {
     this.reloadT = 0; // 0..1 progress of the charge being reloaded
     this.atkCd = 0;
     this.attackAnim = 0;
+    this.castAnim = 0;
+    this.combo = 0;
     this.pendingFire = false;
     this.pendingAuto = false;
     this.pendingX = 0;
@@ -231,6 +235,8 @@ export class Player {
     this.recalc();
     if (!this.dead) { this.hp = this.maxHp; this.mana = this.maxMana; }
     this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
+    this.game.effects.ring(this.x, this.z, 0.5, 5, 0xffd24a, 0.6);
+    this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
     play('levelup');
     this.game.hud.toast(t('toast.levelUp', { level: this.level, points: gained }));
   }
@@ -332,6 +338,7 @@ export class Player {
     this.hp -= d;
     this.hurtFlash = 1;
     play('hurt');
+    if (d > this.maxHp * 0.15) this.game.cam.shake(0.25, 0.2);
     fx.number(this.x, 2.6, this.z, fmt(d), 'hurt');
     fx.burst(this.x, 1.2, this.z, 5, 0xff4a5a, 4, 0.14, 0.35);
     if (this.hp <= 0) {
@@ -379,7 +386,8 @@ export class Player {
     }
 
     if (this.atkCd > 0) this.atkCd -= dt;
-    if (this.attackAnim > 0) this.attackAnim -= dt * 4.5;
+    if (this.attackAnim > 0) this.attackAnim -= dt * (SWING_RATE[this.weapon] || 4.5);
+    if (this.castAnim > 0) this.castAnim -= dt * 3;
     if (this.invuln > 0) this.invuln -= dt;
     if (this.dodgeCd > 0) this.dodgeCd -= dt;
     if (this.cds[0] > 0) this.cds[0] -= dt;
@@ -407,6 +415,7 @@ export class Player {
         this.dodgeCd = this.dodgeCdMax;
         this.invuln = Math.max(this.invuln, c.dodge.invuln);
         game.effects.burst(this.x, 0.6, this.z, 10, 0x8a4dff, 3, 0.2, 0.4);
+        game.effects.ring(this.x, this.z, 0.4, 2.2, 0x9fd0ff, 0.25);
       }
     }
 
@@ -517,6 +526,7 @@ export class Player {
     this.dirZ = this.pendingZ;
     if (this.eclipseT <= 0) this.charges--;
     this.atkCd = w.cooldown;
+    this.combo ^= 1;
     this.attackAnim = 1;
     play('swing');
     fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
@@ -543,7 +553,7 @@ export class Player {
     else { this.mana -= def.mana; this.cds[slot] = def.cooldown; }
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
-    this.attackAnim = 1;
+    this.castAnim = 1;
     play(slot === 2 ? 'ult' : 'skill');
     castSkill(this.game, id, this.pendingX, this.pendingZ, this.pendingP);
     if (slot === 2) this.ult = 0; // the ultimate does not charge itself
@@ -559,9 +569,13 @@ export class Player {
     root.rotation.y += diff * Math.min(1, dt * 22);
     ANIM.moving = this.moving;
     ANIM.attack = this.attackAnim > 0 ? this.attackAnim : 0;
+    ANIM.cast = this.castAnim > 0 ? this.castAnim : 0;
+    ANIM.weapon = this.weapon;
+    ANIM.combo = this.combo;
     ANIM.dodging = this.dodgeT > 0;
     ANIM.dead = this.dead;
     this.model.animate(dt, ANIM);
     this.game.effects.blob(this.x, this.z, 0.75);
+    if (this.shield > 0) this.game.effects.showBubble(this.x, this.z, Math.min(1, this.shield / (this.maxHp * 0.4)));
   }
 }

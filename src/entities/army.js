@@ -8,6 +8,7 @@ import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
 import { t } from '../strings.js';
+import { FLASH, EXPAND } from '../render/effects.js';
 
 export const BEHAVIORS = ['attack', 'guard'];
 const B_ATTACK = 0;
@@ -207,7 +208,7 @@ export class Army {
         o.hp = Math.min(o.maxHp, o.hp + o.maxHp * ab.heal * pw);
       }
       if (pHurt) P.heal(P.maxHp * ab.heal * pw);
-      fx.slash(u.x, u.z, 0, ab.radius, 360, 0x5cf08a);
+      fx.ring(u.x, u.z, 1, ab.radius, 0x5cf08a, 0.5);
       fx.burst(u.x, 1.5, u.z, 20, 0x5cf08a, 4, 0.2, 0.7);
       u.abT = ab.cooldown;
       return;
@@ -233,10 +234,10 @@ export class Army {
     if (ab.name === 'taunt') {
       E.taunt(u.x, u.z, ab.radius, u.slot, ab.duration * pw);
       u.tauntT = ab.duration * pw;
-      fx.slash(u.x, u.z, 0, ab.radius, 360, 0xff6070);
+      fx.ring(u.x, u.z, 1, ab.radius, 0xff6070, 0.45);
       fx.burst(u.x, 1.5, u.z, 16, 0xff6070, 5, 0.2, 0.5);
     } else if (ab.name === 'cleave') {
-      fx.slash(u.x, u.z, 0, ab.radius, 360, this.auraHex);
+      fx.slash(u.x, u.z, u.yaw, ab.radius, 360, this.auraHex, EXPAND, 1, 0.3);
       fx.burst(u.x, 1, u.z, 14, this.auraHex, 6, 0.2, 0.5);
     } else {
       fx.burst(u.x, 1.6, u.z, 10, this.auraHex, 3, 0.16, 0.4);

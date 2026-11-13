@@ -957,3 +957,7 @@ body {
   color: #ffb37a;
   line-height: 1.3;
 }
+.btn.pill.pressed {
+  filter: brightness(1.3);
+  transform: scale(0.95);
+}

@@ -639,11 +639,13 @@ export class Enemies {
     let sy = s, y = 0, off = 0;
     if (this.moving[i]) y = Math.abs(Math.sin(this.phase[i])) * 0.16;
     if (tint === 2) { sy = s * 0.85; off = -0.25; } // crouch before the attack
+    let sx = s;
+    if (this.flash[i] > 0) { sy *= 0.84; sx *= 1.12; } // squashed by the hit
     if (this.lunge[i] > 0) off = this.lunge[i] * 0.7;
     const o = n * 16;
-    a[o] = cos * s; a[o + 1] = 0; a[o + 2] = -sin * s;
+    a[o] = cos * sx; a[o + 1] = 0; a[o + 2] = -sin * sx;
     a[o + 4] = 0; a[o + 5] = sy; a[o + 6] = 0;
-    a[o + 8] = sin * s; a[o + 9] = 0; a[o + 10] = cos * s;
+    a[o + 8] = sin * sx; a[o + 9] = 0; a[o + 10] = cos * sx;
     a[o + 12] = this.x[i] + sin * off; a[o + 13] = y; a[o + 14] = this.z[i] + cos * off;
     const k = n * 3;
     const tier = this.tier[i];

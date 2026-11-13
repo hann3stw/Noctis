@@ -37,6 +37,33 @@ export class Minimap {
     this.draw();
   }
 
+  outpostIcon(g, x, y, r, captured, respawn, S) {
+    if (respawn) {
+      g.strokeStyle = '#e9c77b';
+      g.lineWidth = Math.max(1.5, S / 70);
+      g.beginPath();
+      g.arc(x, y, r * 1.45, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.fillStyle = captured ? '#2fb85e' : '#d8243c';
+    g.strokeStyle = '#0d0716';
+    g.lineWidth = Math.max(1.5, S / 80);
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+    // little tent
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(x, y - r * 0.6);
+    g.lineTo(x + r * 0.6, y + r * 0.45);
+    g.lineTo(x - r * 0.6, y + r * 0.45);
+    g.closePath();
+    g.fill();
+    g.fillStyle = captured ? '#2fb85e' : '#d8243c';
+    g.fillRect(x - r * 0.12, y + r * 0.05, r * 0.24, r * 0.4);
+  }
+
   draw() {
     const game = this.game, P = game.player, cv = this.canvas, g = this.ctx;
     // match the canvas resolution to its size on screen
@@ -98,25 +125,6 @@ export class Minimap {
       g.stroke();
     }
 
-    // outposts (captured: green, in enemy hands: red; the respawn point has a ring)
-    if (arena < 0) {
-      const so = Math.max(2.5, S / 34);
-      game.world.safes.forEach((s, si) => {
-        if (si === 0) return;
-        g.fillStyle = s.captured ? '#7df0a0' : '#ff4050';
-        g.beginPath();
-        g.arc(X(s.x), Y(s.z), so, 0, Math.PI * 2);
-        g.fill();
-        if (si === game.respawnIndex) {
-          g.strokeStyle = '#ffffff';
-          g.lineWidth = Math.max(1, S / 90);
-          g.beginPath();
-          g.arc(X(s.x), Y(s.z), so * 1.8, 0, Math.PI * 2);
-          g.stroke();
-        }
-      });
-    }
-
     // elites, champions, bosses and helpers
     const E = game.enemies;
     const dot = Math.max(2, S / 45);
@@ -158,6 +166,23 @@ export class Minimap {
         g.strokeRect(-s, -s, s * 2, s * 2);
         g.restore();
       }
+    }
+
+    // outposts: a tent badge (green = captured, red = held by enemies, gold
+    // ring = respawn point). Nearby ones out of view sit on the edge.
+    if (arena < 0) {
+      const r = Math.max(4, S / 19);
+      game.world.safes.forEach((s, si) => {
+        if (si === 0) return;
+        let x = X(s.x), y = Y(s.z);
+        const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - r * 1.25;
+        if (d > lim) {
+          if (d > lim * 2.5) return; // far away
+          x = half + (dx / d) * lim;
+          y = half + (dy / d) * lim;
+        }
+        this.outpostIcon(g, x, y, r, s.captured, si === game.respawnIndex, S);
+      });
     }
 
     // player arrow

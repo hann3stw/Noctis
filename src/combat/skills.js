@@ -2,6 +2,7 @@
 // CONFIG.skills / CONFIG.ultimates.
 import { CONFIG } from '../config.js';
 import { hitArc, hitCircle, hitLine } from './weapons.js';
+import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
 
 export function skillDef(id) {
   return CONFIG.skills[id] || CONFIG.ultimates[id];
@@ -33,37 +34,49 @@ export function castSkill(game, id, dx, dz, power) {
       }
       P.invuln = Math.max(P.invuln, 0.4);
       hitCircle(game, P.x, P.z, def.radius, base);
-      fx.slash(P.x, P.z, 0, def.radius, 360, aura);
+      fx.slash(P.x, P.z, 0, def.radius, 360, aura, EXPAND, 1, 0.3);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, aura, 0.35);
       fx.burst(P.x, 1, P.z, 16, aura, 6, 0.22, 0.5);
+      game.cam.shake(0.15, 0.15);
       break;
     }
     case 'shadowWave':
       hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base);
-      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, aura);
-      fx.slash(P.x, P.z, yaw, def.range * 0.6, def.arcDeg, 0xffffff);
+      // a wave that rolls outwards
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, aura, EXPAND, 1, 0.4);
+      fx.slash(P.x, P.z, yaw, def.range * 0.75, def.arcDeg, 0xffffff, EXPAND, 1, 0.3);
+      game.cam.shake(0.2, 0.2);
       break;
     case 'rulersGrasp':
       E.pull(tx, tz, def.radius, 0.8);
       hitCircle(game, tx, tz, def.radius, base, def.stun);
-      fx.slash(tx, tz, 0, def.radius, 360, aura);
+      // everything is pulled together: a shrinking ring
+      fx.ring(tx, tz, def.radius + 1, 0.4, aura, 0.35);
+      fx.ring(tx, tz, def.radius * 0.7, 0.3, 0xffffff, 0.3, 0.08);
+      fx.slash(tx, tz, 0, def.radius * 0.6, 360, aura, FLASH, 1, 0.4);
       fx.burst(tx, 1, tz, 20, aura, 3, 0.24, 0.7);
+      game.cam.shake(0.15, 0.2);
       break;
     case 'umbralShield':
       P.shield = Math.round(P.maxHp * def.shield);
       P.shieldT = def.duration;
-      fx.slash(P.x, P.z, 0, def.radius, 360, 0x6aa8ff);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0x6aa8ff, 0.4);
+      fx.burst(P.x, 1.2, P.z, 18, 0x6aa8ff, 4, 0.18, 0.6);
       break;
     case 'daggerRain':
-      game.zones.add(tx, tz, def.radius, 0.25, def.ticks, def.interval, base, 0, 0xd8d2ff);
+      // daggers fall from the sky before every hit
+      game.zones.add(tx, tz, def.radius, 0.3, def.ticks, def.interval, base, 0, 0xd8d2ff, true);
       break;
     case 'warCry':
       army.buff(def.armyDamage, def.duration);
-      fx.slash(P.x, P.z, 0, def.radius, 360, 0xff6070);
+      fx.ring(P.x, P.z, 1, def.radius, 0xff6070, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius * 0.7, 0xffd0a0, 0.45, 0.1);
       fx.burst(P.x, 1.5, P.z, 24, 0xff6070, 8, 0.2, 0.6);
+      game.cam.shake(0.25, 0.3);
       break;
     case 'lifeLeech': {
       const n = hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base);
-      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0x5cf08a);
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0x5cf08a, SWEEP, P.combo ? -1 : 1, 0.3);
       if (n > 0) {
         P.heal(Math.min(P.maxHp * 0.4, base * def.heal * n));
         fx.burst(P.x, 1.4, P.z, 10, 0x5cf08a, 3, 0.18, 0.6);
@@ -73,26 +86,40 @@ export function castSkill(game, id, dx, dz, power) {
     case 'nightLance':
       hitLine(game, P.x, P.z, dx, dz, def.range, def.width, base);
       fx.beam(P.x, P.z, dx, dz, def.range, def.width, aura);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width * 0.35, 0xffffff);
+      fx.ring(P.x + dx * def.range, P.z + dz * def.range, 0.5, 3, aura, 0.3);
+      game.cam.shake(0.2, 0.18);
       break;
 
     // ---- ultimates
     case 'nightfall':
       hitCircle(game, P.x, P.z, def.radius, base, def.stun);
-      fx.slash(P.x, P.z, 0, def.radius, 360, aura);
-      fx.slash(P.x, P.z, 0, def.radius * 0.6, 360, 0xffffff);
+      // night falls: a dark dome, three shock rings, heavy shake
+      fx.slash(P.x, P.z, 0, def.radius, 360, aura, EXPAND, 1, 0.55);
+      fx.slash(P.x, P.z, 0, def.radius * 0.6, 360, 0xb48cff, FLASH, 1, 0.3);
+      fx.ring(P.x, P.z, 1, def.radius + 2, aura, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius * 0.8, 0xffffff, 0.45, 0.1);
+      fx.ring(P.x, P.z, 1, def.radius + 5, aura, 0.7, 0.2);
       fx.burst(P.x, 1, P.z, 60, aura, 12, 0.3, 0.9);
+      game.cam.shake(0.6, 0.45);
+      game.hitStop(0.09);
       break;
     case 'legionsCall':
       army.reviveAll();
       army.buff(def.armyDamage, def.duration);
-      fx.slash(P.x, P.z, 0, def.radius, 360, aura);
+      fx.ring(P.x, P.z, 1, def.radius, aura, 0.6);
+      fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
+      game.cam.shake(0.35, 0.35);
       break;
     case 'eclipse':
       P.eclipseT = def.duration;
       P.charges = P.maxCharges;
-      fx.slash(P.x, P.z, 0, 5, 360, 0xffd24a);
+      fx.ring(P.x, P.z, 0.5, 6, 0xffd24a, 0.5);
+      fx.ring(P.x, P.z, 0.5, 9, 0xfff0b0, 0.6, 0.12);
       fx.burst(P.x, 1.4, P.z, 40, 0xffd24a, 8, 0.24, 0.8);
+      game.cam.shake(0.3, 0.3);
+      game.hitStop(0.06);
       break;
   }
 }

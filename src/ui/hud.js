@@ -18,6 +18,25 @@ const ICON_DASH =
 
 const skillBtn = (id, cls) => `<div id="${id}" class="btn round skill ${cls}"><div class="knob"><b></b></div><div class="cd"></div><small></small></div>`;
 
+// A tap: pressed and released on the same button.
+function onTap(el, fn) {
+  let id = -1;
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    id = e.pointerId;
+    el.classList.add('pressed');
+  });
+  el.addEventListener('pointerup', (e) => {
+    e.stopPropagation();
+    el.classList.remove('pressed');
+    if (e.pointerId !== id) return;
+    id = -1;
+    const r = el.getBoundingClientRect();
+    if (e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 8 && e.clientY <= r.bottom + 8) fn();
+  });
+  el.addEventListener('pointercancel', () => { id = -1; el.classList.remove('pressed'); });
+}
+
 export class Hud {
   constructor(root, game) {
     this.game = game;
@@ -122,7 +141,7 @@ export class Hud {
     this.vBoss = -2;
     this.vBossHp = -1;
     this.vRank = -1;
-    $('#btn-gate').addEventListener('pointerdown', (e) => { e.stopPropagation(); input.enterGate = true; });
+    onTap($('#btn-gate'), () => { input.enterGate = true; });
     this.savingEl = $('.saving');
     this.savingT = 0;
     this.mpFill = $('.bar.mp i');
@@ -153,9 +172,11 @@ export class Hud {
       revive.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.armyRevive = true; });
     }
     this.btnArise.addEventListener('pointerdown', (e) => { e.stopPropagation(); input.arise = true; });
-    $('#btn-menu').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.menu.open(); });
-    $('#btn-travel').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openTravel(); });
-    $('#btn-pause').addEventListener('pointerdown', (e) => { e.stopPropagation(); game.app.openPause(); });
+    // these open screens: they react when the finger is lifted, otherwise the
+    // same touch would also hit the button that appears under it (e.g. Close)
+    onTap($('#btn-menu'), () => game.menu.open());
+    onTap($('#btn-travel'), () => game.app.openTravel());
+    onTap($('#btn-pause'), () => game.app.openPause());
     this.hud.classList.toggle('swap', input.swap);
 
     // cached values

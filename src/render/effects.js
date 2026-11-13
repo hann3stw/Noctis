@@ -8,7 +8,38 @@ const MAX_PARTICLES = 320;
 const MAX_BLOBS = 256;
 const MAX_BARS = 160;
 const MAX_NUMBERS = 24;
-const MAX_SLASHES = 6;
+const MAX_SLASHES = 10;
+const MAX_RINGS = 20;
+
+// slash styles
+export const SWEEP = 0; // the blade trail sweeps across the arc
+export const EXPAND = 1; // the arc grows outwards (waves, explosions)
+export const FLASH = 2; // the whole arc flashes at once
+
+// Blade trail: a ring band whose alpha grows towards the leading edge
+// (+arc/2) and towards the outer rim. Not indexed, so drawRange can reveal
+// it segment by segment.
+const TRAIL_SEGS = 18;
+function trailGeometry(arcRad) {
+  const pos = [], col = [];
+  const radii = [0.3, 0.78, 1.0], rAlpha = [0.0, 0.55, 1.0];
+  for (let i = 0; i < TRAIL_SEGS; i++) {
+    const t0 = i / TRAIL_SEGS, t1 = (i + 1) / TRAIL_SEGS;
+    const a0 = -arcRad / 2 + arcRad * t0, a1 = -arcRad / 2 + arcRad * t1;
+    const f0 = 0.15 + 0.85 * t0 * t0, f1 = 0.15 + 0.85 * t1 * t1;
+    for (let b = 0; b < 2; b++) {
+      const ri = radii[b], ro = radii[b + 1], ai = rAlpha[b], ao = rAlpha[b + 1];
+      const p = (r, a) => pos.push(Math.sin(a) * r, 0, Math.cos(a) * r);
+      const c = (al) => col.push(1, 1, 1, al);
+      p(ri, a0); c(ai * f0); p(ro, a0); c(ao * f0); p(ro, a1); c(ao * f1);
+      p(ri, a0); c(ai * f0); p(ro, a1); c(ao * f1); p(ri, a1); c(ai * f1);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  return g;
+}
 
 const _v = new THREE.Vector3();
 const _c = new THREE.Color();
@@ -82,14 +113,15 @@ export class Effects {
     this.ux = e[4]; this.uy = e[5]; this.uz = e[6];
     this.fx = e[8]; this.fy = e[9]; this.fz = e[10];
 
-    // --- slash arcs
+    // --- slash trails (every mesh keeps its own geometry per arc, because
+    // the reveal uses drawRange)
     this.slashes = [];
-    this.slashGeo = new Map();
     for (let i = 0; i < MAX_SLASHES; i++) {
       const m = new THREE.Mesh(
         undefined,
         new THREE.MeshBasicMaterial({
           color: 0xc9a8ff,
+          vertexColors: true,
           transparent: true,
           opacity: 0,
           depthWrite: false,
@@ -99,11 +131,35 @@ export class Effects {
       );
       m.visible = false;
       m.renderOrder = 5;
-      m.userData.life = 0;
+      m.userData = { life: 0, rate: 4, style: 0, range: 1, geos: new Map() };
       scene.add(m);
       this.slashes.push(m);
     }
     this.slashNext = 0;
+
+    // --- shock rings (hits, explosions, arise, level up ...)
+    const ringGeo = new THREE.RingGeometry(0.86, 1, 48);
+    ringGeo.rotateX(-Math.PI / 2);
+    this.rings = [];
+    for (let i = 0; i < MAX_RINGS; i++) {
+      const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      m.visible = false;
+      m.renderOrder = 6;
+      m.userData = { t: 0, dur: 1, delay: 0, r0: 1, r1: 2 };
+      scene.add(m);
+      this.rings.push(m);
+    }
+    this.ringNext = 0;
+
+    // --- shield bubble around the player
+    this.bubble = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.5, 1),
+      new THREE.MeshBasicMaterial({ color: 0x6aa8ff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, wireframe: false }),
+    );
+    this.bubble.visible = false;
+    this.bubble.renderOrder = 7;
+    scene.add(this.bubble);
+    this.time = 0;
 
     // --- beams (piercing line attacks)
     this.beams = [];
@@ -156,21 +212,67 @@ export class Effects {
   }
 
   // ---- slash --------------------------------------------------------------
-  slash(x, z, yaw, range, arcDeg, color = 0xc9a8ff) {
-    let geo = this.slashGeo.get(arcDeg);
-    if (!geo) {
-      geo = sectorGeometry((arcDeg * Math.PI) / 180, 0.35, 16);
-      this.slashGeo.set(arcDeg, geo);
-    }
+  // style: SWEEP / EXPAND / FLASH, dir: 1 or -1 (sweep direction),
+  // dur: seconds the trail stays
+  slash(x, z, yaw, range, arcDeg, color = 0xc9a8ff, style = SWEEP, dir = 1, dur = 0.26) {
     const m = this.slashes[this.slashNext];
     this.slashNext = (this.slashNext + 1) % MAX_SLASHES;
+    const u = m.userData;
+    let geo = u.geos.get(arcDeg);
+    if (!geo) {
+      geo = trailGeometry((Math.min(arcDeg, 360) * Math.PI) / 180);
+      u.geos.set(arcDeg, geo);
+    }
     m.geometry = geo;
-    m.material.color.setHex(color);
-    m.position.set(x, 0.9, z);
+    // brighter than the colour itself: additive trails need the extra punch
+    m.material.color.setHex(color).multiplyScalar(style === SWEEP ? 2.2 : 1.6);
+    m.position.set(x, style === SWEEP ? 0.95 : 0.25, z);
     m.rotation.y = yaw;
-    m.userData.life = 1;
-    m.userData.range = range;
+    m.scale.set(range * dir, 1, range);
+    u.life = 1;
+    u.rate = 1 / dur;
+    u.style = style;
+    u.range = range;
+    u.dir = dir;
+    geo.setDrawRange(0, style === SWEEP ? 0 : Infinity);
     m.visible = true;
+  }
+
+  // expanding (r1 > r0) or shrinking (r1 < r0) ring on the ground
+  ring(x, z, r0, r1, color, dur = 0.4, delay = 0, y = 0.12) {
+    const m = this.rings[this.ringNext];
+    this.ringNext = (this.ringNext + 1) % MAX_RINGS;
+    const u = m.userData;
+    u.t = 0; u.dur = dur; u.delay = delay; u.r0 = r0; u.r1 = r1;
+    m.material.color.setHex(color);
+    m.material.opacity = 0;
+    m.position.set(x, y, z);
+    m.scale.setScalar(Math.max(0.01, r0));
+    m.visible = true;
+  }
+
+  // shield bubble: shown every frame while the shield is up
+  showBubble(x, z, strength) {
+    this.bubble.visible = true;
+    this.bubble.position.set(x, 1.1, z);
+    this.bubbleStrength = strength;
+  }
+
+  // particles falling from the sky over a circle (Dagger Rain)
+  rain(x, z, radius, count, color) {
+    const d = this.pData;
+    _c.setHex(color);
+    count = Math.max(1, Math.round(count * gfx.particles));
+    for (let i = 0; i < count; i++) {
+      const o = this.pNext * 12;
+      this.pNext = (this.pNext + 1) % MAX_PARTICLES;
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * radius;
+      d[o] = x + Math.cos(a) * r; d[o + 1] = 6 + Math.random() * 3; d[o + 2] = z + Math.sin(a) * r;
+      d[o + 3] = 0; d[o + 4] = -22 - Math.random() * 6; d[o + 5] = 0;
+      d[o + 6] = d[o + 7] = 0.45;
+      d[o + 8] = 0.22;
+      d[o + 9] = _c.r; d[o + 10] = _c.g; d[o + 11] = _c.b;
+    }
   }
 
   beam(x, z, dx, dz, len, width, color) {
@@ -186,6 +288,7 @@ export class Effects {
 
   // ---- blob shadows -------------------------------------------------------
   beginFrame() {
+    this.bubble.visible = false;
     this.blobCount = 0;
     this.barCount = 0;
   }
@@ -263,11 +366,49 @@ export class Effects {
     for (let i = 0; i < MAX_SLASHES; i++) {
       const m = this.slashes[i];
       if (!m.visible) continue;
-      m.userData.life -= dt * 5.5;
-      const l = m.userData.life;
+      const u = m.userData;
+      u.life -= dt * u.rate;
+      const l = u.life;
       if (l <= 0) { m.visible = false; continue; }
-      m.material.opacity = l * 0.75;
-      m.scale.setScalar(m.userData.range * (1.08 - l * 0.2));
+      const p = 1 - l; // 0 -> 1
+      if (u.style === SWEEP) {
+        // reveal the blade trail during the first 40 %, then fade out
+        const k = Math.min(1, p / 0.4);
+        m.geometry.setDrawRange(0, Math.ceil(k * TRAIL_SEGS) * 12);
+        m.material.opacity = p < 0.4 ? 1 : l / 0.6;
+        const s = u.range * (1 + p * 0.06);
+        m.scale.set(s * u.dir, 1, s);
+      } else if (u.style === EXPAND) {
+        const s = u.range * (0.25 + 0.75 * (1 - l * l));
+        m.scale.set(s * u.dir, 1, s);
+        m.material.opacity = Math.min(1, l * 1.6);
+      } else {
+        m.material.opacity = l;
+        m.scale.set(u.range * u.dir * (1 + p * 0.08), 1, u.range * (1 + p * 0.08));
+      }
+    }
+
+    // shock rings
+    for (let i = 0; i < MAX_RINGS; i++) {
+      const m = this.rings[i];
+      if (!m.visible) continue;
+      const u = m.userData;
+      if (u.delay > 0) { u.delay -= dt; continue; }
+      u.t += dt;
+      const p = u.t / u.dur;
+      if (p >= 1) { m.visible = false; continue; }
+      const e = 1 - (1 - p) * (1 - p);
+      m.scale.setScalar(Math.max(0.01, u.r0 + (u.r1 - u.r0) * e));
+      m.material.opacity = (1 - p) * 0.9;
+    }
+
+    // shield bubble (hidden again unless showBubble is called next frame)
+    this.time += dt;
+    if (this.bubble.visible) {
+      const s = 1 + Math.sin(this.time * 6) * 0.04;
+      this.bubble.scale.setScalar(s);
+      this.bubble.rotation.y += dt;
+      this.bubble.material.opacity = 0.12 + 0.18 * (this.bubbleStrength || 1);
     }
 
     for (let i = 0; i < this.beams.length; i++) {
