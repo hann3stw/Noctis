@@ -87,8 +87,8 @@ export class App {
     if (this.debug) window.__noctis = this.game;
   }
 
-  startNew(slot, name, appearance) {
-    this.launch({ slot, name, seed: randomSeed(), appearance });
+  startNew(slot, name, appearance, difficulty) {
+    this.launch({ slot, name, seed: randomSeed(), appearance, difficulty });
     this.game.save(); // the slot is taken (or overwritten) right away
   }
 

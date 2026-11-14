@@ -49,6 +49,9 @@ export class Game {
     this.fpsN = 0;
     this.hitStopT = 0;
     this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
+    const DL = CONFIG.difficulty;
+    this.difficulty = save ? save.difficulty || DL.oldSaves : opts.difficulty || DL.default;
+    if (!DL.levels[this.difficulty]) this.difficulty = DL.default;
     this.discovered = new Set(save ? save.discovered || [] : []); // outposts captured (index in world.safes)
     // zones the player has set foot in (the minimap only shows these)
     this.knownZones = new Set(save && save.knownZones ? save.knownZones : [0]);
@@ -157,6 +160,7 @@ export class Game {
       defeatedGates: [...this.defeatedGates],
       discovered: [...this.discovered],
       knownZones: [...this.knownZones],
+      difficulty: this.difficulty,
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
@@ -172,6 +176,21 @@ export class Game {
     const d = this.player.serialize();
     if (this.gates.active >= 0) { d.x = this.gates.returnX; d.z = this.gates.returnZ; }
     return d;
+  }
+
+  // values of the world's difficulty
+  diff() {
+    return CONFIG.difficulty.levels[this.difficulty];
+  }
+
+  setDifficulty(id) {
+    const L = CONFIG.difficulty.levels;
+    if (!L[id] || id === this.difficulty) return;
+    const a = L[this.difficulty], b = L[id];
+    this.difficulty = id;
+    this.enemies.rescale(b.enemyHp / a.enemyHp, b.enemyDamage / a.enemyDamage);
+    this.player.recalc();
+    this.save();
   }
 
   // rank that belongs to the player's level

@@ -191,7 +191,7 @@ export class Player {
     this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit);
     this.critDmg = G.critDamage + st.per * S.per.critDamage;
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
-    this.drop = st.per * S.per.drop;
+    this.drop = st.per * S.per.drop + (this.game.diff ? this.game.diff().luck : 0);
     this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;

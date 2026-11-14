@@ -233,7 +233,7 @@ export class Enemies {
     this.tx[i] = x;
     this.tz[i] = z;
     this.yaw[i] = Math.random() * 6.28;
-    const D = CONFIG.difficulty;
+    const D = this.game.diff();
     // inside a gate: the gate's level and difficulty, bosses much tougher
     let lv, hpM = 1, dmgM = 1;
     if (this.arena[i]) {
@@ -262,6 +262,15 @@ export class Enemies {
     this.stun[i] = 0;
     this.retT[i] = Math.random() * 0.5;
     this.alive[i] = 1;
+  }
+
+  // The difficulty changed: every enemy gets the new health and damage.
+  rescale(hpR, dmgR) {
+    for (let i = 0; i < this.count; i++) {
+      this.maxHp[i] = Math.round(this.maxHp[i] * hpR);
+      this.hp[i] = Math.min(this.maxHp[i], this.hp[i] * hpR);
+      this.dmg[i] *= dmgR;
+    }
   }
 
   // After an outpost is taken its guards come back further out.

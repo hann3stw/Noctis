@@ -21,6 +21,8 @@ const PALETTE_ROWS = [
 ];
 
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+const diffSegs = (cur) => Object.keys(CONFIG.difficulty.levels).map((k) =>
+  `<button class="seg dif-${k}${cur === k ? ' on' : ''}" data-act="diff" data-v="${k}">${t('diff.' + k)}</button>`).join('');
 function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }
@@ -133,7 +135,13 @@ export class Screens {
         break;
       case 'edDone':
         if (this.params.mode === 'camp') app.closeEditorInCamp({ ...this.ed.look });
-        else app.startNew(this.params.slot, this.worldName(), { ...this.ed.look });
+        else app.startNew(this.params.slot, this.worldName(), { ...this.ed.look }, this.ed.diff);
+        break;
+      // difficulty: in the new world editor, or of the running world
+      case 'diff':
+        if (this.ed) this.ed.diff = v;
+        else if (app.game) app.game.setDifficulty(v);
+        this.render();
         break;
       // settings
       case 'gfx': setSetting('graphics', v); this.render(); break;
@@ -195,8 +203,9 @@ export class Screens {
       return `<div class="slot empty"><b>${t('slot.title', { n: i + 1 })}</b><span>${t('slot.empty')}</span>${buttons}</div>`;
     }
     const level = (s.player && s.player.level) || 1;
+    const dk = CONFIG.difficulty.levels[s.difficulty] ? s.difficulty : CONFIG.difficulty.oldSaves;
     return `<div class="slot"><b>${esc(s.name)}</b>
-      <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })}</span>
+      <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })} · <em class="dif-${dk}">${t('diff.' + dk)}</em></span>
       <small>${t('slot.playTime', { time: formatPlayTime(s.playTime || 0) })}</small>
       <small>${formatDate(s.updated)}</small>${buttons}</div>`;
   }
@@ -236,8 +245,14 @@ export class Screens {
       `<button class="seg${String(cur) === String(v) ? ' on' : ''}" data-act="${act}" data-v="${v}">${label}</button>`).join('');
     const toggle = (act, on) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}">${on ? t('set.on') : t('set.off')}</button>`;
     const vol = Math.round(settings.volume * 100);
+    // the difficulty belongs to the world: only while one is running
+    const g = this.app.game;
+    const diff = g && this.params.back === 'pause'
+      ? `<div class="set-row"><div><b>${t('set.difficulty')}</b><small>${t('diff.' + g.difficulty + '.desc')}</small></div>
+          <div class="segs">${diffSegs(g.difficulty)}</div></div>`
+      : '';
     return `<div class="scr-page">${this.header(t('title.settings'), 'setBack')}
-      <div class="set-list" data-scroll="set">
+      <div class="set-list" data-scroll="set">${diff}
         <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level) }) : t('set.graphicsHint')}</small></div>
           <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], settings.graphics)}</div></div>
         <div class="set-row"><div><b>${t('set.volume')}</b></div>
@@ -302,6 +317,7 @@ export class Screens {
     this.ed = {
       look: { ...CONFIG.defaultAppearance, ...start },
       name: params.mode === 'new' ? t('new.defaultName', { n: params.slot + 1 }) : '',
+      diff: CONFIG.difficulty.default,
       equip: params.equip || { weapon: { kind: 'weapon', type: CONFIG.player.startWeapon, rarity: 0, level: 1, up: 0 } },
     };
     if (!this.preview) this.preview = new Preview();
@@ -337,7 +353,8 @@ export class Screens {
       return `<div class="ed-row"><b>${t('ed.' + key)}${extra}</b><div class="sws${key === 'capeColor' && !L.cape ? ' off' : ''}">${sw}</div></div>${hair}`;
     }).join('');
     const name = isNew
-      ? `<label class="ed-name"><b>${t('new.name')}</b><input type="text" data-act="name" maxlength="${CONFIG.save.nameMaxLength}" value="${esc(this.ed.name)}" autocomplete="off" spellcheck="false"></label>`
+      ? `<label class="ed-name"><b>${t('new.name')}</b><input type="text" data-act="name" maxlength="${CONFIG.save.nameMaxLength}" value="${esc(this.ed.name)}" autocomplete="off" spellcheck="false"></label>
+        <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small></div>`
       : '';
     return `<div class="ed">
       <div class="ed-stage"><h2>${isNew ? t('new.title2') : t('ed.title')}</h2><p>${t('ed.note')}</p></div>

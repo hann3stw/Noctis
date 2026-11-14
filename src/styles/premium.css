@@ -1302,3 +1302,22 @@ button,
   border-color: var(--rc);
   color: var(--rc);
 }
+
+/* ---- difficulty ------------------------------------------------------------------ */
+.ed-diff {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1);
+}
+.ed-diff small {
+  opacity: 0.7;
+  font-size: calc(var(--u) * 2.5);
+}
+.seg.dif-easy.on { border-color: #5cf08a; color: #a8ffc4; }
+.seg.dif-hard.on { border-color: #ffb040; color: #ffd08a; }
+.seg.dif-extreme.on { border-color: #ff3050; color: #ff8a9a; }
+.slot em { font-style: normal; font-weight: 700; }
+.slot em.dif-easy { color: #a8ffc4; }
+.slot em.dif-normal { color: #d9c4ff; }
+.slot em.dif-hard { color: #ffd08a; }
+.slot em.dif-extreme { color: #ff8a9a; }

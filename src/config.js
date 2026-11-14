@@ -89,11 +89,18 @@ export const CONFIG = {
     chestMinRarity: 2, // at least rare
   },
 
-  // Global difficulty: every enemy (bosses too) gets this much more health
-  // and damage. Turn these up or down to make the whole game harder or easier.
+  // Difficulty of a world: chosen when it is made, can be changed in the
+  // settings while playing. Every enemy (bosses too) gets this much health and
+  // damage; luck = a little better loot on the harder ones.
   difficulty: {
-    enemyHp: 1.5,
-    enemyDamage: 1.75,
+    levels: {
+      easy: { enemyHp: 0.7, enemyDamage: 0.6, luck: 0 },
+      normal: { enemyHp: 1, enemyDamage: 1.1, luck: 0 },
+      hard: { enemyHp: 1.5, enemyDamage: 1.75, luck: 0.15 },
+      extreme: { enemyHp: 2.4, enemyDamage: 2.8, luck: 0.4 },
+    },
+    default: 'normal', // new worlds
+    oldSaves: 'hard', // worlds made before there was a choice
   },
 
   camera: {

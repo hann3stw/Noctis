@@ -109,10 +109,14 @@ HTTPS (or localhost) for offline mode and installing.
   20); levels give 3 points in E, 2 in D, 1 in C and B, and one every second
   level in A and S.
 - The hunter grows x6 per rank from levels alone. The rest of the step to the
-  next zone must come from better gear, stat points and the army. A global
-  difficulty setting (enemy health x1.5, damage x1.75) sits in
-  `src/config.js` -> `difficulty`; all level values in `levels`.
-  Old saves are moved to the new levels automatically.
+  next zone must come from better gear, stat points and the army. All level
+  values sit in `src/config.js` -> `levels`. Old saves are moved to the new
+  levels automatically.
+- Four difficulties, chosen when a world is made and changeable in the
+  settings while playing: Easy (enemies 70 % health, 60 % damage), Normal
+  (x1 / x1.1), Hard (x1.5 / x1.75, slightly better loot) and Extreme
+  (x2.4 / x2.8, better loot). Worlds from before keep Hard.
+  Values: `src/config.js` -> `difficulty`.
 - Kills of your shadows give you half the XP.
 - Every zone has three enemy types (melee, ranged, charger). Elites (gold
   ring) and champions (red ring, with two escorts) are much stronger and always
