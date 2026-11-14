@@ -3,6 +3,7 @@
 // confirmation dialogs. Everything is rendered into #screens; clicks are
 // handled by one delegated listener (data-act attributes).
 import { CONFIG } from '../config.js';
+import { flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
@@ -71,6 +72,7 @@ export class Screens {
     this.el.className = 'on scr-' + name;
     if (name === 'editor') this.openEditor(params);
     this.render();
+    flashClass(this.el, 'enter');
   }
 
   hide() {
@@ -181,7 +183,7 @@ export class Screens {
     const keepScroll = [...this.el.querySelectorAll('[data-scroll]')].map((x) => [x.dataset.scroll, x.scrollTop]);
     let html = views[this.current] ? views[this.current]() : '';
     if (this.confirmBox) {
-      html += `<div class="scr-modal"><div class="scr-box"><p>${esc(this.confirmBox.text)}</p>
+      html += `<div class="scr-modal confirm"><div class="scr-box"><p>${esc(this.confirmBox.text)}</p>
         <div class="scr-row"><button class="sbtn danger" data-act="yes">${esc(this.confirmBox.yes)}</button>
         <button class="sbtn ghost" data-act="no">${t('confirm.cancel')}</button></div></div></div>`;
     }

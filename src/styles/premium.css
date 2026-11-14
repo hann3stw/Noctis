@@ -154,11 +154,13 @@ body {
   box-shadow: var(--bevel), 0 0 calc(var(--u) * 2.5) rgba(138, 77, 255, 0.55);
 }
 
-/* screens fade in, dialogs pop */
-#screens.on > * {
+/* screens fade in, dialogs pop: only when they open (class "enter"), not on
+   every re-render after a tap */
+#screens.enter > * {
   animation: fade-in 0.25s ease-out;
 }
-.scr-box {
+#screens.enter .scr-box,
+.scr-modal.confirm .scr-box {
   animation: pop-in 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 .scr-modal {
@@ -637,9 +639,11 @@ body {
   background:
     radial-gradient(ellipse at 50% -10%, rgba(110, 60, 220, 0.35), transparent 60%),
     rgba(8, 5, 15, 0.94);
+}
+#menu.on.enter {
   animation: fade-in 0.2s ease-out;
 }
-#menu.on .mn-body {
+#menu.on.enter-tab .mn-body {
   animation: fade-in 0.25s ease-out;
 }
 .mn-head {

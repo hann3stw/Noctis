@@ -9,3 +9,12 @@ export function fmt(n) {
   while (Math.abs(v) >= 1000 && u < UNITS.length - 1) { v /= 1000; u++; }
   return (Math.abs(v) < 100 ? v.toFixed(1) : Math.round(v)) + UNITS[u];
 }
+
+// Sets a class for a moment (used for the fade-in when something opens).
+export function flashClass(el, cls, ms = 320) {
+  clearTimeout(el['_t' + cls]);
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el['_t' + cls] = setTimeout(() => el.classList.remove(cls), ms);
+}

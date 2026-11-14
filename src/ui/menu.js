@@ -2,7 +2,7 @@
 // (level and stat points), Skills and Army. The game is paused while it is
 // open. Equipment, skills and the army can only be changed in the camp.
 import { CONFIG } from '../config.js';
-import { fmt } from '../core/format.js';
+import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
 import { TAB_ICONS, SKILL_ICONS } from './icons.js';
@@ -76,6 +76,7 @@ export class Menu {
     this.game.setPaused(true);
     this.el.classList.add('on');
     this.render();
+    flashClass(this.el, 'enter');
   }
 
   // what was shown in a tab is not new any more once the player leaves it
@@ -117,7 +118,10 @@ export class Menu {
     if (act !== 'dismantle') this.confirmId = 0;
     if (act !== 'bulkGo') this.bulkConfirm = -1;
     if (act === 'tab') {
-      if (target.dataset.tab !== this.tab) this.markSeen(this.tab);
+      if (target.dataset.tab !== this.tab) {
+        this.markSeen(this.tab);
+        flashClass(this.el, 'enter-tab');
+      }
       this.tab = target.dataset.tab;
     } else if (act === 'item') {
       this.selItem = this.findItem(Number(target.dataset.id));
