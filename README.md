@@ -163,8 +163,8 @@ HTTPS (or localhost) for offline mode and installing.
   (the loot comes along). Every cleared boss floor becomes a start point for
   later runs; the best floor is saved. Abyss items have item level 1000 +
   5 per floor and keep getting a little stronger.
-- **Modifiers** (up to 3): chosen in the Abyss panel or with the Mods button
-  in front of any gate, and kept until changed. Volatile (enemies explode),
+- **Modifiers** (up to 3, from rank A on): chosen in the Abyss panel or with
+  the Mods button in front of any gate, and kept until changed. Volatile (enemies explode),
   No Mercy (no healing), Against the Clock (150 s per gate, 90 s per Abyss
   floor), Swift, Lonely Hunter (shadows deal half damage), Elite Horde,
   Hardened (+50 % enemy health), Mana Curse (skills cost double). Every

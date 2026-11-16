@@ -350,6 +350,7 @@ export const CONFIG = {
   // Gate modifiers: up to max at a time, chosen before entering a gate or the
   // Abyss. Every modifier gives luck (better loot) and more XP.
   modifiers: {
+    minRank: 4, // only from rank A on (normal gates; the Abyss is later anyway)
     max: 3,
     luck: 0.25,
     xp: 0.25,

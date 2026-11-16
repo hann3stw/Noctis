@@ -193,7 +193,7 @@ export class Gates {
     if (this.active >= 0 || P.dead || gi < 0 || !this.list[gi].open) return;
     const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
     if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
-    this.runMods = [...game.mods];
+    this.runMods = game.modsOpen() ? [...game.mods] : [];
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
     this.timeLeft = 0;
     this.buildArena(gi).visible = true;
@@ -368,7 +368,7 @@ export class Gates {
     const game = this.game;
     if (game.player.dead) return;
     if (this.active >= 0) { if (this.exitOpen && this.inAbyss) this.leave(false); }
-    else if (this.near >= 0 && this.near !== this.abyssIndex) game.abyssPanel.open('mods');
+    else if (this.near >= 0 && this.near !== this.abyssIndex && game.modsOpen()) game.abyssPanel.open('mods');
   }
 
   // ---- boss brain -----------------------------------------------------------------

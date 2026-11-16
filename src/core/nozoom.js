@@ -7,7 +7,7 @@
 // itself uses pointer events, which still arrive. In menus one finger may
 // scroll lists, but two fingers are blocked there too.
 
-const MENUS = '#menu, #screens';
+const MENUS = '#menu, #screens, #abyss-panel';
 
 function inMenu(e) {
   const t = e.target;

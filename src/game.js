@@ -191,6 +191,11 @@ export class Game {
     return d;
   }
 
+  // gate modifiers can be chosen from rank A on
+  modsOpen() {
+    return this.rankIndex >= CONFIG.modifiers.minRank;
+  }
+
   // Values of a modifier while it is on (only inside a gate or the Abyss), else null.
   modOn(id) {
     const g = this.gates;

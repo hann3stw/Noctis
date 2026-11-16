@@ -245,14 +245,14 @@ export class Hud {
     // -50 = gate cleared, -60 = Abyss floor cleared
     const ab = gates.abyssIndex, P = game.player;
     const near = gates.active < 0 ? gates.near : gates.exitOpen ? (gates.inAbyss ? -60 : -50) : -1;
-    const sig = near + ':' + game.mods.length + ':' + game.abyss.best + ':' + game.abyss.floor + ':' + game.abyss.unlocked;
+    const sig = near + ':' + game.modsOpen() + ':' + game.mods.length + ':' + game.abyss.best + ':' + game.abyss.floor + ':' + game.abyss.unlocked;
     if (sig !== this.vGate) {
       this.vGate = sig;
       this.gatePanel.classList.toggle('on', near !== -1);
       this.gateBtn.textContent = t(near === -50 ? 'gate.leave' : near === -60 ? 'abyss.next' : 'gate.enter');
       this.gateBtn.classList.remove('off');
       this.gateBtn2.style.display = 'none';
-      const nm = game.mods.length;
+      const nm = game.modsOpen() ? game.mods.length : 0;
       if (near === -60) {
         this.gateTitle.textContent = t('abyss.cleared', { n: game.abyss.floor });
         this.gateInfo.textContent = t('abyss.clearedInfo');
@@ -276,7 +276,7 @@ export class Hud {
         this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
         this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
         this.gatePanel.dataset.d = diff.id;
-        this.gateBtn2.style.display = '';
+        this.gateBtn2.style.display = game.modsOpen() ? '' : 'none';
         this.gateBtn2.textContent = t('mods.btn') + (nm ? ' (' + nm + ')' : '');
       }
     }
