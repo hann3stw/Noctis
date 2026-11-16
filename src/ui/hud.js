@@ -2,6 +2,8 @@
 // change, so the HUD costs almost nothing per frame.
 import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
+import { play } from '../core/sfx.js';
+import { itemName } from '../core/items.js';
 import { input } from '../input/input.js';
 import { BEHAVIORS } from '../entities/army.js';
 import { skillDef } from '../combat/skills.js';
@@ -59,7 +61,9 @@ export class Hud {
         <div class="boss-bar"><b></b><div class="bar"><i></i><span></span></div></div>
         <div class="capture"><b></b><div class="bar"><i></i></div></div>
         <canvas class="minimap"></canvas>
-        <div class="gate-panel"><div class="gp-text"><b></b><small></small></div><div id="btn-gate" class="btn pill">${t('gate.enter')}</div></div>
+        <div class="gate-panel"><div class="gp-text"><b></b><small></small></div><div id="btn-gate2" class="btn pill"></div><div id="btn-gate" class="btn pill">${t('gate.enter')}</div></div>
+        <div class="abyss-info"><b></b><small></small></div>
+        <div class="uq-drop"><div class="uq-rays"></div><div class="uq-card"><small>${t('uq.drop')}</small><b></b><p></p><em>${t('uq.dropSub')}</em></div></div>
         <div class="banner"><b></b><small></small></div>
         <div class="fps"></div>
         <div class="toast"></div>
@@ -144,6 +148,15 @@ export class Hud {
     this.vBossHp = -1;
     this.vRank = -1;
     onTap($('#btn-gate'), () => { input.enterGate = true; });
+    onTap($('#btn-gate2'), () => game.gates.press2());
+    this.gateBtn2 = $('#btn-gate2');
+    this.abyssInfo = $('.abyss-info');
+    this.abyssTitle = $('.abyss-info b');
+    this.abyssSub = $('.abyss-info small');
+    this.vAbyss = '';
+    this.uqEl = $('.uq-drop');
+    this.uqT = 0;
+    this.vArena = null;
     this.savingEl = $('.saving');
     this.savingT = 0;
     this.mpFill = $('.bar.mp i');
@@ -229,12 +242,31 @@ export class Hud {
   updateGates(dt) {
     const game = this.game, gates = game.gates, E = game.enemies;
     // gate panel in the world
-    const near = gates.active < 0 ? gates.near : gates.exitOpen ? -50 : -1;
-    if (near !== this.vGate) {
-      this.vGate = near;
+    // -50 = gate cleared, -60 = Abyss floor cleared
+    const ab = gates.abyssIndex, P = game.player;
+    const near = gates.active < 0 ? gates.near : gates.exitOpen ? (gates.inAbyss ? -60 : -50) : -1;
+    const sig = near + ':' + game.mods.length + ':' + game.abyss.best + ':' + game.abyss.floor + ':' + game.abyss.unlocked;
+    if (sig !== this.vGate) {
+      this.vGate = sig;
       this.gatePanel.classList.toggle('on', near !== -1);
-      this.gateBtn.textContent = t(near === -50 ? 'gate.leave' : 'gate.enter');
-      if (near === -50) {
+      this.gateBtn.textContent = t(near === -50 ? 'gate.leave' : near === -60 ? 'abyss.next' : 'gate.enter');
+      this.gateBtn.classList.remove('off');
+      this.gateBtn2.style.display = 'none';
+      const nm = game.mods.length;
+      if (near === -60) {
+        this.gateTitle.textContent = t('abyss.cleared', { n: game.abyss.floor });
+        this.gateInfo.textContent = t('abyss.clearedInfo');
+        this.gatePanel.dataset.d = 'exit';
+        this.gateBtn2.style.display = '';
+        this.gateBtn2.textContent = t('gate.leave');
+      } else if (near === ab && near >= 0) {
+        const A = game.abyss;
+        this.gateTitle.textContent = t('abyss.name');
+        this.gateInfo.textContent = !A.unlocked ? t('abyss.locked', { level: CONFIG.abyss.unlockLevel })
+          : A.best ? t('abyss.best', { n: A.best }) : t('abyss.bestNone');
+        this.gatePanel.dataset.d = 'abyss';
+        this.gateBtn.classList.toggle('off', !A.unlocked);
+      } else if (near === -50) {
         this.gateTitle.textContent = t('gate.cleared');
         this.gateInfo.textContent = t('gate.leaveInfo');
         this.gatePanel.dataset.d = 'exit';
@@ -242,8 +274,10 @@ export class Hud {
         const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
         const diff = CONFIG.gates.difficulties[gate.diff];
         this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
-        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level });
+        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
         this.gatePanel.dataset.d = diff.id;
+        this.gateBtn2.style.display = '';
+        this.gateBtn2.textContent = t('mods.btn') + (nm ? ' (' + nm + ')' : '');
       }
     }
     // boss health
@@ -252,7 +286,6 @@ export class Hud {
     if (show !== this.vBoss) {
       this.vBoss = show;
       this.bossBar.classList.toggle('on', show >= 0);
-      this.hud.classList.toggle('arena', gates.active >= 0);
       if (show >= 0) this.bossName.textContent = t('enemy.' + E.types[E.type[show]].id);
       this.vBossHp = -1;
     }
@@ -264,6 +297,37 @@ export class Hud {
         this.bossText.textContent = fmt(Math.max(0, hp)) + ' / ' + fmt(E.maxHp[show]);
       }
     }
+    // inside a gate or the Abyss: the zone label makes room
+    const arena = gates.active >= 0;
+    if (arena !== this.vArena) { this.vArena = arena; this.hud.classList.toggle('arena', arena); }
+    this.hud.classList.toggle('bossup', show >= 0);
+    // Abyss floor and wave, or the time left of a gate
+    const A = game.abyss;
+    const left = A.on ? A.timeLeft : gates.timeLeft;
+    let info = '';
+    if (A.on) info = A.floor + ':' + A.wave + ':' + A.waves + ':' + Math.ceil(left) + ':' + A.cleared;
+    else if (arena && left > 0) info = 'g:' + Math.ceil(left);
+    if (info !== this.vAbyss) {
+      this.vAbyss = info;
+      this.abyssInfo.classList.toggle('on', info !== '');
+      const clock = left > 0 ? Math.floor(left / 60) + ':' + String(Math.ceil(left) % 60).padStart(2, '0') : '';
+      if (A.on) {
+        this.abyssTitle.textContent = t('abyss.floor', { n: A.floor });
+        const parts = [];
+        if (!A.cleared && A.waves) parts.push(t('abyss.wave', { n: A.wave, max: A.waves }));
+        if (clock) parts.push('⏱ ' + clock);
+        if (gates.runMods.length) parts.push(t('mods.active', { n: gates.runMods.length }));
+        this.abyssSub.textContent = parts.join(' · ');
+      } else {
+        this.abyssTitle.textContent = '⏱ ' + clock;
+        this.abyssSub.textContent = gates.runMods.length ? t('mods.active', { n: gates.runMods.length }) : '';
+      }
+    }
+    if (this.uqT > 0) {
+      this.uqT -= dt;
+      if (this.uqT <= 0) this.uqEl.classList.remove('on');
+    }
+
     // outpost capture
     const cap = game.capture;
     const cv = cap.si < 0 ? -1 : cap.guards > 0 ? -10 - cap.guards : Math.floor(cap.p * 100);
@@ -295,6 +359,22 @@ export class Hud {
     this.noteEl.className = 'sq-note on ' + kind;
     this.noteT = 2.6;
     this.vNote = text;
+  }
+
+  // A unique item dropped: a big card in the middle of the screen.
+  uniqueDrop(item, x, z) {
+    const game = this.game;
+    this.uqEl.querySelector('b').textContent = itemName(item);
+    this.uqEl.querySelector('p').textContent = t('uqd.' + item.uq);
+    this.uqEl.classList.remove('on');
+    void this.uqEl.offsetWidth;
+    this.uqEl.classList.add('on');
+    this.uqT = 4.5;
+    play('unique');
+    game.cam.shake(0.35, 0.5);
+    game.effects.burst(x, 1.5, z, 80, 0xfff0c0, 12, 0.35, 1.6);
+    game.effects.ring(x, z, 0.5, 8, 0xffd870, 0.9);
+    game.effects.ring(x, z, 0.5, 5, 0xffffff, 0.7, 0.2);
   }
 
   toast(text) {
@@ -481,7 +561,9 @@ export class Hud {
     }
 
     // level and experience
-    const xp = Math.floor((P.xp / P.xpNeed()) * 100);
+    const maxed = P.level >= CONFIG.levels.maxLevel;
+    const xp = Math.floor((maxed ? P.mastery.xp / P.masteryNeed() : P.xp / P.xpNeed()) * 100);
+    this.xpFill.parentNode.classList.toggle('mastery', maxed);
     if (xp !== this.vXp) {
       this.vXp = xp;
       this.xpFill.style.transform = 'scaleX(' + xp / 100 + ')';

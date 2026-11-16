@@ -153,7 +153,7 @@ export class Minimap {
     // gates (always visible: on the edge when they are out of view)
     if (arena < 0) {
       for (const gt of gates.list) {
-        if (!gt.open || gt.zone !== game.curZone) continue;
+        if (!gt.open || gt.abyss || gt.zone !== game.curZone) continue;
         const zone = CONFIG.world.zones[gt.zone];
         let x = X(gt.x), y = Y(gt.z);
         const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 14;

@@ -95,6 +95,11 @@ export class World {
       });
     });
 
+    // The Abyss: a gate in the camp that is always there (see world/abyss.js).
+    // It comes last so the gates of saved worlds keep their numbers.
+    const A = CONFIG.abyss;
+    this.gates.push({ zone: this.zones.length - 1, diff: 2, level: A.unlockLevel, x: A.pos.x, z: A.pos.z, open: true, gen: 0, t: 0, abyss: true });
+
     this.buildGround();
     this.camp = buildCamp(scene, this);
     this.outposts = buildOutposts(scene, this.safes);

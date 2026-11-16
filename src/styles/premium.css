@@ -1638,3 +1638,386 @@ button,
 .lvl-badge b[data-n='4'] {
   font-size: calc(var(--u) * 3.7);
 }
+
+/* ===================================== endgame ===================================== */
+/* unique items: a shimmering rainbow frame */
+.tile.r7 {
+  animation: legend 0.9s ease-in-out infinite alternate, unique-frame 3s linear infinite;
+}
+@keyframes unique-frame {
+  0%, 100% { border-color: #ffe8a0; }
+  25% { border-color: #ff9ad8; }
+  50% { border-color: #9ad8ff; }
+  75% { border-color: #b0ffb8; }
+}
+.d-rows p.uq-box {
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6);
+  border-radius: calc(var(--u) * 1.4);
+  border: 1px solid #ffe8a0;
+  background: linear-gradient(120deg, rgba(255, 232, 160, 0.16), rgba(154, 216, 255, 0.12), rgba(255, 154, 216, 0.14));
+  color: #fff6dc;
+}
+.d-rows p.uq-box b {
+  display: block;
+  font-size: calc(var(--u) * 2.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffd870;
+}
+
+/* the second button of the gate panel (modifiers, leave the Abyss) */
+#btn-gate2 {
+  position: relative;
+  flex: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border-color: rgba(255, 255, 255, 0.35);
+}
+#btn-gate.off {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+.gate-panel[data-d='abyss'] {
+  border-color: #ff2850;
+  box-shadow: 0 0 calc(var(--u) * 5) rgba(255, 40, 80, 0.45);
+}
+.gate-panel[data-d='abyss'] .gp-text b {
+  color: #ff8098;
+}
+
+/* Abyss floor / time left, at the top */
+.abyss-info {
+  position: absolute;
+  top: calc(var(--st) + var(--u) * 2.5);
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  text-align: center;
+  pointer-events: none;
+}
+.abyss-info.on {
+  display: block;
+}
+#hud.bossup .abyss-info {
+  top: calc(var(--st) + var(--u) * 14);
+}
+.abyss-info b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 4.4);
+  color: #ffb0c0;
+  text-shadow: 0 0 calc(var(--u) * 2) #ff2850, 0 2px 2px #000;
+}
+.abyss-info small {
+  display: block;
+  font-size: calc(var(--u) * 2.6);
+  color: #f0e0ff;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* a unique item dropped */
+.uq-drop {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+.uq-drop.on {
+  display: flex;
+  animation: uq-fade 4.5s ease-out forwards;
+}
+.uq-rays {
+  position: absolute;
+  width: 160vmax;
+  height: 160vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 232, 160, 0.22) 0deg 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, transparent 45%);
+  mask: radial-gradient(circle, #000 0%, transparent 45%);
+  animation: uq-spin 8s linear infinite;
+}
+.uq-card {
+  position: relative;
+  text-align: center;
+  padding: calc(var(--u) * 3) calc(var(--u) * 8);
+  border-radius: calc(var(--u) * 3);
+  background: radial-gradient(ellipse at center, rgba(40, 24, 10, 0.92), rgba(12, 8, 20, 0.9));
+  border: 2px solid #ffe8a0;
+  box-shadow: 0 0 calc(var(--u) * 8) rgba(255, 216, 112, 0.7), inset 0 0 calc(var(--u) * 4) rgba(255, 216, 112, 0.25);
+  animation: uq-pop 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both, unique-frame 2s linear infinite;
+  max-width: 80vw;
+}
+.uq-card small {
+  display: block;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 4);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #ffe8a0, #ff9ad8, #9ad8ff, #b0ffb8, #ffe8a0);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: uq-shine 2s linear infinite;
+}
+.uq-card b {
+  display: block;
+  margin-top: calc(var(--u) * 1);
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 6.4);
+  color: #fff6dc;
+  text-shadow: 0 0 calc(var(--u) * 3) #ffd870;
+}
+.uq-card p {
+  margin: calc(var(--u) * 1) 0 0;
+  font-size: calc(var(--u) * 3);
+  color: #fff;
+}
+.uq-card em {
+  display: block;
+  margin-top: calc(var(--u) * 1);
+  font-style: normal;
+  font-size: calc(var(--u) * 2.4);
+  opacity: 0.7;
+}
+@keyframes uq-pop {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes uq-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes uq-shine {
+  to { background-position: 200% 0; }
+}
+@keyframes uq-fade {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* mastery: the XP bar turns cyan, rows in the Stats tab */
+.xp .bar.mastery i {
+  background: linear-gradient(90deg, #7df0ff, #b48cff);
+}
+.ms-head {
+  flex: none;
+  margin-top: calc(var(--u) * 2.4);
+  padding-top: calc(var(--u) * 1.6);
+  border-top: 1px solid rgba(125, 240, 255, 0.35);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--u) * 0.6) calc(var(--u) * 3);
+}
+.ms-head b {
+  font-size: calc(var(--u) * 4);
+  color: #7df0ff;
+}
+.ms-head span {
+  flex: 1;
+  opacity: 0.75;
+}
+.ms-head em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.6;
+}
+.ms-head em.on {
+  opacity: 1;
+  color: #7df0ff;
+}
+.ms-head small {
+  flex-basis: 100%;
+  opacity: 0.6;
+  font-size: calc(var(--u) * 2.4);
+}
+
+/* the Abyss / modifier panel */
+#abyss-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 55;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--st) + var(--u) * 2) calc(var(--sr) + var(--u) * 3) calc(var(--sb) + var(--u) * 2) calc(var(--sl) + var(--u) * 3);
+  background: radial-gradient(ellipse at 50% 40%, rgba(120, 10, 40, 0.45), rgba(6, 3, 10, 0.92));
+  font-size: calc(var(--u) * 3);
+}
+#abyss-panel.on {
+  display: flex;
+}
+#abyss-panel.on.enter {
+  animation: fade-in 0.2s ease-out;
+}
+.ab-box {
+  width: min(100%, calc(var(--u) * 190));
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.6);
+  padding: calc(var(--u) * 2.4) calc(var(--u) * 3);
+  border-radius: calc(var(--u) * 3);
+  background: var(--glass);
+  border: 1px solid rgba(255, 80, 120, 0.55);
+  box-shadow: var(--bevel), 0 0 calc(var(--u) * 8) rgba(255, 40, 80, 0.35), var(--lift);
+}
+.ab-box.mods {
+  border-color: var(--line-hi);
+  box-shadow: var(--bevel), 0 0 calc(var(--u) * 8) rgba(138, 77, 255, 0.35), var(--lift);
+}
+.ab-head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 3);
+}
+.ab-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 5);
+  color: #ffb0c0;
+}
+.ab-box.mods .ab-head h2 {
+  color: var(--gold-hi);
+}
+.ab-head small {
+  opacity: 0.75;
+  font-size: calc(var(--u) * 2.6);
+}
+.ab-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: calc(var(--u) * 2.4);
+}
+.ab-side {
+  flex: 0 0 34%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1);
+  overflow-y: auto;
+}
+.ab-side p {
+  margin: 0;
+  font-size: calc(var(--u) * 2.6);
+  opacity: 0.85;
+}
+.ab-side small {
+  font-size: calc(var(--u) * 2.3);
+  opacity: 0.6;
+}
+#abyss-panel h4 {
+  margin: calc(var(--u) * 0.6) 0 0;
+  font-size: calc(var(--u) * 2.8);
+  color: var(--gold-hi);
+}
+#abyss-panel h4 em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: calc(var(--u) * 2.4);
+  color: #e8dcff;
+  opacity: 0.85;
+  margin-left: calc(var(--u) * 1);
+}
+.ab-floor {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+}
+.ab-floor b {
+  min-width: calc(var(--u) * 10);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 6);
+  color: #fff;
+}
+.ab-floor .ap-btn {
+  min-width: calc(var(--u) * 8);
+  font-size: calc(var(--u) * 4);
+}
+.ab-mods {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1);
+}
+.ab-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  touch-action: pan-y;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--u) * 1);
+  align-content: start;
+}
+.ab-mod {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 0.9) calc(var(--u) * 1.4);
+  border-radius: calc(var(--u) * 1.6);
+  border: 1px solid rgba(200, 170, 255, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  color: #e8dcff;
+  font: inherit;
+  text-align: left;
+}
+.ab-mod i {
+  flex: none;
+  width: calc(var(--u) * 5.4);
+  height: calc(var(--u) * 5.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-size: calc(var(--u) * 3);
+  background: rgba(0, 0, 0, 0.35);
+}
+.ab-mod b {
+  display: block;
+  font-size: calc(var(--u) * 2.7);
+}
+.ab-mod small {
+  display: block;
+  font-size: calc(var(--u) * 2.2);
+  opacity: 0.7;
+}
+.ab-mod.on {
+  border-color: #ff6080;
+  background: linear-gradient(180deg, rgba(255, 60, 100, 0.35), rgba(140, 20, 50, 0.3));
+  color: #fff;
+}
+.ab-mod[disabled] {
+  opacity: 0.4;
+}
+.ab-btns {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--u) * 2);
+}
+.ab-btns .ap-btn {
+  min-width: calc(var(--u) * 24);
+}
+.ap-btn.go {
+  color: #2a1700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, var(--gold-hi) 0%, var(--gold) 45%, var(--gold-lo) 100%);
+  border-color: #fff3d0;
+}
+
+/* the gate panel stays clear of the skill buttons on small screens */
+.gate-panel .gp-text {
+  max-width: calc(var(--u) * 44);
+}
+.gate-panel .btn.pill {
+  padding-left: calc(var(--u) * 3);
+  padding-right: calc(var(--u) * 3);
+}

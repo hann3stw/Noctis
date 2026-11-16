@@ -79,7 +79,7 @@ export class Menu {
     this.army.hint = hint || '';
     // open where something new waits
     if (tab) this.tab = tab;
-    else if (P.points > 0) this.tab = 'stats';
+    else if (P.points > 0 || P.mastery.pts > 0) this.tab = 'stats';
     else if (P.inventory.some((it) => it.n)) this.tab = 'gear';
     else if (P.newSkills.length) this.tab = 'skills';
     this.selItem = null;
@@ -178,6 +178,8 @@ export class Menu {
       }
     } else if (act === 'stat') {
       P.spendPoint(target.dataset.stat);
+    } else if (act === 'mastery') {
+      P.spendMastery(target.dataset.k);
     } else if (act === 'skill') {
       this.selSkill = target.dataset.id;
     } else if (act === 'slot' && this.selSkill && !this.locked) {
@@ -189,7 +191,7 @@ export class Menu {
   render() {
     const P = this.game.player;
     const news = {
-      stats: P.points > 0 ? P.points : '',
+      stats: P.points + P.mastery.pts > 0 ? P.points + P.mastery.pts : '',
       gear: P.inventory.some((it) => it.n) ? '!' : '',
       skills: P.newSkills.length ? '!' : '',
     };
@@ -284,6 +286,7 @@ export class Menu {
       const label = this.confirmId === item.id ? t('gear.confirm') : t('gear.dismantle', { n: dismantleValue(item) });
       buttons.push(`<button class="ap-btn danger" data-act="dismantle">${label}</button>`);
     }
+    if (item.uq) rows.unshift(`<p class="uq-box"><b>${t('item.unique')}</b>${t('uqd.' + item.uq)}</p>`);
     return `<h3 style="color:${color}">${itemName(item)}</h3>
       <small class="sub">${t('rarity.' + item.rarity)} · ${t('item.level', { level: item.level })}${equipped ? ' · ' + t('item.equipped') : ''}</small>
       <div class="d-rows" data-scroll="detail">${rows.join('')}</div><div class="d-btns">${buttons.join('')}</div>`;
@@ -408,11 +411,21 @@ export class Menu {
         <h4 class="bk-auto">${t('gear.auto')}</h4><div class="segs bk-segs">${autos}</div></div>`;
   }
 
+  // ---- mastery (after the last level) -------------------------------------------
+  masteryRows() {
+    const P = this.game.player, m = P.mastery, M = CONFIG.mastery.perPoint;
+    if (P.level < CONFIG.levels.maxLevel) return '';
+    const rows = Object.keys(M).map((k) => `<div class="s-row ms"><div><b>${t('mastery.' + k)}</b><small>${t('mastery.each', { v: Math.round(M[k] * 1000) / 10 })}</small></div>
+      <span>${m.s[k]}</span><button class="ap-btn" data-act="mastery" data-k="${k}"${m.pts > 0 ? '' : ' disabled'}>+</button></div>`).join('');
+    return `<div class="ms-head"><b>${t('mastery.title', { n: m.lv })}</b><span>${t('mastery.xp', { xp: fmt(Math.floor(m.xp)), need: fmt(P.masteryNeed()) })}</span>
+      <em class="${m.pts > 0 ? 'on' : ''}">${t('mastery.points', { n: m.pts })}</em><small>${t('mastery.hint')}</small></div>${rows}`;
+  }
+
   // ---- stats ------------------------------------------------------------------
   stats() {
     const P = this.game.player, K = CONFIG.progression.defenseK;
     const rows = STAT_KEYS.map((k) => `<div class="s-row"><div><b>${t('stat.' + k)}</b><small>${t('stat.' + k + '.desc')}</small></div>
-      <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('');
+      <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('') + this.masteryRows();
     const d = [
       ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
       ['damage', fmt(P.power())], ['dps', fmt(P.power() * (1 + P.crit * (P.critDmg - 1)) / P.reloadTime)], ['skill', fmt(P.skillPower())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],

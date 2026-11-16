@@ -200,6 +200,7 @@ export const CONFIG = {
     playerRank: 6,
     playerHpRank: 8,
     itemRank: 1.27, // damage / defence of items: x1.27 per rank of the item level
+    levelsPerRankAbove: 150, // Abyss items above the last level: one more rank per this many levels
     tierLevel: [0, 0.1, 0.2, 0.4], // extra levels of elites, champions, bosses (share of the zone's levels)
   },
 
@@ -280,11 +281,12 @@ export const CONFIG = {
     luckStep: 0.6,
     // Rarity counts more than the item level: a rarer item is nearly always
     // better than a more common one from the next zone.
-    rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6, 4.8], // stat factor per rarity
+    // index 7 = unique: never rolled by chance, only from the Abyss (see abyss.unique)
+    rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6, 4.8, 6.5], // stat factor per rarity
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
-    upgradeCost: [2, 3, 5, 8, 14, 24, 40], // essence per rarity, times (upgrade + 1)
-    dismantle: [1, 2, 4, 8, 18, 40, 90], // essence per rarity
+    upgradeCost: [2, 3, 5, 8, 14, 24, 40, 70], // essence per rarity, times (upgrade + 1)
+    dismantle: [1, 2, 4, 8, 18, 40, 90, 250], // essence per rarity
     inventorySize: 80,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
     // one bonus per armour piece: value x (1 + bonusRarity x rarity), so a
@@ -306,6 +308,76 @@ export const CONFIG = {
       tempest: { 2: { reload: 0.12 }, 4: { speed: 0.08, charges: 1 } },
       arcanist: { 2: { mana: 0.3 }, 4: { skillDamage: 0.3, cooldown: 0.2 } },
       bloodreaver: { 2: { killHeal: 0.04 }, 4: { damage: 0.1, hitHeal: 0.004 } },
+    },
+  },
+
+  // ---- after the last level --------------------------------------------------
+  // XP beyond level 1000 fills mastery levels; each gives a mastery point.
+  // XP for the next mastery level = XP of the last level x (1 + growth x mastery level).
+  mastery: {
+    growth: 0.04,
+    // what one point gives (no limit; crit stays under progression.critMax)
+    perPoint: { damage: 0.01, hp: 0.01, armyDamage: 0.01, armyHp: 0.01, loot: 0.01, crit: 0.005 },
+  },
+
+  // The Abyss: an endless gate in the camp, open from the last level on.
+  // Every floor has waves of enemies from all zones, every bossEvery-th
+  // floor a boss of a zone. Floor 1 = enemies of the last level; every floor
+  // makes them floorPower times stronger. Clearing a boss floor makes the
+  // next floor a start point for later runs.
+  abyss: {
+    unlockLevel: 1000,
+    pos: { x: 11.5, z: 11.5 }, // the portal in the camp
+    pool: 24, // enemy slots kept for the Abyss (waves and boss helpers)
+    floorPower: 1.1,
+    bossEvery: 5,
+    waves: 2,
+    waveSize: [8, 18], // enemies per wave on floor 1; +1 every third floor up to the second number
+    eliteChance: 0.15,
+    bossHp: 0.6, // abyss bosses: boss.hp x this (they come often)
+    dropChance: 0.12, // per normal enemy (elites x3)
+    clearItems: 1, // items for every cleared floor
+    bossItems: 3, // items of a boss
+    itemLevelPerFloor: 5, // abyss items have level 1000 + floor x this
+    luckPerFloor: 0.03,
+    essencePerFloor: 30,
+    // Unique items drop only here: chance per item (bosses more), a little
+    // more on deep floors and with modifiers, never above max / bossMax.
+    unique: { chance: 0.002, bossChance: 0.01, perFloor: 0.04, perModifier: 0.25, max: 0.03, bossMax: 0.06 },
+  },
+
+  // Gate modifiers: up to max at a time, chosen before entering a gate or the
+  // Abyss. Every modifier gives luck (better loot) and more XP.
+  modifiers: {
+    max: 3,
+    luck: 0.25,
+    xp: 0.25,
+    list: {
+      explode: { radius: 3, delay: 0.7, damage: 1.2 }, // enemies explode when they die
+      noHeal: {}, // no healing at all
+      timeLimit: { gate: 150, floor: 90 }, // seconds for a gate / for an Abyss floor
+      swift: { speed: 1.3 }, // faster enemies
+      weakArmy: { damage: 0.5 }, // your shadows deal half damage
+      elites: { chance: 0.45 }, // many more elites (gate helpers are all elites)
+      tough: { hp: 1.5 }, // enemies have more health
+      manaCurse: { cost: 2 }, // skills cost twice the mana
+    },
+  },
+
+  // Unique items: one fixed special effect each. A weapon gets one of the
+  // weapon effects, a piece of armour the effect of its slot.
+  uniques: {
+    weapon: {
+      echo: { every: 5, power: 1.5, range: 9, arcDeg: 80 }, // every 5th attack also sends a shadow wave (x skill damage)
+      storm: { chance: 0.25, jumps: 2, damage: 0.4, range: 6 }, // a hit may zap 2 enemies nearby for 40 %
+      reaper: { heal: 0.03 }, // kills heal 3 % and give an attack charge back
+      execute: { below: 0.3, damage: 0.8 }, // +80 % damage on enemies below 30 % health
+    },
+    armor: {
+      helmet: { insight: { critDamage: 0.5 } }, // +50 % crit damage
+      chest: { bastion: { shield: 0.15, time: 4, cooldown: 8 } }, // when hit: a shield of 15 % max health
+      gloves: { frenzy: { perHit: 0.03, max: 0.3, time: 4 } }, // every hit: 3 % faster reload for 4 s (up to 30 %)
+      boots: { voidstep: { power: 3, radius: 3.5, delay: 0.4 } }, // dodging leaves an explosion behind (x skill damage)
     },
   },
 

@@ -21,6 +21,8 @@ import { Gates, RANKS } from './world/gates.js';
 import { Minimap } from './ui/minimap.js';
 import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
+import { Abyss } from './world/abyss.js';
+import { AbyssPanel } from './ui/abyssPanel.js';
 import { skillDef } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
@@ -56,6 +58,8 @@ export class Game {
     this.discovered = new Set(save ? save.discovered || [] : []); // outposts captured (index in world.safes)
     // zones the player has set foot in (the minimap only shows these)
     this.knownZones = new Set(save && save.knownZones ? save.knownZones : [0]);
+    // gate modifiers chosen by the player (kept until changed)
+    this.mods = (save && save.mods ? save.mods : []).filter((id) => CONFIG.modifiers.list[id]).slice(0, CONFIG.modifiers.max);
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
     this.lastSafe = 0;
     this.captureT = new Float32Array(64); // capture progress per outpost
@@ -100,7 +104,9 @@ export class Game {
     this.projectiles = new Projectiles(this);
     this.zones = new Zones(this);
     this.loot = new Loot(this);
+    this.abyss = new Abyss(this, save && save.abyss);
     this.menu = new Menu(uiRoot, this);
+    this.abyssPanel = new AbyssPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
     if (save) {
@@ -165,6 +171,8 @@ export class Game {
       discovered: [...this.discovered],
       knownZones: [...this.knownZones],
       difficulty: this.difficulty,
+      abyss: this.abyss.serialize(),
+      mods: [...this.mods],
       tutorial: this.tutorial ? this.tutorial.step : -1,
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
@@ -181,6 +189,12 @@ export class Game {
     const d = this.player.serialize();
     if (this.gates.active >= 0) { d.x = this.gates.returnX; d.z = this.gates.returnZ; }
     return d;
+  }
+
+  // Values of a modifier while it is on (only inside a gate or the Abyss), else null.
+  modOn(id) {
+    const g = this.gates;
+    return g && g.active >= 0 && g.runMods.includes(id) ? CONFIG.modifiers.list[id] : null;
   }
 
   // values of the world's difficulty
@@ -314,6 +328,7 @@ export class Game {
     this.shots.update(dt);
     this.hazards.update(dt);
     this.gates.update(dt);
+    this.abyss.update(dt);
     this.souls.update(dt);
     this.loot.update(dt);
     this.soulNear = P.dead ? -1 : this.souls.nearest(P.x, P.z, CONFIG.souls.ariseRange);
@@ -590,7 +605,12 @@ export class Game {
     // kills of the army count only partly for the hunter
     this.player.addXp(src < 0 ? xp : xp * CONFIG.progression.armyKillXp);
     if (src < 0) this.player.onKill();
-    if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
+    // Volatile: enemies in gates explode when they die
+    const ex = this.modOn('explode');
+    if (ex && E.arena[i] && tier < 3) this.hazards.add(E.x[i], E.z[i], ex.radius, ex.delay, E.dmg[i] * ex.damage, 0xff6030);
+    const gate = E.arena[i] ? this.gates.list[E.arena[i] - 1] : null;
+    if (gate && gate.abyss) this.abyss.onKill(i, tier);
+    else if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
     else this.loot.enemyDrop(E.x[i], E.z[i], level, tier);
   }
 

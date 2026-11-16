@@ -194,8 +194,8 @@ export class Enemies {
     });
 
     // reserved slots for the gate bosses and their helpers (asleep until used)
-    const maxAdds = CONFIG.bossPatterns.summon.maxAdds;
     world.gates.forEach((g, gi) => {
+      const maxAdds = g.abyss ? CONFIG.abyss.pool : CONFIG.bossPatterns.summon.maxAdds;
       const zone = CONFIG.world.zones[g.zone];
       const c = arenaCenter(gi);
       const p = this.newPack(c.x, c.z);
@@ -236,12 +236,25 @@ export class Enemies {
     this.yaw[i] = Math.random() * 6.28;
     const D = this.game.diff();
     // inside a gate: the gate's level and difficulty, bosses much tougher
-    let lv, hpM = 1, dmgM = 1;
+    let lv, hpM = 1, dmgM = 1, xpM = 1;
     if (this.arena[i]) {
-      const gate = this.game.world.gates[this.arena[i] - 1], gd = CONFIG.gates.difficulties[gate.diff];
-      lv = gate.level;
-      hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1);
-      dmgM = gd.damage;
+      const game = this.game, gate = game.world.gates[this.arena[i] - 1];
+      if (gate.abyss) {
+        // the Abyss: enemies of the last level, stronger on every floor
+        const A = CONFIG.abyss, pw = game.abyss.power();
+        lv = A.unlockLevel;
+        hpM = pw * (def.boss ? CONFIG.boss.hp * A.bossHp : 1);
+        dmgM = pw;
+        xpM = pw;
+      } else {
+        const gd = CONFIG.gates.difficulties[gate.diff];
+        lv = gate.level;
+        hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1);
+        dmgM = gd.damage;
+      }
+      const tough = game.modOn('tough');
+      if (tough) hpM *= tough.hp;
+      xpM *= 1 + game.gates.runMods.length * CONFIG.modifiers.xp;
     } else {
       lv = levelAt(Math.hypot(this.packX[p], this.packZ[p]));
     }
@@ -251,7 +264,7 @@ export class Enemies {
     this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM * rk);
     this.hp[i] = this.maxHp[i];
     this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;
-    this.xpv[i] = Math.round(def.xp * pw * T.xp * Math.sqrt(rk));
+    this.xpv[i] = Math.round(def.xp * pw * T.xp * Math.sqrt(rk) * xpM);
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];
     this.state[i] = ST_IDLE;
@@ -592,6 +605,11 @@ export class Enemies {
         }
       }
       this.state[i] = st;
+      // Swift: faster enemies in gates and the Abyss
+      if (speed > 0 && this.arena[i]) {
+        const sw = game.modOn('swift');
+        if (sw) speed *= sw.speed;
+      }
 
       this.moving[i] = 0;
       if (speed > 0) {

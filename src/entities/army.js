@@ -477,7 +477,8 @@ export class Army {
     const huntRange = this.huntRange();
     const variance = CONFIG.combat.damageVariance;
     if (this.buffT > 0) this.buffT -= dt;
-    const dmgMult = 1 + P.armyDamage + (this.buffT > 0 ? this.buffDamage : 0);
+    const weak = game.modOn('weakArmy');
+    const dmgMult = (1 + P.armyDamage + (this.buffT > 0 ? this.buffDamage : 0)) * (weak ? weak.damage : 1);
 
     if (this.summonCd > 0) this.summonCd -= dt;
     this.total = this.alive = this.ready = this.readyCost = 0;

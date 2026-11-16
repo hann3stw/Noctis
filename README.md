@@ -152,6 +152,34 @@ HTTPS (or localhost) for offline mode and installing.
   1.5-2 minutes alone with ordinary gear and still 10-30 seconds with the best
   legendary gear, in every rank.
 
+## Endgame (level 1000)
+
+- **Mastery**: XP after level 1000 fills mastery levels (the XP bar turns
+  cyan). Every mastery level gives a point for the Stats tab: +1 % damage,
+  health, shadow damage, shadow health or loot, or +0.5 % crit. No limit.
+- **The Abyss**: the red portal in the camp, open from level 1000. Endless
+  floors with two waves of enemies from all zones, a zone boss every 5th
+  floor; every floor is 10 % stronger. After a floor: Next floor or Leave
+  (the loot comes along). Every cleared boss floor becomes a start point for
+  later runs; the best floor is saved. Abyss items have item level 1000 +
+  5 per floor and keep getting a little stronger.
+- **Modifiers** (up to 3): chosen in the Abyss panel or with the Mods button
+  in front of any gate, and kept until changed. Volatile (enemies explode),
+  No Mercy (no healing), Against the Clock (150 s per gate, 90 s per Abyss
+  floor), Swift, Lonely Hunter (shadows deal half damage), Elite Horde,
+  Hardened (+50 % enemy health), Mana Curse (skills cost double). Every
+  modifier gives +25 % loot luck and +25 % XP.
+- **Unique items** (rarity 8, x6.5, rainbow frame) drop only in the Abyss:
+  about 0.2 % per item, 1 % from Abyss bosses, a bit more on deep floors and
+  with modifiers. A drop shows a big card with rays and its own sound. Each
+  has one special effect: Echo of the Fallen (every 5th attack a shadow
+  wave), Stormbinder (hits zap 2 enemies), Soulreaper (kills heal and give a
+  charge back), Last Rites (+80 % damage below 30 % health), Crown of Insight
+  (+50 % crit damage), Bastion of Night (a shield when hit), Frenzy Grips
+  (faster reload with every hit), Voidstep Treads (dodging leaves an
+  explosion). Values: `src/config.js` -> `mastery`, `abyss`, `modifiers`,
+  `uniques`.
+
 ## Shadow army
 
 - Raise defeated enemies with Arise. Enemies below your level always rise;

@@ -54,8 +54,10 @@ export function gateLevel(zi, diff) {
 }
 
 // damage / defence factor of an item of this level
+// Abyss items above the last level: one more rank every levelsPerRankAbove levels.
 export function itemLevelPower(level) {
-  return Math.pow(L.itemRank, rankProgress(level));
+  const p = level > L.maxLevel ? rankProgress(L.maxLevel) + (level - L.maxLevel) / L.levelsPerRankAbove : rankProgress(level);
+  return Math.pow(L.itemRank, p);
 }
 
 // Enemy level at distance r from the centre: rises from the inner to the

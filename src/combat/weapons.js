@@ -8,13 +8,15 @@ const DEG = Math.PI / 180;
 
 // One hit of the player on enemy i: variance, crit, ultimate charge.
 export function playerHit(game, i, base, kx, kz) {
-  const P = game.player;
+  const P = game.player, E = game.enemies, U = P.uq;
   let dmg = base * (1 + (Math.random() * 2 - 1) * CONFIG.combat.damageVariance);
+  // Last Rites: more damage on wounded enemies
+  if (U.execute && E.hp[i] < E.maxHp[i] * U.execute.below) dmg *= 1 + U.execute.damage;
   const crit = Math.random() < P.crit;
   if (crit) dmg *= P.critDmg;
   P.onHit();
   play(crit ? 'crit' : 'hit');
-  const E = game.enemies, fx = game.effects;
+  const fx = game.effects;
   if (crit) {
     fx.ring(E.x[i], E.z[i], 0.4, 2.6, 0xffc040, 0.3, 0, 1.0);
     game.cam.shake(0.18, 0.15);
@@ -22,7 +24,36 @@ export function playerHit(game, i, base, kx, kz) {
   } else {
     fx.ring(E.x[i], E.z[i], 0.3, 1.5, 0xffffff, 0.18, 0, 1.0);
   }
+  const x = E.x[i], z = E.z[i];
   E.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);
+  // Stormbinder: the hit may jump to enemies nearby
+  if (U.storm && !zapping && Math.random() < U.storm.chance) zap(game, i, x, z, dmg * U.storm.damage, U.storm);
+}
+
+let zapping = false;
+function zap(game, from, x, z, dmg, S) {
+  const E = game.enemies, fx = game.effects;
+  zapping = true;
+  let n = 0;
+  for (let k = 0; k < E.activeCount && n < S.jumps; k++) {
+    const j = E.active[k];
+    if (j === from || !E.alive[j]) continue;
+    const dx = E.x[j] - x, dz = E.z[j] - z, d = Math.hypot(dx, dz);
+    if (d > S.range || d < 0.01) continue;
+    fx.beam(x, z, dx / d, dz / d, d, 0.25, 0x9fe8ff);
+    E.damage(j, Math.max(1, Math.round(dmg)), dx / d, dz / d, -1, false);
+    n++;
+  }
+  zapping = false;
+}
+
+// Echo of the Fallen: a shadow wave in the attack direction
+export function echoWave(game, dx, dz, U) {
+  const P = game.player, fx = game.effects;
+  hitArc(game, P.x, P.z, dx, dz, U.range, U.arcDeg, P.skillPower() * U.power);
+  const yaw = Math.atan2(dx, dz), aura = game.appearance ? game.appearance.aura : 0x8a4dff;
+  fx.slash(P.x, P.z, yaw, U.range, U.arcDeg, aura, EXPAND, 1, 0.4);
+  fx.slash(P.x, P.z, yaw, U.range * 0.75, U.arcDeg, 0xfff0c0, EXPAND, 1, 0.3);
 }
 
 // All of these return the number of enemies hit.

@@ -68,6 +68,11 @@ const SOUNDS = {
   chest: () => { hiss(300, 120, 0.25, 0.3, 2); [660, 880, 1100].forEach((f, i) => tone('triangle', f, f, 0.16, 0.08, 0.1 + i * 0.07)); },
   death: () => { tone('sawtooth', 300, 50, 0.9, 0.16); hiss(400, 80, 0.8, 0.25, 1); },
   ui: () => tone('sine', 660, 760, 0.06, 0.08),
+  unique: () => {
+    tone('sawtooth', 70, 140, 1.2, 0.16);
+    [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone('triangle', f, f * 1.01, 0.5, 0.11, 0.25 + i * 0.09));
+    hiss(2000, 9000, 1.6, 0.18, 0.6, 0.2);
+  },
 };
 
 // minimum time between two plays of the same sound (seconds)

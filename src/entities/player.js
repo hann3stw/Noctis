@@ -5,9 +5,9 @@ import { playerPower, playerHpPower, enemyPower, rankOf } from '../core/levels.j
 import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
-import { fireWeapon } from '../combat/weapons.js';
+import { fireWeapon, echoWave } from '../combat/weapons.js';
 import { castSkill, skillDef } from '../combat/skills.js';
-import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower } from '../core/items.js';
+import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower, uniqueDef } from '../core/items.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
@@ -77,6 +77,12 @@ export class Player {
     this.shield = 0;
     this.shieldMax = 1;
     this.shieldT = 0;
+    // after the last level: mastery levels and points (s = points spent per kind)
+    this.mastery = { lv: 0, xp: 0, pts: 0, s: { damage: 0, hp: 0, armyDamage: 0, armyHp: 0, loot: 0, crit: 0 } };
+    this.uq = {}; // effects of the worn unique items: id -> values
+    this.frenzy = 0; // Frenzy Grips: faster reload
+    this.frenzyT = 0;
+    this.bastionCd = 0; // Bastion of Night: time until the next shield
     this.eclipseT = 0;
     this.rageT = 0; // Blood Rage
     this.counts = { attack: 0, dodge: 0, cast: 0 }; // for the tutorial
@@ -118,6 +124,7 @@ export class Player {
       inventory: this.inventory.map((it) => ({ ...it })),
       equip: Object.fromEntries(Object.entries(this.equip).map(([k, v]) => [k, v ? { ...v } : null])),
       known: [...this.known], slots: [...this.slots], newSkills: [...this.newSkills],
+      mastery: { lv: this.mastery.lv, xp: this.mastery.xp, pts: this.mastery.pts, s: { ...this.mastery.s } },
     };
   }
 
@@ -143,6 +150,13 @@ export class Player {
     if (d.slots) this.slots = d.slots.map((id) => (id && valid(id) ? id : null));
     this.newSkills = (d.newSkills || []).filter(valid);
     this.ult = d.ult || 0;
+    if (d.mastery) {
+      const m = this.mastery;
+      m.lv = d.mastery.lv || 0;
+      m.xp = d.mastery.xp || 0;
+      m.pts = d.mastery.pts || 0;
+      for (const k in m.s) m.s[k] = (d.mastery.s && d.mastery.s[k]) || 0;
+    }
     this.recalc();
     // the camp is safe: start there when the saved spot is unknown
     if (typeof d.x === 'number' && typeof d.z === 'number') { this.x = d.x; this.z = d.z; }
@@ -185,10 +199,18 @@ export class Player {
         if (this.setCount[set] >= Number(need)) for (const k in tiers[need]) b[k] += tiers[need][k];
       }
     }
+    // mastery points (after the last level)
+    const M = CONFIG.mastery.perPoint, ms = this.mastery.s;
+    // effects of unique items
+    this.uq = {};
+    for (const slot in this.equip) {
+      const it = this.equip[slot];
+      if (it && it.uq) { const u = uniqueDef(it.uq); if (u) this.uq[it.uq] = u; }
+    }
     const oldMax = this.maxHp;
     // levels multiply health and damage, Vitality and Strength add to them
     this.levelMult = playerPower(this.level);
-    this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp));
+    this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp) * (1 + M.hp * ms.hp));
     this.hpRegen = st.vit * S.vit.regen * this.maxHp;
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
@@ -197,11 +219,11 @@ export class Player {
     this.manaRegen = c.manaRegen + st.int * S.int.manaRegen;
     this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
-    this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit);
-    this.critDmg = G.critDamage + st.per * S.per.critDamage;
+    this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit);
+    this.critDmg = G.critDamage + st.per * S.per.critDamage + (this.uq.insight ? this.uq.insight.critDamage : 0);
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
-    this.drop = st.per * S.per.drop + (this.game.diff ? this.game.diff().luck : 0);
-    this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage);
+    this.drop = st.per * S.per.drop + (this.game.diff ? this.game.diff().luck : 0) + M.loot * ms.loot;
+    this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage) * (1 + M.damage * ms.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;
     this.maxCharges = c.charges.max + b.charges;
@@ -211,8 +233,8 @@ export class Player {
     this.ultRate = 1 + b.ultCharge;
     this.killHeal = b.killHeal;
     this.hitHeal = b.hitHeal;
-    this.armyDamage = b.armyDamage;
-    this.armyHp = b.armyHp;
+    this.armyDamage = b.armyDamage + M.armyDamage * ms.armyDamage;
+    this.armyHp = b.armyHp + M.armyHp * ms.armyHp;
     this.armySlots = b.armySlots;
     this.model.setEquipment(this.equip);
     if (this.game.army) this.game.army.recalcAll();
@@ -249,13 +271,50 @@ export class Player {
     const U = CONFIG.progression.ultCharge;
     if (this.ultLockT <= 0) this.ult = Math.min(U.max, this.ult + U.perHit * this.ultRate);
     if (this.hitHeal > 0) this.heal(this.maxHp * this.hitHeal);
+    const F = this.uq.frenzy;
+    if (F) { this.frenzy = Math.min(F.max, this.frenzy + F.perHit); this.frenzyT = F.time; }
   }
 
   onKill() {
     if (this.killHeal > 0) this.heal(this.maxHp * this.killHeal);
+    const R = this.uq.reaper;
+    if (R) {
+      this.heal(this.maxHp * R.heal);
+      if (this.charges < this.maxCharges) this.charges++;
+    }
   }
 
   // ---- levels ---------------------------------------------------------------
+  // XP for the next mastery level (after the last level)
+  masteryNeed() {
+    return Math.round(this.xpNeed() * (1 + CONFIG.mastery.growth * this.mastery.lv));
+  }
+
+  addMasteryXp(amount) {
+    const m = this.mastery;
+    m.xp += amount;
+    let ups = 0;
+    for (let guard = 0; guard < 1000 && m.xp >= this.masteryNeed(); guard++) {
+      m.xp -= this.masteryNeed();
+      m.lv++;
+      m.pts++;
+      ups++;
+    }
+    if (!ups) return;
+    this.game.effects.burst(this.x, 1.5, this.z, 30, 0x7df0ff, 8, 0.22, 0.9);
+    this.game.effects.ring(this.x, this.z, 0.5, 5, 0x7df0ff, 0.6);
+    play('levelup');
+    this.game.hud.toast(t('mastery.up', { n: m.lv }));
+  }
+
+  spendMastery(key) {
+    const m = this.mastery;
+    if (m.pts <= 0 || !(key in m.s)) return;
+    m.s[key]++;
+    m.pts--;
+    this.recalc();
+  }
+
   xpNeed() {
     const G = CONFIG.progression;
     return Math.round(G.xpBase * enemyPower(this.level) * (1 + G.xpPerLevel * (this.level - 1)));
@@ -264,7 +323,7 @@ export class Player {
   addXp(amount) {
     const G = CONFIG.progression;
     const max = CONFIG.levels.maxLevel;
-    if (this.level >= max) return;
+    if (this.level >= max) { this.addMasteryXp(amount); return; }
     this.xp += amount;
     let gained = 0, ups = 0;
     while (this.level < max && this.xp >= this.xpNeed()) {
@@ -300,7 +359,7 @@ export class Player {
   // Takes a dropped item. Skills are learned at once. False = inventory full.
   // something new to look at in the menu?
   hasNews() {
-    if (this.points > 0 || this.newSkills.length) return true;
+    if (this.points > 0 || this.newSkills.length || this.mastery.pts > 0) return true;
     for (let i = 0; i < this.inventory.length; i++) if (this.inventory[i].n) return true;
     return false;
   }
@@ -416,7 +475,7 @@ export class Player {
 
   // ---- health ---------------------------------------------------------------
   heal(amount) {
-    if (this.dead) return;
+    if (this.dead || this.game.modOn('noHeal')) return;
     this.hp = Math.min(this.maxHp, this.hp + amount);
   }
 
@@ -433,6 +492,14 @@ export class Player {
     }
     d = Math.max(1, Math.round(d));
     this.hp -= d;
+    // Bastion of Night: a shield right after a hit
+    const B = this.uq.bastion;
+    if (B && this.bastionCd <= 0 && this.hp > 0) {
+      this.shield = this.shieldMax = this.maxHp * B.shield;
+      this.shieldT = B.time;
+      this.bastionCd = B.cooldown;
+      fx.ring(this.x, this.z, 0.5, 2.5, 0x6aa8ff, 0.4);
+    }
     this.hurtFlash = 1;
     play('hurt');
     if (d > this.maxHp * 0.15) this.game.cam.shake(0.25, 0.2);
@@ -494,6 +561,8 @@ export class Player {
     if (this.eclipseT > 0) this.eclipseT -= dt;
     if (this.rageT > 0) this.rageT -= dt;
     if (this.ultLockT > 0) this.ultLockT -= dt;
+    if (this.bastionCd > 0) this.bastionCd -= dt;
+    if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.frenzy = 0; }
     if (this.shieldT > 0) {
       this.shieldT -= dt;
       if (this.shieldT <= 0) this.shield = 0;
@@ -514,6 +583,9 @@ export class Player {
         this.dirZ = this.dodgeZ;
         this.dodgeT = c.dodge.duration;
         this.counts.dodge++;
+        // Voidstep Treads: an explosion where the dodge started
+        const V = this.uq.voidstep;
+        if (V) game.zones.add(this.x, this.z, V.radius, V.delay, 1, 0, this.skillPower() * V.power, 0, 0xb070ff);
         this.dodgeCd = this.dodgeCdMax;
         this.invuln = Math.max(this.invuln, c.dodge.invuln);
         game.effects.burst(this.x, 0.6, this.z, 10, 0x8a4dff, 3, 0.2, 0.4);
@@ -554,7 +626,7 @@ export class Player {
 
     // ---- charges reload one after another
     if (this.charges < this.maxCharges) {
-      this.reloadT += dt / this.reloadTime;
+      this.reloadT += (dt / this.reloadTime) * (1 + this.frenzy);
       if (this.reloadT >= 1) { this.charges++; this.reloadT = this.charges < this.maxCharges ? this.reloadT - 1 : 0; }
     }
 
@@ -593,7 +665,7 @@ export class Player {
     else if (this.attackAnim <= 0 && this.dodgeT <= 0 && ml > 0.01) { this.dirX = mx / ml; this.dirZ = mz / ml; }
 
     // ---- camp heals, mana comes back on its own
-    if (this.hp < this.maxHp) {
+    if (this.hp < this.maxHp && !game.modOn('noHeal')) {
       const regen = this.hpRegen + (this.inCamp ? this.maxHp * c.campRegen : 0);
       this.hp = Math.min(this.maxHp, this.hp + regen * dt);
     }
@@ -634,6 +706,15 @@ export class Player {
     this.counts.attack++;
     play('swing');
     fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
+    // Echo of the Fallen: every few attacks a shadow wave as well
+    const U = this.uq.echo;
+    if (U && this.counts.attack % U.every === 0) echoWave(this.game, this.pendingX, this.pendingZ, U);
+  }
+
+  // mana a skill costs (Mana Curse doubles it)
+  manaCost(def) {
+    const m = this.game.modOn('manaCurse');
+    return def.mana * (m ? m.cost : 1);
   }
 
   // slot 0 / 1 = skills, 2 = ultimate
@@ -646,7 +727,7 @@ export class Player {
       if (this.ult < CONFIG.progression.ultCharge.max) { hud.deny(slot); return; }
     } else {
       if (this.cds[slot] > 0) { hud.deny(slot); return; }
-      if (this.mana < def.mana) { hud.deny(slot); hud.toast(t('toast.noMana')); return; }
+      if (this.mana < this.manaCost(def)) { hud.deny(slot); hud.toast(t('toast.noMana')); return; }
     }
     this.pendingX = dx;
     this.pendingZ = dz;
@@ -654,7 +735,7 @@ export class Player {
     if (def.aim === 'self') { this.pendingX = this.dirX; this.pendingZ = this.dirZ; }
     else if (auto) this.autoAim(def.range);
     if (slot === 2) this.ult = 0;
-    else { this.mana -= def.mana; this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
+    else { this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
     this.counts.cast++;
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;

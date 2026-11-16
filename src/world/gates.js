@@ -47,6 +47,9 @@ export class Gates {
     this.zoneNow = -1; // zone whose gates are shown
     this.time = 0;
     this.b = { state: PAUSE, t: 0, pattern: '', last: '', cdx: 0, cdz: 0, bite: 0, hitP: false, hitS: new Set() };
+    this.abyssIndex = this.list.findIndex((g) => g.abyss);
+    this.runMods = []; // modifiers of the gate the player is in
+    this.timeLeft = 0; // Against the Clock in a normal gate
 
     // gates in the world
     const frameGeo = gateFrameGeometry();
@@ -55,13 +58,14 @@ export class Gates {
       const zone = CONFIG.world.zones[g.zone], diff = CONFIG.gates.difficulties[g.diff];
       const grp = new THREE.Group();
       grp.add(new THREE.Mesh(frameGeo, flatMaterial));
-      const portal = portalMesh(zone.gateColor, 1.9, 2.4);
+      // the Abyss: a deep red portal with a black core
+      const portal = portalMesh(g.abyss ? 0xff2850 : zone.gateColor, 1.9, 2.4);
       portal.position.y = 2.55;
-      const core = portalMesh(diff.color, 1.0, 1.4);
+      const core = portalMesh(g.abyss ? 0x0a0010 : diff.color, 1.0, 1.4);
       core.material.opacity = 0.35;
       core.position.set(0, 2.55, 0.02);
       grp.add(portal, core);
-      grp.scale.setScalar(1 + g.diff * 0.18);
+      grp.scale.setScalar(g.abyss ? 1.25 : 1 + g.diff * 0.18);
       game.scene.add(grp);
       return { grp, portal, core };
     });
@@ -87,6 +91,13 @@ export class Gates {
   // use. Which one depends on the world seed and how often it opened (gen).
   place(gi) {
     const g = this.list[gi], world = this.game.world;
+    if (g.abyss) {
+      const p = this.portals[gi];
+      p.grp.position.set(g.x, 0, g.z);
+      p.grp.rotation.y = Math.atan2(-g.x, -g.z);
+      p.grp.visible = true;
+      return;
+    }
     const sites = world.gateSites.filter((s) => s.zone === g.zone);
     const taken = (s) => this.list.some((o, oi) => oi !== gi && o.zone === g.zone && o.open && o.x === s.x && o.z === s.z);
     let k = hashSeed(this.game.seed, 900 + gi, g.gen) % sites.length;
@@ -108,6 +119,20 @@ export class Gates {
 
   serialize() {
     return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t) }));
+  }
+
+  get inAbyss() {
+    return this.active >= 0 && this.active === this.abyssIndex;
+  }
+
+  // the boss brain starts fresh (a new gate or an Abyss boss floor)
+  resetBrain() {
+    const br = this.b;
+    br.state = PAUSE;
+    br.t = 2.5; // a moment to get ready
+    br.bite = 0;
+    br.last = '';
+    br.pattern = '';
   }
 
   // ---- arena ---------------------------------------------------------------------
@@ -162,11 +187,15 @@ export class Gates {
     return this.active >= 0 ? this.game.enemies.arenaBoss[this.active] : -1;
   }
 
-  enter(gi) {
+  // floor: where an Abyss run starts
+  enter(gi, floor = 1) {
     const game = this.game, P = game.player, E = game.enemies;
     if (this.active >= 0 || P.dead || gi < 0 || !this.list[gi].open) return;
     const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
-    this.close(gi); // one try: the gate is gone afterwards
+    if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
+    this.runMods = [...game.mods];
+    const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
+    this.timeLeft = 0;
     this.buildArena(gi).visible = true;
     // come back in front of the gate, on the camp side
     const d = Math.hypot(g.x, g.z) || 1;
@@ -180,18 +209,18 @@ export class Gates {
     this.exit.rotation.y = Math.PI;
 
     E.calmAll();
-    for (const a of E.arenaAdds[gi]) E.vanish(a);
-    const b = E.arenaBoss[gi];
-    E.place(b, c.x, c.z - 3);
-    E.packAggro[E.pack[b]] = 1;
-    E.state[b] = ST_CHASE;
-    E.yaw[b] = 0;
-    const br = this.b;
-    br.state = PAUSE;
-    br.t = 2.5; // a moment to get ready
-    br.bite = 0;
-    br.last = '';
-    br.pattern = '';
+    // Elite Horde: the helpers of a gate are all elites
+    const elites = game.modOn('elites') || CONFIG.gates.difficulties[g.diff].eliteAdds;
+    for (const a of E.arenaAdds[gi]) { E.vanish(a); if (!g.abyss) E.tier[a] = elites ? 1 : 0; }
+    if (!g.abyss) {
+      if (tl) this.timeLeft = tl.gate;
+      const b = E.arenaBoss[gi];
+      E.place(b, c.x, c.z - 3);
+      E.packAggro[E.pack[b]] = 1;
+      E.state[b] = ST_CHASE;
+      E.yaw[b] = 0;
+      this.resetBrain();
+    }
 
     game.shots.clear();
     game.hazards.clear();
@@ -202,8 +231,12 @@ export class Gates {
     game.army.relocate(P.x, P.z);
     game.cam.snap(P.x, P.z);
     game.world.update(P.x, P.z, true);
-    game.hud.toast(t('gate.entered', { boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
-    play('arise');
+    if (g.abyss) {
+      game.abyss.begin(floor);
+    } else {
+      game.hud.toast(t('gate.entered', { boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
+      play('arise');
+    }
   }
 
   // victory: the Leave button; toCamp: died and respawned in the camp
@@ -219,6 +252,9 @@ export class Gates {
     for (const a of E.arenaAdds[gi]) E.vanish(a);
     game.shots.clear();
     game.hazards.clear();
+    if (this.list[gi].abyss) game.abyss.end();
+    this.runMods = [];
+    this.timeLeft = 0;
     if (!toCamp) {
       // loot that still lies in the arena comes along
       game.loot.moveAll(arenaCenter(gi), CONFIG.gates.arenaRadius + 2, this.returnX, this.returnZ);
@@ -234,9 +270,11 @@ export class Gates {
   onBossKilled(gi, x, z) {
     const game = this.game, P = game.player, E = game.enemies;
     const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = CONFIG.gates.difficulties[gate.diff];
+    const modLuck = this.runMods.length * CONFIG.modifiers.luck;
+    this.timeLeft = 0;
     for (let k = 0; k < D.items; k++) {
       const a = (k / D.items) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.drop + D.luck, P.known, D.minRarity, k < D.items - 1));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.drop + D.luck + modLuck, P.known, D.minRarity, k < D.items - 1));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -246,7 +284,7 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
-    const ess = 10 * (gate.zone + 1) * (gate.diff + 1);
+    const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck));
     P.essence += ess;
     game.hud.toast(t('toast.essence', { n: ess }));
     if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
@@ -274,6 +312,7 @@ export class Gates {
       this.zoneNow = zone;
       for (let i = 0; i < this.list.length; i++) {
         const g = this.list[i], here = g.zone === zone;
+        if (g.abyss) continue;
         if (!g.open) {
           if (g.t > 0) g.t -= dt;
           if (g.t <= 0 && here) {
@@ -289,21 +328,47 @@ export class Gates {
       if (P.dead) return;
       const r2 = CONFIG.gates.enterRange * CONFIG.gates.enterRange;
       for (let i = 0; i < this.list.length; i++) {
-        if (!this.list[i].open || this.list[i].zone !== zone) continue;
+        if (!this.list[i].open || this.list[i].abyss || this.list[i].zone !== zone) continue;
         const dx = this.list[i].x - P.x, dz = this.list[i].z - P.z;
         if (dx * dx + dz * dz < r2) { this.near = i; break; }
       }
+      const ab = this.list[this.abyssIndex];
+      if (this.near < 0 && ab && (ab.x - P.x) ** 2 + (ab.z - P.z) ** 2 < r2 * 2.5) this.near = this.abyssIndex; // a bigger portal
     } else if (this.exitOpen) {
       this.exitPortal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
+    } else if (this.timeLeft > 0 && !P.dead) {
+      // Against the Clock: out of the gate when the time is up
+      this.timeLeft -= dt;
+      if (this.timeLeft <= 0) {
+        this.timeLeft = 0;
+        game.hud.toast(t('abyss.timeUp'));
+        this.leave(false);
+      }
     }
   }
 
   // the Enter / Leave button of the gate panel
   press() {
-    const P = this.game.player;
+    const game = this.game, P = game.player;
     if (P.dead) return;
-    if (this.active >= 0) { if (this.exitOpen) this.leave(false); }
-    else if (this.near >= 0) this.enter(this.near);
+    if (this.active >= 0) {
+      if (!this.exitOpen) return;
+      if (this.inAbyss) game.abyss.next();
+      else this.leave(false);
+    } else if (this.near >= 0 && this.near === this.abyssIndex) {
+      if (game.abyss.unlocked) game.abyssPanel.open('abyss');
+      else game.hud.toast(t('abyss.locked', { level: CONFIG.abyss.unlockLevel }));
+    } else if (this.near >= 0) {
+      this.enter(this.near);
+    }
+  }
+
+  // the second button: leave the Abyss, or choose modifiers in front of a gate
+  press2() {
+    const game = this.game;
+    if (game.player.dead) return;
+    if (this.active >= 0) { if (this.exitOpen && this.inAbyss) this.leave(false); }
+    else if (this.near >= 0 && this.near !== this.abyssIndex) game.abyssPanel.open('mods');
   }
 
   // ---- boss brain -----------------------------------------------------------------

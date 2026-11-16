@@ -7,9 +7,10 @@ import { CONFIG } from '../config.js';
 import { itemLevelPower, rankProgress, rankOf } from './levels.js';
 import { t } from '../strings.js';
 
-// common, uncommon, rare, epic, legendary, mythic, exotic
-export const RARITY_COLORS = [0xb8b8c8, 0x5cd65c, 0x4aa3ff, 0xb45cff, 0xffb02e, 0xff4a6e, 0x3ff0e0];
-export const RARITY_CSS = ['#b8b8c8', '#6ee06e', '#4aa3ff', '#c07cff', '#ffb02e', '#ff5a7a', '#3ff0e0'];
+// common, uncommon, rare, epic, legendary, mythic, exotic, unique
+export const RARITY_COLORS = [0xb8b8c8, 0x5cd65c, 0x4aa3ff, 0xb45cff, 0xffb02e, 0xff4a6e, 0x3ff0e0, 0xfff0c0];
+export const RARITY_CSS = ['#b8b8c8', '#6ee06e', '#4aa3ff', '#c07cff', '#ffb02e', '#ff5a7a', '#3ff0e0', '#fff0c0'];
+export const UNIQUE = 7; // rarity of unique items (Abyss only)
 export const RARITIES = RARITY_CSS.length;
 export const ARMOR_SLOTS = ['helmet', 'chest', 'gloves', 'boots'];
 export const EQUIP_SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots'];
@@ -57,6 +58,29 @@ export function makeWeapon(type, rarity, level) {
 
 export function makeArmor(type, set, bonus, rarity, level) {
   return { id: nextId++, kind: 'armor', type, set, bonus, rarity, level, up: 0 };
+}
+
+// A unique item: rarity 7 with one special effect (item.uq). Weapons get one
+// of the weapon effects, armour the effect of its slot.
+export function makeUnique(level) {
+  const U = CONFIG.uniques;
+  if (Math.random() < 0.4) {
+    const it = makeWeapon(pick(Object.keys(CONFIG.weapons)), UNIQUE, level);
+    it.uq = pick(Object.keys(U.weapon));
+    return it;
+  }
+  const slot = pick(ARMOR_SLOTS);
+  const it = makeArmor(slot, pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), UNIQUE, level);
+  it.uq = Object.keys(U.armor[slot])[0];
+  return it;
+}
+
+// values of a unique effect (or null)
+export function uniqueDef(id) {
+  const U = CONFIG.uniques;
+  if (U.weapon[id]) return U.weapon[id];
+  for (const slot in U.armor) if (U.armor[slot][id]) return U.armor[slot][id];
+  return null;
 }
 
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
@@ -123,7 +147,7 @@ export function itemPower(item) {
 // ---- text -------------------------------------------------------------------
 export function itemName(item) {
   if (item.kind === 'skill') return t('skill.' + item.type);
-  const base = item.kind === 'weapon'
+  const base = item.uq ? t('uq.' + item.uq) : item.kind === 'weapon'
     ? t('weapon.' + item.type)
     : t('item.armorName', { set: t('set.' + item.set), slot: t('slot.' + item.type) });
   return item.up > 0 ? base + ' +' + item.up : base;
