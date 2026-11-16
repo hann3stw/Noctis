@@ -5,7 +5,7 @@ import { CONFIG } from '../config.js';
 import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
-import { TAB_ICONS, SKILL_ICONS } from './icons.js';
+import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
@@ -25,6 +25,9 @@ const ICONS = {
   bow: svg('M6 2c8 2 12 8 12 10s-4 8-12 10l-1-2c6-2 10-6 10-8S11 6 5 4zM4 3h2v18H4z'),
   scythe: svg('M5 2h2v20H5zM7 3c7 0 12 3 14 9-4-4-8-5-14-5z'),
   staff: svg('M11 9h2v13h-2zM12 1l4 4-4 4-4-4z'),
+  spear: svg('M22 2l-2 8-2-2L5 21l-2 1 1-2L17 7l-2-2z'),
+  hammer: svg('M6 3h12v7h-4.500v12h-3V10H6z'),
+  grimoire: svg('M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2zm2 2v12h10V5zm5 2l1.200 2.600 2.800.400-2 2 .500 2.800L12 13.500l-2.500 1.300.500-2.800-2-2 2.800-.400z'),
   helmet: svg('M4 14a8 8 0 0 1 16 0v6h-5v-5H9v5H4z'),
   chest: svg('M4 4l4-2 4 2 4-2 4 2v6l-2 1v11H6V11l-2-1z'),
   gloves: svg('M7 22V12L5 9V5h2v4h1V3h2v6h1V2h2v7h1V4h2v9l-1 3v6z'),
@@ -43,6 +46,7 @@ export class Menu {
     this.army = new ArmyPanel(game);
     this.tab = 'gear';
     this.isOpen = false;
+    this.opens = 0; // how often it was opened (the tutorial waits for it)
     this.locked = false;
     this.selItem = null; // selected item (inventory or equipped)
     this.selSkill = null;
@@ -59,6 +63,7 @@ export class Menu {
     if (this.isOpen) return;
     const P = this.game.player;
     this.isOpen = true;
+    this.opens++;
     this.locked = !P.inCamp;
     this.army.locked = false; // the army can be changed anywhere
     this.army.reset();
@@ -199,8 +204,10 @@ export class Menu {
     const P = this.game.player;
     const cur = P.equip[slotOf(item)];
     const better = cur !== item && (!cur || itemPower(item) > itemPower(cur));
+    // armour shows the emblem of its set in the corner
+    const set = item.set ? `<u style="color:${SET_CSS[item.set]}">${SET_ICONS[item.set]}</u>` : '';
     return `<div class="tile r${item.rarity}${this.selItem === item ? ' sel' : ''}${item.n ? ' new' : ''}${extra}" data-act="item" data-id="${item.id}" style="--rc:${RARITY_CSS[item.rarity]}">
-      ${iconOf(item)}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}${item.n ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
+      ${iconOf(item)}${set}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}${item.n ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
   }
 
   mainStat(item) {
@@ -225,11 +232,13 @@ export class Menu {
       const w = CONFIG.weapons[item.type];
       rows.push(`<div class="row"><span>${t('item.reload')}</span><b>${w.reload}s</b></div>`);
       rows.push(`<div class="row"><span>${t('item.range')}</span><b>${w.range}</b></div>`);
+      if (w.stun) rows.push(`<div class="row"><span>${t('item.stun')}</span><b>${w.stun}s</b></div>`);
+      if (w.jumps) rows.push(`<div class="row"><span>${t('item.jumps')}</span><b>${w.jumps}</b></div>`);
       rows.push(`<p>${t('weapon.' + item.type + '.desc')}</p>`);
     } else {
       rows.push(`<p class="bonus">${bonusText(item.bonus, armorBonus(item))}</p>`);
       const have = P.setCount[item.set] || 0;
-      rows.push(`<p class="set">${t('item.set', { set: t('set.' + item.set), n: have })}</p>`);
+      rows.push(`<p class="set" style="color:${SET_CSS[item.set]}"><u>${SET_ICONS[item.set]}</u>${t('item.set', { set: t('set.' + item.set), n: have })}<small>${t('set.' + item.set + '.desc')}</small></p>`);
       const tiers = I.sets[item.set];
       for (const need in tiers) {
         const text = Object.keys(tiers[need]).map((k) => bonusText(k, tiers[need][k])).join(', ');
@@ -301,8 +310,9 @@ export class Menu {
       <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('');
     const d = [
       ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
-      ['damage', fmt(P.power())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
+      ['damage', fmt(P.power())], ['skill', fmt(P.skillPower())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
       ['reduction', pct(1 - P.takenFactor())], ['speed', P.speed.toFixed(1)], ['reload', P.reloadTime.toFixed(2) + 's'],
+      ['charges', P.maxCharges],
       ['drop', '+' + pct(P.drop)], ['slots', this.game.army.maxDeployed()], ['armyRange', Math.round(this.game.army.huntRange())],
     ].map(([k, v]) => `<div class="row"><span>${t('derived.' + k)}</span><b>${v}</b></div>`).join('');
     // the rank and when the next one comes
@@ -333,19 +343,29 @@ export class Menu {
     const known = P.known.includes(id);
     const used = P.slots.indexOf(id);
     const def = skillDef(id), ult = !!CONFIG.ultimates[id];
-    const meta = !known ? t('skills.locked') : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: def.cooldown });
+    const meta = !known ? t('skills.locked') : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: this.cd(def) });
     const badge = used >= 0 ? `<em>${used === 2 ? 'U' : used + 1}</em>` : '';
     return `<div class="k-card ${cls}${ult ? ' ult' : ''}${known ? '' : ' locked'}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
       <i>${known ? SKILL_ICONS[id] : LOCK}</i><div><b>${t('skill.' + id)}</b><small>${meta}</small></div>${badge}${P.newSkills.includes(id) ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
   }
 
+  // cooldown of a skill with the player's bonuses, as text
+  cd(def) {
+    return Math.round(def.cooldown * this.game.player.cdMult * 10) / 10;
+  }
+
   skillStats(id) {
-    const def = skillDef(id), ult = !!CONFIG.ultimates[id];
+    const def = skillDef(id), ult = !!CONFIG.ultimates[id], P = this.game.player;
     const rows = [];
     const row = (k, v) => rows.push(`<div class="row"><span>${t('ks.' + k)}</span><b>${v}</b></div>`);
     if (ult) row('charge', t('skills.ultCost'));
-    else { row('mana', def.mana); row('cooldown', def.cooldown + 's'); }
-    if (def.power) row('damage', t('ks.damageV', { v: def.power }) + (def.ticks ? ' × ' + def.ticks : ''));
+    else { row('mana', def.mana); row('cooldown', this.cd(def) + 's'); }
+    // the real damage with the current weapon and stats
+    if (def.power) row('damage', fmt(Math.round(P.skillPower() * def.power)) + (def.ticks ? ' × ' + def.ticks : ''));
+    if (def.vuln) row('vuln', '+' + Math.round(def.vuln * 100) + '%');
+    if (def.healSelf) row('healSelf', Math.round(def.healSelf * 100) + '%');
+    if (def.healArmy) row('healArmy', Math.round(def.healArmy * 100) + '%');
+    if (def.speed) row('speedUp', '+' + Math.round(def.speed * 100) + '%');
     if (def.range) row('range', def.range);
     if (def.radius) row('radius', def.radius);
     if (def.arcDeg) row('cone', def.arcDeg + '°');
@@ -354,7 +374,7 @@ export class Menu {
     if (def.shield) row('shield', Math.round(def.shield * 100) + '%');
     if (def.heal) row('heal', Math.round(def.heal * 100) + '%');
     if (def.armyDamage) row('army', '+' + Math.round(def.armyDamage * 100) + '%');
-    if (def.damage && ult) row('damageUp', '+' + Math.round(def.damage * 100) + '%');
+    if (def.damage) row('damageUp', '+' + Math.round(def.damage * 100) + '%');
     if (def.duration) row('duration', def.duration + 's');
     return rows.join('');
   }
@@ -366,7 +386,7 @@ export class Menu {
       const id = P.slots[k];
       if (!id) return `<div class="k-slot empty${k === 2 ? ' ult' : ''}"><i></i><div><small>${t('skills.slot' + k)}</small><b>${t('skills.none')}</b></div></div>`;
       const def = skillDef(id);
-      const meta = k === 2 ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: def.cooldown });
+      const meta = k === 2 ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: this.cd(def) });
       return `<div class="k-slot${k === 2 ? ' ult' : ''}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
         <i>${SKILL_ICONS[id]}</i><div><small>${t('skills.slot' + k)}</small><b>${t('skill.' + id)}</b><span>${meta}</span></div></div>`;
     }).join('');

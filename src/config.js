@@ -83,7 +83,7 @@ export const CONFIG = {
   // seconds to take it; then its chest opens.
   outposts: {
     radius: 10,
-    captureTime: 12,
+    captureTime: 6,
     guards: 5, // enemies guarding an outpost (the first one is an elite)
     chestItems: 3,
     chestMinRarity: 2, // at least rare
@@ -188,13 +188,27 @@ export const CONFIG = {
     dismissXpShare: 0.5, // share of a dismissed shadow's XP that goes to the player
   },
 
-  // cooldown = minimum time between two attacks, reload = seconds per charge
+  // cooldown = minimum time between two attacks, reload = seconds per charge.
+  // Every weapon deals about the same damage per second on one enemy
+  // (damage / reload = 16-21); what differs is how you fight with it:
+  //   daggers   very fast: most hits, so the ultimate charges quickest
+  //   sword     wide slash, the all-rounder
+  //   spear     long thrust through every enemy in a line
+  //   hammer    slow, heavy slam in front of you that stuns
+  //   scythe    full circle: weakest on one enemy, best in a crowd
+  //   bow       longest range, highest single hit, only the first enemy
+  //   staff     ranged area blast after a short delay
+  //   grimoire  bolt that finds its target and jumps to enemies nearby
   weapons: {
     daggers: { shape: 'arc', damage: 10, range: 3.2, arcDeg: 80, cooldown: 0.12, reload: 0.6 },
     sword: { shape: 'arc', damage: 22, range: 4.6, arcDeg: 110, cooldown: 0.3, reload: 1.3 },
-    bow: { shape: 'line', damage: 34, range: 17, width: 0.7, speed: 40, cooldown: 0.35, reload: 1.5 },
+    spear: { shape: 'thrust', damage: 23, range: 7.5, width: 1.5, cooldown: 0.3, reload: 1.25 },
+    hammer: { shape: 'slam', damage: 38, range: 3, radius: 3.3, stun: 0.5, cooldown: 0.55, reload: 2.2 },
     scythe: { shape: 'circle', damage: 19, range: 4.4, cooldown: 0.4, reload: 1.5 },
+    bow: { shape: 'line', damage: 31, range: 17, width: 0.7, speed: 40, cooldown: 0.35, reload: 1.5 },
     staff: { shape: 'blast', damage: 26, range: 11, radius: 3, delay: 0.35, cooldown: 0.4, reload: 1.7 },
+    // jumps: how often the bolt jumps on, each time with jumpDamage of the hit before
+    grimoire: { shape: 'chain', damage: 19, range: 12, coneDeg: 50, jumps: 3, jumpRange: 6.5, jumpDamage: 0.7, cooldown: 0.35, reload: 1.3 },
   },
 
   // ---- items ----------------------------------------------------------------
@@ -225,12 +239,23 @@ export const CONFIG = {
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
     // one bonus per armour piece: value x (1 + bonusRarity x rarity), so a
     // legendary piece has x2.6, a mythic one x3
-    bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04 }, // all as shares (0.05 = +5 %)
+    bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04, skillDamage: 0.04, ultCharge: 0.05 }, // all as shares (0.05 = +5 %)
     bonusRarity: 0.4,
+    // Six sets, one per way to play. 2 and 4 pieces of a set give its bonuses.
+    //   stalker      crits and raw damage
+    //   bulwark      health and less damage taken
+    //   gravecaller  a bigger, stronger army
+    //   tempest      faster reload, speed and a fourth attack charge
+    //   arcanist     mana, stronger skills, shorter cooldowns
+    //   bloodreaver  kills and hits heal you
+    // hitHeal / killHeal are shares of max health per hit / per kill.
     sets: {
       stalker: { 2: { crit: 0.08 }, 4: { damage: 0.2 } },
       bulwark: { 2: { hp: 0.15 }, 4: { damageTaken: -0.15 } },
       gravecaller: { 2: { armyDamage: 0.15 }, 4: { armyHp: 0.25, armySlots: 2 } },
+      tempest: { 2: { reload: 0.12 }, 4: { speed: 0.08, charges: 1 } },
+      arcanist: { 2: { mana: 0.3 }, 4: { skillDamage: 0.3, cooldown: 0.2 } },
+      bloodreaver: { 2: { killHeal: 0.04 }, 4: { damage: 0.1, hitHeal: 0.004 } },
     },
   },
 
@@ -242,22 +267,43 @@ export const CONFIG = {
   },
 
   // ---- skills ---------------------------------------------------------------
-  // power = damage as a multiple of the weapon damage. aim: arc | line | point | self
+  // power = damage as a multiple of the skill base. The skill base is the
+  // damage of a weapon with skillBase damage and the level, rarity and
+  // upgrades of the equipped weapon, so skills are equally strong with every
+  // weapon type. aim: arc | line | point | self
+  skillBase: 22,
   skills: {
-    shadowStep: { mana: 15, cooldown: 5, aim: 'point', range: 10, radius: 3, power: 1.2 },
+    // damage
     shadowWave: { mana: 20, cooldown: 6, aim: 'arc', range: 9, arcDeg: 70, power: 2.4 },
-    rulersGrasp: { mana: 25, cooldown: 10, aim: 'point', range: 11, radius: 6, power: 0.8, stun: 1.4 },
-    umbralShield: { mana: 20, cooldown: 14, aim: 'self', radius: 2, shield: 0.4, duration: 6 },
+    nightLance: { mana: 18, cooldown: 6, aim: 'line', range: 18, width: 1.4, power: 2.6 },
     daggerRain: { mana: 25, cooldown: 9, aim: 'point', range: 11, radius: 4, power: 0.7, ticks: 5, interval: 0.3 },
-    warCry: { mana: 30, cooldown: 20, aim: 'self', radius: 12, armyDamage: 0.4, duration: 8 },
+    bladeDance: { mana: 20, cooldown: 8, aim: 'self', radius: 4.5, power: 0.8, ticks: 4, interval: 0.25 },
+    // one enemy only: jumps to the enemy nearest to the target point
+    phantomStrike: { mana: 22, cooldown: 7, aim: 'point', range: 10, radius: 4, power: 4 },
+    // movement and control
+    shadowStep: { mana: 15, cooldown: 5, aim: 'point', range: 10, radius: 3, power: 1.2 },
+    rulersGrasp: { mana: 25, cooldown: 10, aim: 'point', range: 11, radius: 6, power: 0.8, stun: 1.4 },
+    blackFrost: { mana: 25, cooldown: 12, aim: 'self', radius: 7, power: 1, stun: 2.2 },
+    // marked enemies take more damage from you and your shadows
+    huntersMark: { mana: 20, cooldown: 16, aim: 'point', range: 12, radius: 5, vuln: 0.25, duration: 8 },
+    // survival
+    umbralShield: { mana: 20, cooldown: 14, aim: 'self', radius: 2, shield: 0.4, duration: 6 },
     lifeLeech: { mana: 20, cooldown: 8, aim: 'arc', range: 6, arcDeg: 120, power: 1.5, heal: 0.5 },
-    nightLance: { mana: 18, cooldown: 5, aim: 'line', range: 18, width: 1.4, power: 3 },
+    darkMend: { mana: 30, cooldown: 16, aim: 'self', radius: 12, healSelf: 0.22, healArmy: 0.35 },
+    // buffs
+    warCry: { mana: 30, cooldown: 20, aim: 'self', radius: 12, armyDamage: 0.4, duration: 8 },
+    bloodRage: { mana: 25, cooldown: 18, aim: 'self', radius: 3, damage: 0.3, speed: 0.15, duration: 7 },
   },
 
+  // The ultimate charges with every enemy hit. While an ultimate with a
+  // duration is active, hits do not charge the next one.
   ultimates: {
-    nightfall: { aim: 'self', radius: 10, power: 7, stun: 2 },
+    nightfall: { aim: 'self', radius: 10, power: 9, stun: 2 },
     legionsCall: { aim: 'self', radius: 12, armyDamage: 0.6, duration: 12 }, // also revives every fallen shadow
-    eclipse: { aim: 'self', radius: 3, duration: 8, damage: 1 }, // +100 % damage, attacks cost no charges
+    eclipse: { aim: 'self', radius: 3, duration: 5, damage: 0.2 }, // +20 % damage, attacks cost no charges
+    voidStorm: { aim: 'point', range: 10, radius: 6.5, power: 1, ticks: 12, interval: 0.5 },
+    umbralAegis: { aim: 'self', radius: 6, healSelf: 0.4, shield: 0.8, duration: 10, stun: 1.5 },
+    oblivionRay: { aim: 'line', range: 24, width: 3, power: 16 },
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -332,12 +378,14 @@ export const CONFIG = {
     pause: 1.4, // seconds between two attacks
     enrageAt: 0.5, // below this share of health the boss gets faster
     enrageSpeed: 1.35,
+    stunResist: 0.5, // bosses are stunned for this share of the time
     shotRadius: 0.5,
   },
 
-  // Gates are about loot and strong shadows. Every zone always has one gate
-  // of each difficulty open somewhere. A gate closes once you enter it (win or
-  // lose) and opens again later at another spot of the zone.
+  // Gates are about loot and strong shadows. Only the zone you are in has
+  // gates: one of each difficulty. A gate closes once you enter it (win or
+  // lose) and opens again later at another spot of the zone, but only while
+  // you are in that zone. After the boss you leave with the Leave button.
   gates: {
     enterRange: 4, // the Enter button appears within this distance
     arenaRadius: 26,
@@ -354,7 +402,6 @@ export const CONFIG = {
       { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 3, luck: 3, eliteAdds: true, color: 0xff3050 },
     ],
     ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
-    exitRange: 3,
   },
 
   minimap: {

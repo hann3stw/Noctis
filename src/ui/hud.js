@@ -44,7 +44,7 @@ export class Hud {
       <div id="touch-layer"></div>
       <div id="fx-layer"></div>
       <div id="vignette"></div>
-      <div id="overhead"><div class="oh-hp"><i></i></div><div class="oh-ammo"><i></i><i></i><i></i></div></div>
+      <div id="overhead"><div class="oh-hp"><i></i></div><div class="oh-ammo"><i></i><i></i><i></i><i></i></div></div>
       <div id="hud">
         <div class="panel-player">
           <div class="lvl-badge"><b></b><small></small></div>
@@ -84,7 +84,7 @@ export class Hud {
           ${skillBtn('btn-ult', 'ult')}
           <div id="btn-attack" class="btn round" aria-label="${t('hud.attack')}">
             <div class="knob">${ICON_SWORD}</div>
-            <div class="ammo"><i></i><i></i><i></i></div>
+            <div class="ammo"><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
         <div class="death"><b>${t('hud.died')}</b><small>${t('hud.respawning')}</small></div>
@@ -132,6 +132,7 @@ export class Hud {
     this.gatePanel = $('.gate-panel');
     this.gateTitle = $('.gate-panel b');
     this.gateInfo = $('.gate-panel small');
+    this.gateBtn = $('#btn-gate');
     this.bannerEl = $('.banner');
     this.captureEl = $('.capture');
     this.captureText = $('.capture b');
@@ -185,10 +186,17 @@ export class Hud {
     // cached values
     this.vHp = -1;
     this.vMaxHp = -1;
+    this.hpF = 1; // health as a share of the maximum
+    this.trail = 0; // where the "just lost" part ends
+    this.trailHold = 0;
+    this.vTrail = -1;
     this.vShield = null;
     this.vZone = null;
     this.vDodge = -1;
-    this.vAmmo = [-1, -1, -1];
+    this.vAmmo = [-1, -1, -1, -1];
+    this.vMaxCh = -1;
+    this.vUltOn = null;
+    this.vRage = null;
     this.vDead = null;
     this.vVig = -1;
     this.vNoAmmo = false;
@@ -221,11 +229,16 @@ export class Hud {
   updateGates(dt) {
     const game = this.game, gates = game.gates, E = game.enemies;
     // gate panel in the world
-    const near = gates.active < 0 ? gates.near : -1;
+    const near = gates.active < 0 ? gates.near : gates.exitOpen ? -50 : -1;
     if (near !== this.vGate) {
       this.vGate = near;
-      this.gatePanel.classList.toggle('on', near >= 0);
-      if (near >= 0) {
+      this.gatePanel.classList.toggle('on', near !== -1);
+      this.gateBtn.textContent = t(near === -50 ? 'gate.leave' : 'gate.enter');
+      if (near === -50) {
+        this.gateTitle.textContent = t('gate.cleared');
+        this.gateInfo.textContent = t('gate.leaveInfo');
+        this.gatePanel.dataset.d = 'exit';
+      } else if (near >= 0) {
         const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
         const diff = CONFIG.gates.difficulties[gate.diff];
         this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
@@ -324,7 +337,7 @@ export class Hud {
         low = false;
       } else {
         const def = skillDef(id);
-        p = Math.ceil((Math.max(0, P.cds[k]) / def.cooldown) * 50);
+        p = Math.ceil((Math.max(0, P.cds[k]) / (P.cdMax[k] || def.cooldown)) * 50);
         low = P.mana < def.mana;
       }
       if (p !== s.vP) {
@@ -437,9 +450,23 @@ export class Hud {
       this.vMaxHp = P.maxHp;
       const f = Math.max(0, P.hp / P.maxHp);
       this.hpFill.style.transform = 'scaleX(' + f.toFixed(3) + ')';
-      this.hpTrail.style.transform = 'scaleX(' + f.toFixed(3) + ')'; // lags behind (CSS transition)
+      if (f < this.hpF - 0.001) this.trailHold = 0.45; // just hurt: the lost part stays for a moment
+      this.hpF = f;
       this.ohHp.style.transform = 'scaleX(' + f.toFixed(3) + ')';
       this.hpText.textContent = fmt(hp) + ' / ' + fmt(P.maxHp);
+    }
+    // the part that was just lost drains away after a moment
+    if (this.trail <= this.hpF) {
+      this.trail = this.hpF;
+    } else if (this.trailHold > 0) {
+      this.trailHold -= dt;
+    } else {
+      this.trail = Math.max(this.hpF, this.trail - dt * 0.9);
+    }
+    const tr = Math.round(this.trail * 500);
+    if (tr !== this.vTrail) {
+      this.vTrail = tr;
+      this.hpTrail.style.transform = 'scaleX(' + (tr / 500).toFixed(3) + ')';
     }
     const shield = P.shield > 0;
     if (shield !== this.vShield) {
@@ -472,8 +499,27 @@ export class Hud {
       this.menuBadge.textContent = news ? '!' : '';
     }
 
-    // attack charges (each pip fills while it reloads)
-    for (let i = 0; i < 3; i++) {
+    // the ultimate glows while it lasts (it cannot charge then)
+    const ultOn = P.ultLockT > 0;
+    if (ultOn !== this.vUltOn) {
+      this.vUltOn = ultOn;
+      this.skillEls[2].btn.classList.toggle('active', ultOn);
+    }
+    const rage = P.rageT > 0;
+    if (rage !== this.vRage) {
+      this.vRage = rage;
+      this.els.btnAttack.classList.toggle('rage', rage);
+    }
+
+    // attack charges (each pip fills while it reloads); a fourth with the
+    // Stormrunner set
+    if (P.maxCharges !== this.vMaxCh) {
+      this.vMaxCh = P.maxCharges;
+      for (let i = 0; i < 4; i++) {
+        this.ammo[i].style.display = this.ohAmmo[i].style.display = i < P.maxCharges ? '' : 'none';
+      }
+    }
+    for (let i = 0; i < 4; i++) {
       let v = i < P.charges ? 100 : i === P.charges ? Math.floor(P.reloadT * 20) * 5 : 0;
       if (i >= P.maxCharges) v = 0;
       if (v !== this.vAmmo[i]) {

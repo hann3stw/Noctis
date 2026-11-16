@@ -1,5 +1,8 @@
-// Save games: IndexedDB, with localStorage as a fallback when IndexedDB is
-// not available (some private browser modes). One record per slot.
+// Save games: one record per slot, written to IndexedDB and, as a second
+// copy, to localStorage. Loading takes the newer of the two, so a world
+// survives when one of the stores is lost. Saves from older versions of the
+// game are brought up to date by migrateSave when they are loaded; they are
+// never thrown away.
 import { migrateSave } from './levels.js';
 
 const DB_NAME = 'noctis';
@@ -48,18 +51,41 @@ function lsGet(slot) {
 
 export async function loadSlot(slot) {
   const db = await openDb();
+  let a = null;
   if (db) {
-    try { return migrateSave((await request(db, 'readonly', (s) => s.get(slot))) || null); } catch (_) { /* fall back */ }
+    try { a = (await request(db, 'readonly', (s) => s.get(slot))) || null; } catch (_) { /* use the copy */ }
   }
-  return migrateSave(lsGet(slot));
+  const b = lsGet(slot);
+  const pick = a && b ? ((b.updated || 0) > (a.updated || 0) ? b : a) : a || b;
+  try { return migrateSave(pick); } catch (_) { return null; }
 }
 
 export async function saveSlot(slot, data) {
   const db = await openDb();
+  let ok = false;
   if (db) {
-    try { await request(db, 'readwrite', (s) => s.put(data, slot)); return true; } catch (_) { /* fall back */ }
+    try { await request(db, 'readwrite', (s) => s.put(data, slot)); ok = true; } catch (_) { /* the copy below may still work */ }
   }
-  try { localStorage.setItem(LS_KEY + slot, JSON.stringify(data)); return true; } catch (_) { return false; }
+  try { localStorage.setItem(LS_KEY + slot, JSON.stringify(data)); ok = true; } catch (_) { /* storage full or blocked */ }
+  return ok;
+}
+
+// Asks the browser not to clear the saves when storage runs low.
+export function keepStorage() {
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  } catch (_) { /* not supported */ }
+}
+
+// A save from a file: checked and brought up to date. Null when it is not one.
+export function readSaveText(text) {
+  try {
+    const s = JSON.parse(text);
+    if (!s || typeof s !== 'object' || typeof s.seed !== 'number' || !s.player || typeof s.player !== 'object') return null;
+    return migrateSave(s);
+  } catch (_) {
+    return null;
+  }
 }
 
 export async function deleteSlot(slot) {

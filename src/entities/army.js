@@ -161,6 +161,15 @@ export class Army {
     this.buffT = duration;
   }
 
+  // Dark Mend: every living deployed shadow gets back a share of its health
+  healAll(share) {
+    for (const u of this.deployed) {
+      if (!u.alive) continue;
+      u.hp = Math.min(u.maxHp, u.hp + u.maxHp * share);
+      this.game.effects.burst(u.x, 1.2, u.z, 6, 0x5cf08a, 3, 0.16, 0.5);
+    }
+  }
+
   // revives every fallen deployed shadow at once, free of charge
   reviveAll() {
     for (let i = 0; i < this.deployed.length; i++) {

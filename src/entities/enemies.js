@@ -61,6 +61,7 @@ export class Enemies {
     this.tgt = new Int16Array(N).fill(-1); // -1 = the player, otherwise a shadow slot
     this.retT = new Float32Array(N); // time until the target is re-evaluated
     this.stun = new Float32Array(N); // seconds the enemy cannot act
+    this.vuln = new Float32Array(N); // seconds the enemy takes more damage (Hunter's Mark)
 
     this.active = new Uint16Array(N);
     this.activeCount = 0;
@@ -260,6 +261,7 @@ export class Enemies {
     this.deathT[i] = 0;
     this.tgt[i] = -1;
     this.stun[i] = 0;
+    this.vuln[i] = 0;
     this.retT[i] = Math.random() * 0.5;
     this.alive[i] = 1;
   }
@@ -361,10 +363,32 @@ export class Enemies {
     }
   }
 
+  // bosses shake off stuns faster
+  applyStun(i, s) {
+    if (this.tier[i] === 3) s *= CONFIG.boss.stunResist;
+    if (s > this.stun[i]) this.stun[i] = s;
+  }
+
+  // Hunter's Mark: enemies in the circle take more damage for a while
+  markArea(x, z, radius, duration) {
+    let n = 0;
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.active[k];
+      if (!this.alive[i]) continue;
+      const dx = this.x[i] - x, dz = this.z[i] - z, r = radius + this.radius[i];
+      if (dx * dx + dz * dz > r * r) continue;
+      this.vuln[i] = duration;
+      this.packAggro[this.pack[i]] = 1;
+      n++;
+    }
+    return n;
+  }
+
   // src: -1 = the player, otherwise the slot of the shadow that dealt the hit
   damage(i, amount, kx, kz, src = -1, crit = false) {
     if (!this.alive[i]) return;
     const fx = this.game.effects;
+    if (this.vuln[i] > 0) amount = Math.round(amount * (1 + CONFIG.skills.huntersMark.vuln));
     this.hp[i] -= amount;
     this.flash[i] = 0.12;
     this.packAggro[this.pack[i]] = 1;
@@ -460,6 +484,11 @@ export class Enemies {
       }
       const dist = Math.sqrt(dx * dx + dz * dz);
 
+      if (this.vuln[i] > 0) {
+        this.vuln[i] -= dt;
+        // a red sign above marked enemies
+        if (Math.random() < dt * 5) game.effects.burst(this.x[i], 2.4 * this.scale[i], this.z[i], 1, 0xff4060, 0.6, 0.2, 0.5);
+      }
       if (this.stun[i] > 0) {
         this.stun[i] -= dt;
         if (st === ST_WINDUP || st === ST_CHARGE) this.state[i] = ST_CHASE;

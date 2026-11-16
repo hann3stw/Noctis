@@ -3,7 +3,7 @@
 import { Game } from './game.js';
 import { Screens } from './ui/screens.js';
 import { settings, loadSettings, saveSettings, onGraphicsChange } from './core/settings.js';
-import { listSlots, saveSlot, deleteSlot } from './core/storage.js';
+import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText } from './core/storage.js';
 import { unlockAudio } from './core/sfx.js';
 import { initKeyboard, setEscapeHandler } from './input/keyboard.js';
 import { sizeRenderer } from './render/renderer.js';
@@ -34,10 +34,11 @@ export class App {
     window.addEventListener('resize', () => { if (!this.game) sizeRenderer(); });
     sizeRenderer();
 
+    keepStorage();
     this.slots = await listSlots();
-    // ?seed=123 starts a test world straight away (never saved)
+    // ?seed=123 starts a test world straight away (never saved); &tutorial=1 with the tutorial
     if (params.has('seed')) {
-      this.launch({ slot: -1, name: 'Test', seed: Number(params.get('seed')) >>> 0 });
+      this.launch({ slot: -1, name: 'Test', seed: Number(params.get('seed')) >>> 0, tutorial: params.has('tutorial') });
       return;
     }
     this.screens.show('title');
@@ -64,6 +65,49 @@ export class App {
     this.screens.show(this.slots.some(Boolean) ? 'load' : 'title');
   }
 
+  // ---- backup: a world as a file -----------------------------------------------
+  // Shares the file on phones and tablets, downloads it on a PC.
+  exportSlot(slot) {
+    const s = this.slots[slot];
+    if (!s) return;
+    const name = 'noctis-' + (String(s.name || 'world').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'world') + '.json';
+    const text = JSON.stringify(s);
+    try {
+      const file = new File([text], name, { type: 'application/json' });
+      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'Noctis' }).catch(() => {});
+        return;
+      }
+    } catch (_) { /* download instead */ }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  // Lets the player pick a save file and puts it into the slot. done(ok).
+  importSlot(slot, done) {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.json,application/json,text/plain';
+    inp.addEventListener('change', async () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      let save = null;
+      try { save = readSaveText(await f.text()); } catch (_) { /* not readable */ }
+      if (save) {
+        save.updated = Date.now();
+        await this.store(slot, save);
+      }
+      done(!!save);
+    });
+    inp.click();
+  }
+
   // ---- starting and leaving worlds ---------------------------------------------
   // On phones and tablets the game goes fullscreen in landscape. Browsers only
   // allow this right after a tap, so it happens when a world starts.
@@ -87,8 +131,9 @@ export class App {
     if (this.debug) window.__noctis = this.game;
   }
 
-  startNew(slot, name, appearance, difficulty) {
-    this.launch({ slot, name, seed: randomSeed(), appearance, difficulty });
+  startNew(slot, name, appearance, difficulty, tutorial) {
+    keepStorage();
+    this.launch({ slot, name, seed: randomSeed(), appearance, difficulty, tutorial });
     this.game.save(); // the slot is taken (or overwritten) right away
   }
 

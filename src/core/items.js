@@ -84,6 +84,11 @@ export function weaponDamage(item) {
   return CONFIG.weapons[item.type].damage * factor(item);
 }
 
+// base damage of skills: the same for every weapon type (see CONFIG.skillBase)
+export function skillDamage(item) {
+  return CONFIG.skillBase * factor(item);
+}
+
 export function armorDefense(item) {
   return Math.round(CONFIG.items.armor[item.type].defense * factor(item));
 }
@@ -118,8 +123,9 @@ export function itemName(item) {
 }
 
 export function bonusText(key, value) {
-  const flat = key === 'armySlots';
-  const v = flat ? value : Math.round(Math.abs(value) * 100);
+  const flat = key === 'armySlots' || key === 'charges';
+  // small shares (heal per hit) keep one decimal
+  const v = flat ? value : Math.abs(value) < 0.01 ? Math.round(Math.abs(value) * 1000) / 10 : Math.round(Math.abs(value) * 100);
   return t('bonus.' + key, { v });
 }
 

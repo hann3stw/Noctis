@@ -8,11 +8,11 @@ const DEG = Math.PI / 180;
 
 // One hit of the player on enemy i: variance, crit, ultimate charge.
 export function playerHit(game, i, base, kx, kz) {
-  const P = game.player, C = CONFIG.progression;
+  const P = game.player;
   let dmg = base * (1 + (Math.random() * 2 - 1) * CONFIG.combat.damageVariance);
   const crit = Math.random() < P.crit;
   if (crit) dmg *= P.critDmg;
-  P.ult = Math.min(C.ultCharge.max, P.ult + C.ultCharge.perHit);
+  P.onHit();
   play(crit ? 'crit' : 'hit');
   const E = game.enemies, fx = game.effects;
   if (crit) {
@@ -54,7 +54,7 @@ export function hitCircle(game, x, z, radius, base, stun = 0) {
     const ex = E.x[i] - x, ez = E.z[i] - z;
     const d = Math.sqrt(ex * ex + ez * ez);
     if (d - E.radius[i] > radius) continue;
-    if (stun > E.stun[i]) E.stun[i] = stun;
+    if (stun > 0) E.applyStun(i, stun);
     const inv = d > 0.01 ? 1 / d : 0;
     if (base > 0) playerHit(game, i, base, ex * inv, ez * inv);
     n++;
@@ -100,5 +100,69 @@ export function fireWeapon(game, weaponId, dx, dz, power) {
   } else if (w.shape === 'blast') {
     const d = w.range * Math.max(0.15, power);
     game.zones.add(P.x + dx * d, P.z + dz * d, w.radius, w.delay, 1, 0, base, 0, 0xc9a8ff);
+  } else if (w.shape === 'thrust') {
+    // spear: through everything in a short line
+    hitLine(game, P.x, P.z, dx, dz, w.range, w.width, base);
+    fx.beam(P.x + dx * 0.6, P.z + dz * 0.6, dx, dz, w.range - 0.6, w.width * 0.45, 0xe8dcff);
+    fx.ring(P.x + dx * w.range, P.z + dz * w.range, 0.3, 1.4, 0xc9a8ff, 0.2);
+  } else if (w.shape === 'slam') {
+    // hammer: a heavy blow on the ground in front of the hunter
+    const x = P.x + dx * w.range, z = P.z + dz * w.range;
+    hitCircle(game, x, z, w.radius, base, w.stun);
+    fx.slash(x, z, 0, w.radius, 360, 0xffd9a0, EXPAND, 1, 0.3);
+    fx.ring(x, z, 0.5, w.radius + 0.8, 0xffb060, 0.3);
+    fx.burst(x, 0.3, z, 12, 0xd8c0a0, 6, 0.2, 0.4);
+    game.cam.shake(0.14, 0.12);
+  } else if (w.shape === 'chain') {
+    chainBolt(game, w, dx, dz, base);
+  }
+}
+
+// Grimoire: the bolt takes the enemy closest to the aim direction, then jumps
+// on to enemies nearby. Every enemy is hit once.
+function chainBolt(game, w, dx, dz, base) {
+  const E = game.enemies, P = game.player, fx = game.effects;
+  const cosHalf = Math.cos(w.coneDeg * 0.5 * DEG);
+  let first = -1, best = -2;
+  for (let k = 0; k < E.activeCount; k++) {
+    const i = E.active[k];
+    if (!E.alive[i]) continue;
+    const ex = E.x[i] - P.x, ez = E.z[i] - P.z;
+    const d = Math.sqrt(ex * ex + ez * ez) || 0.01;
+    if (d - E.radius[i] > w.range) continue;
+    const c = (ex * dx + ez * dz) / d;
+    if (c < cosHalf && d > E.radius[i] + 1) continue;
+    // straight ahead counts most, close a little
+    const score = c - d / (w.range * 4);
+    if (score > best) { best = score; first = i; }
+  }
+  if (first < 0) {
+    // nothing there: the bolt fizzles out
+    fx.beam(P.x + dx * 0.6, P.z + dz * 0.6, dx, dz, w.range * 0.6, 0.22, 0x9fd0ff);
+    return;
+  }
+  const hit = [first];
+  let x = P.x, z = P.z, cur = first, dmg = base;
+  for (let j = 0; ; j++) {
+    const tx = E.x[cur], tz = E.z[cur];
+    let bx = tx - x, bz = tz - z;
+    const len = Math.sqrt(bx * bx + bz * bz) || 0.01;
+    bx /= len; bz /= len;
+    fx.beam(x, z, bx, bz, len, 0.3, j ? 0x9fd0ff : 0xd8ecff);
+    fx.burst(tx, 1.2, tz, 6, 0x9fd0ff, 4, 0.16, 0.3);
+    playerHit(game, cur, dmg, bx, bz);
+    if (j >= w.jumps) break;
+    x = tx; z = tz;
+    dmg *= w.jumpDamage;
+    let next = -1, nd = w.jumpRange * w.jumpRange;
+    for (let k = 0; k < E.activeCount; k++) {
+      const i = E.active[k];
+      if (!E.alive[i] || hit.includes(i)) continue;
+      const ex = E.x[i] - x, ez = E.z[i] - z, d2 = ex * ex + ez * ez;
+      if (d2 < nd) { nd = d2; next = i; }
+    }
+    if (next < 0) break;
+    hit.push(next);
+    cur = next;
   }
 }

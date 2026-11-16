@@ -7,13 +7,13 @@ import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
 import { fireWeapon } from '../combat/weapons.js';
 import { castSkill, skillDef } from '../combat/skills.js';
-import { makeWeapon, weaponDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower } from '../core/items.js';
+import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower } from '../core/items.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
 const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false };
 // how fast the attack animation plays per weapon (1 / seconds)
-const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4 };
+const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4, spear: 5, hammer: 2.8, grimoire: 4 };
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
 
 export class Player {
@@ -71,10 +71,15 @@ export class Player {
     this.noAmmoFlash = 0;
 
     this.cds = [0, 0]; // skill cooldowns
+    this.cdMax = [1, 1]; // what they started at (for the HUD)
     this.ult = 0; // ultimate charge
+    this.ultLockT = 0; // > 0: an ultimate is active, hits do not charge the next one
     this.shield = 0;
+    this.shieldMax = 1;
     this.shieldT = 0;
     this.eclipseT = 0;
+    this.rageT = 0; // Blood Rage
+    this.counts = { attack: 0, dodge: 0, cast: 0 }; // for the tutorial
 
     this.dodgeT = 0;
     this.dodgeCd = 0;
@@ -124,10 +129,13 @@ export class Player {
     for (const k of STAT_KEYS) this.stats[k] = (d.stats && d.stats[k]) || 0;
     this.essence = d.essence || 0;
     this.autoSalvage = typeof d.autoSalvage === 'number' ? d.autoSalvage : -1;
-    this.inventory = (d.inventory || []).filter((it) => it && (it.kind !== 'weapon' || CONFIG.weapons[it.type]));
+    // items this version does not know (from a newer or broken save) are left out
+    const ok = (it) => it && (it.kind === 'weapon' ? !!CONFIG.weapons[it.type]
+      : !!(CONFIG.items.armor[it.type] && CONFIG.items.sets[it.set] && CONFIG.items.bonuses[it.bonus]));
+    this.inventory = (d.inventory || []).filter(ok);
     for (const slot in this.equip) {
       const it = d.equip && d.equip[slot];
-      if (it && (it.kind !== 'weapon' || CONFIG.weapons[it.type])) this.equip[slot] = it;
+      if (ok(it)) this.equip[slot] = it;
       else if (slot !== 'weapon') this.equip[slot] = null;
     }
     const valid = (id) => CONFIG.skills[id] || CONFIG.ultimates[id];
@@ -161,6 +169,7 @@ export class Player {
     const c = CONFIG.player, G = CONFIG.progression, S = G.stats, st = this.stats;
     const b = this.bonus;
     b.hp = b.speed = b.mana = b.crit = b.reload = b.damage = b.damageTaken = b.armyDamage = b.armyHp = b.armySlots = 0;
+    b.skillDamage = b.ultCharge = b.charges = b.cooldown = b.killHeal = b.hitHeal = 0;
     for (const set in CONFIG.items.sets) this.setCount[set] = 0;
     let def = 0;
     for (const slot of ARMOR_SLOTS) {
@@ -195,6 +204,13 @@ export class Player {
     this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;
+    this.maxCharges = c.charges.max + b.charges;
+    if (this.charges > this.maxCharges) this.charges = this.maxCharges;
+    this.skillMult = 1 + b.skillDamage;
+    this.cdMult = 1 / (1 + b.cooldown);
+    this.ultRate = 1 + b.ultCharge;
+    this.killHeal = b.killHeal;
+    this.hitHeal = b.hitHeal;
     this.armyDamage = b.armyDamage;
     this.armyHp = b.armyHp;
     this.armySlots = b.armySlots;
@@ -210,11 +226,33 @@ export class Player {
     return (K / (K + this.defense)) * this.takenBonus;
   }
 
+  // Eclipse and Blood Rage: more damage while they last
+  tempMult() {
+    let m = 1;
+    if (this.eclipseT > 0) m *= 1 + CONFIG.ultimates.eclipse.damage;
+    if (this.rageT > 0) m *= 1 + CONFIG.skills.bloodRage.damage;
+    return m;
+  }
+
   // damage of one basic attack before variance and crit
   power() {
-    let p = weaponDamage(this.equip.weapon) * this.damageMult;
-    if (this.eclipseT > 0) p *= 1 + CONFIG.ultimates.eclipse.damage;
-    return p;
+    return weaponDamage(this.equip.weapon) * this.damageMult * this.tempMult();
+  }
+
+  // damage of a skill with power 1: the same with every weapon type
+  skillPower() {
+    return skillDamage(this.equip.weapon) * this.damageMult * this.skillMult * this.tempMult();
+  }
+
+  // an enemy was hit: the ultimate charges (not while one is active)
+  onHit() {
+    const U = CONFIG.progression.ultCharge;
+    if (this.ultLockT <= 0) this.ult = Math.min(U.max, this.ult + U.perHit * this.ultRate);
+    if (this.hitHeal > 0) this.heal(this.maxHp * this.hitHeal);
+  }
+
+  onKill() {
+    if (this.killHeal > 0) this.heal(this.maxHp * this.killHeal);
   }
 
   // ---- levels ---------------------------------------------------------------
@@ -405,6 +443,8 @@ export class Player {
       this.dead = true;
       this.shield = 0;
       this.eclipseT = 0;
+      this.rageT = 0;
+      this.ultLockT = 0;
       this.respawnT = CONFIG.player.respawnDelay;
       play('death');
       fx.burst(this.x, 1.2, this.z, 24, 0x8a4dff, 6, 0.22, 0.8);
@@ -452,6 +492,8 @@ export class Player {
     if (this.cds[0] > 0) this.cds[0] -= dt;
     if (this.cds[1] > 0) this.cds[1] -= dt;
     if (this.eclipseT > 0) this.eclipseT -= dt;
+    if (this.rageT > 0) this.rageT -= dt;
+    if (this.ultLockT > 0) this.ultLockT -= dt;
     if (this.shieldT > 0) {
       this.shieldT -= dt;
       if (this.shieldT <= 0) this.shield = 0;
@@ -471,6 +513,7 @@ export class Player {
         this.dirX = this.dodgeX;
         this.dirZ = this.dodgeZ;
         this.dodgeT = c.dodge.duration;
+        this.counts.dodge++;
         this.dodgeCd = this.dodgeCdMax;
         this.invuln = Math.max(this.invuln, c.dodge.invuln);
         game.effects.burst(this.x, 0.6, this.z, 10, 0x8a4dff, 3, 0.2, 0.4);
@@ -487,8 +530,9 @@ export class Player {
       this.dodgeT -= dt;
       this.moving = true;
     } else if (this.moving) {
-      nx += mx * this.speed * dt;
-      nz += mz * this.speed * dt;
+      const sp = this.speed * (this.rageT > 0 ? 1 + CONFIG.skills.bloodRage.speed : 1);
+      nx += mx * sp * dt;
+      nz += mz * sp * dt;
     }
 
     // world edge and obstacles
@@ -587,6 +631,7 @@ export class Player {
     this.atkCd = w.cooldown;
     this.combo ^= 1;
     this.attackAnim = 1;
+    this.counts.attack++;
     play('swing');
     fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
   }
@@ -609,13 +654,17 @@ export class Player {
     if (def.aim === 'self') { this.pendingX = this.dirX; this.pendingZ = this.dirZ; }
     else if (auto) this.autoAim(def.range);
     if (slot === 2) this.ult = 0;
-    else { this.mana -= def.mana; this.cds[slot] = def.cooldown; }
+    else { this.mana -= def.mana; this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
+    this.counts.cast++;
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
     this.castAnim = 1;
     play(slot === 2 ? 'ult' : 'skill');
     castSkill(this.game, id, this.pendingX, this.pendingZ, this.pendingP);
-    if (slot === 2) this.ult = 0; // the ultimate does not charge itself
+    if (slot === 2) {
+      this.ult = 0; // the ultimate does not charge itself ...
+      this.ultLockT = def.duration || (def.ticks || 0) * (def.interval || 0); // ... nor while it lasts
+    }
   }
 
   sync(dt) {
@@ -635,6 +684,6 @@ export class Player {
     ANIM.dead = this.dead;
     this.model.animate(dt, ANIM);
     this.game.effects.blob(this.x, this.z, 0.75);
-    if (this.shield > 0) this.game.effects.showBubble(this.x, this.z, Math.min(1, this.shield / (this.maxHp * 0.4)));
+    if (this.shield > 0) this.game.effects.showBubble(this.x, this.z, Math.min(1, this.shield / this.shieldMax));
   }
 }

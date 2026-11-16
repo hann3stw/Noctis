@@ -299,12 +299,19 @@ body {
 .bar.hp i {
   background: linear-gradient(180deg, #8dffa8 0%, #3ed16a 45%, #1d8a43 100%);
 }
+/* missing health is grey */
+.bar.hp {
+  background: linear-gradient(180deg, #2c2c36, #44444f);
+}
+.oh-hp {
+  background: #4a4a56;
+}
 .bar.hp em {
   position: absolute;
   inset: 0;
   transform-origin: left;
-  background: linear-gradient(180deg, #fff1c8, #ffb35c);
-  transition: transform 0.6s ease-in 0.35s;
+  /* the health just lost: light grey, then it drains away (see hud.js) */
+  background: linear-gradient(180deg, #d0d0da, #8c8c9a);
 }
 .bar.hp::before {
   /* segment ticks */
@@ -1325,3 +1332,187 @@ button,
 .slot em.dif-normal { color: #d9c4ff; }
 .slot em.dif-hard { color: #ffd08a; }
 .slot em.dif-extreme { color: #ff8a9a; }
+
+/* Leave button of a cleared gate */
+.gate-panel[data-d='exit'] {
+  border-color: #7df0a0;
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(90, 240, 140, 0.35);
+}
+.gate-panel[data-d='exit'] .gp-text b {
+  color: #a8ffc4;
+}
+.gate-panel[data-d='exit'] #btn-gate {
+  background: linear-gradient(#3fae6c, #1d6e40);
+}
+
+/* ---- set emblems ---------------------------------------------------------------- */
+.tile u {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  width: 38%;
+  height: 38%;
+  display: flex;
+  text-decoration: none;
+  background: rgba(8, 5, 15, 0.88);
+  border-radius: 50%;
+  padding: 5%;
+  box-sizing: border-box;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+.tile u svg {
+  width: 100%;
+  height: 100%;
+}
+.d-rows p.set {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--u) * 1);
+  font-weight: 700;
+}
+.d-rows p.set u {
+  width: calc(var(--u) * 3.6);
+  height: calc(var(--u) * 3.6);
+  display: flex;
+  text-decoration: none;
+}
+.d-rows p.set u svg {
+  width: 100%;
+  height: 100%;
+}
+.d-rows p.set small {
+  flex-basis: 100%;
+  color: #cfc6e6;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* ultimate that is running, Blood Rage */
+.skill.ult.active .knob {
+  box-shadow: 0 0 calc(var(--u) * 5) #ffd24a, inset 0 0 calc(var(--u) * 2) #fff2b0;
+  animation: arise-pulse 0.6s ease-in-out infinite alternate;
+}
+#btn-attack.rage .knob {
+  background: radial-gradient(circle at 35% 30%, #ffb0b0, #d01830);
+  box-shadow: 0 0 calc(var(--u) * 5) #ff3040;
+}
+
+/* ---- skin editor: the character is turned by dragging ------------------------------ */
+.ed-stage {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ed-stage:active {
+  cursor: grabbing;
+}
+.ed-stage p {
+  text-align: center;
+  line-height: 1.5;
+}
+.ed-stage p b {
+  color: var(--gold-hi);
+  opacity: 1;
+}
+.ed-tut {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+}
+.ed-tut .seg {
+  min-height: calc(var(--u) * 7);
+}
+.ed-tut small {
+  opacity: 0.7;
+  font-size: calc(var(--u) * 2.5);
+}
+.sbtn.small {
+  min-height: calc(var(--u) * 7);
+  font-size: calc(var(--u) * 2.6);
+}
+
+/* ---- tutorial ------------------------------------------------------------------------ */
+/* on the left under the health bars, so the middle of the screen stays free */
+.tut {
+  position: absolute;
+  top: calc(var(--st) + var(--u) * 18);
+  left: calc(var(--sl) + var(--u) * 3);
+  width: calc(var(--u) * 58);
+  max-width: 37vw;
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2) calc(var(--u) * 1.6);
+  background: linear-gradient(180deg, rgba(24, 14, 44, 0.94), rgba(12, 7, 24, 0.94));
+  border: 1px solid var(--gold);
+  border-radius: calc(var(--u) * 2);
+  box-shadow: 0 calc(var(--u) * 1) calc(var(--u) * 4) rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 3;
+}
+.tut-head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 1.6);
+}
+.tut-head small {
+  font-size: calc(var(--u) * 2.1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.tut-head b {
+  font-size: calc(var(--u) * 3.2);
+  color: var(--gold-hi);
+}
+.tut p {
+  margin: calc(var(--u) * 0.6) 0 0;
+  font-size: calc(var(--u) * 2.5);
+  line-height: 1.35;
+  color: #e8e0f8;
+}
+.tut-btns {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+  margin-top: calc(var(--u) * 1.2);
+}
+.tut .btn {
+  position: relative;
+  pointer-events: auto;
+  min-height: calc(var(--u) * 6.4);
+  padding: 0 calc(var(--u) * 3);
+  font-size: calc(var(--u) * 2.5);
+  display: inline-flex;
+  align-items: center;
+}
+.tut-skip {
+  opacity: 0.65;
+}
+.tut-next {
+  background: linear-gradient(#8a4dff, #5a24c8);
+  border-color: #fff;
+}
+.tut.wait .tut-btns {
+  justify-content: flex-start;
+}
+.tut.ok {
+  border-color: #7df0a0;
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(90, 240, 140, 0.5);
+}
+.tut.ok .tut-head b::after {
+  content: ' ✓';
+  color: #7df0a0;
+}
+#hud.arena .tut {
+  display: none;
+}
+/* the button a tutorial step is about */
+.tut-hl {
+  animation: tut-hl 0.9s ease-in-out infinite alternate;
+}
+@keyframes tut-hl {
+  from { filter: drop-shadow(0 0 calc(var(--u) * 0.6) #ffd24a); }
+  to { filter: drop-shadow(0 0 calc(var(--u) * 2.6) #ffd24a) brightness(1.25); }
+}

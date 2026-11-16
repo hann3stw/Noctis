@@ -1,7 +1,9 @@
-// Gates: every zone has one gate of each difficulty (normal, hard, deadly)
-// open somewhere. Entering a gate takes the player (and the deployed shadows)
-// into an enclosed arena far outside the world, where the zone's boss waits.
-// The gate closes behind the player and opens again later at another spot.
+// Gates: the zone the player is in has one gate of each difficulty (normal,
+// hard, deadly) open somewhere; the gates of other zones are not there.
+// Entering a gate takes the player (and the deployed shadows) into an
+// enclosed arena far outside the world, where the zone's boss waits. The gate
+// closes behind the player and opens again later at another spot. After the
+// boss the player leaves with the Leave button.
 // The boss brain (attack patterns) lives here too.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
@@ -42,6 +44,7 @@ export class Gates {
     this.returnX = 0;
     this.returnZ = 0;
     this.exitOpen = false;
+    this.zoneNow = -1; // zone whose gates are shown
     this.time = 0;
     this.b = { state: PAUSE, t: 0, pattern: '', last: '', cdx: 0, cdz: 0, bite: 0, hitP: false, hitS: new Set() };
 
@@ -93,7 +96,7 @@ export class Gates {
     const p = this.portals[gi];
     p.grp.position.set(g.x, 0, g.z);
     p.grp.rotation.y = Math.atan2(-g.x, -g.z); // faces the camp
-    p.grp.visible = g.open;
+    p.grp.visible = g.open && g.zone === this.zoneNow;
   }
 
   close(gi) {
@@ -203,7 +206,7 @@ export class Gates {
     play('arise');
   }
 
-  // victory: walked through the exit; toCamp: died and respawned in the camp
+  // victory: the Leave button; toCamp: died and respawned in the camp
   leave(toCamp) {
     const gi = this.active;
     if (gi < 0) return;
@@ -217,6 +220,8 @@ export class Gates {
     game.shots.clear();
     game.hazards.clear();
     if (!toCamp) {
+      // loot that still lies in the arena comes along
+      game.loot.moveAll(arenaCenter(gi), CONFIG.gates.arenaRadius + 2, this.returnX, this.returnZ);
       P.x = this.returnX;
       P.z = this.returnZ;
       game.cam.snap(P.x, P.z);
@@ -262,35 +267,43 @@ export class Gates {
       p.portal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
       p.core.material.opacity = 0.25 + Math.sin(this.time * 4.3) * 0.15;
     }
-    // closed gates open again later somewhere else in their zone
+    // Only the zone the player is in has gates. Closed gates open again
+    // later somewhere else in their zone, but only while the player is there.
     if (this.active < 0) {
+      const zone = game.curZone, arrived = zone !== this.zoneNow;
+      this.zoneNow = zone;
       for (let i = 0; i < this.list.length; i++) {
-        const g = this.list[i];
-        if (g.open) continue;
-        g.t -= dt;
-        if (g.t > 0) continue;
-        g.open = true;
-        g.gen++;
-        this.place(i);
-        if (game.knownZones.has(g.zone)) {
-          game.hud.toast(t('gate.opened', { diff: t('gate.diff.' + CONFIG.gates.difficulties[g.diff].id), zone: t('zone.' + CONFIG.world.zones[g.zone].id) }));
+        const g = this.list[i], here = g.zone === zone;
+        if (!g.open) {
+          if (g.t > 0) g.t -= dt;
+          if (g.t <= 0 && here) {
+            g.open = true;
+            g.gen++;
+            this.place(i);
+            if (!arrived) game.hud.toast(t('gate.opened', { diff: t('gate.diff.' + CONFIG.gates.difficulties[g.diff].id) }));
+          }
         }
+        this.portals[i].grp.visible = g.open && here;
       }
-    }
-    if (this.active < 0) {
       this.near = -1;
       if (P.dead) return;
       const r2 = CONFIG.gates.enterRange * CONFIG.gates.enterRange;
       for (let i = 0; i < this.list.length; i++) {
-        if (!this.list[i].open) continue;
+        if (!this.list[i].open || this.list[i].zone !== zone) continue;
         const dx = this.list[i].x - P.x, dz = this.list[i].z - P.z;
         if (dx * dx + dz * dz < r2) { this.near = i; break; }
       }
-    } else if (this.exitOpen && !P.dead) {
+    } else if (this.exitOpen) {
       this.exitPortal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
-      const dx = this.exit.position.x - P.x, dz = this.exit.position.z - P.z;
-      if (dx * dx + dz * dz < CONFIG.gates.exitRange * CONFIG.gates.exitRange) this.leave(false);
     }
+  }
+
+  // the Enter / Leave button of the gate panel
+  press() {
+    const P = this.game.player;
+    if (P.dead) return;
+    if (this.active >= 0) { if (this.exitOpen) this.leave(false); }
+    else if (this.near >= 0) this.enter(this.near);
   }
 
   // ---- boss brain -----------------------------------------------------------------

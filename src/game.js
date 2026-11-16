@@ -24,6 +24,7 @@ import { Menu } from './ui/menu.js';
 import { skillDef } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
+import { Tutorial } from './ui/tutorial.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
@@ -120,6 +121,9 @@ export class Game {
     this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
     this.hud.setFps(opts.showFps);
+    // the tutorial of a new world, or the step a saved world stopped at
+    const tut = save ? (typeof save.tutorial === 'number' ? save.tutorial : -1) : opts.tutorial ? 0 : -1;
+    this.tutorial = tut >= 0 ? new Tutorial(this, this.hud.hud, tut) : null;
 
     this.resize = this.resize.bind(this);
     this.frame = this.frame.bind(this);
@@ -161,6 +165,7 @@ export class Game {
       discovered: [...this.discovered],
       knownZones: [...this.knownZones],
       difficulty: this.difficulty,
+      tutorial: this.tutorial ? this.tutorial.step : -1,
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
@@ -336,6 +341,7 @@ export class Game {
     this.cam.update(dt, P.x, P.z);
     this.effects.update(dt);
     this.hud.update(dt);
+    if (this.tutorial) this.tutorial.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point
@@ -444,8 +450,11 @@ export class Game {
     const st = sticks[k];
     if (k === 0) {
       const w = CONFIG.weapons[P.weapon];
-      const shape = w.shape === 'blast' ? 'point' : w.shape;
-      this.aim.show(shape, P.x, P.z, st.x, st.z, st.power, w.range, w.arcDeg, w.width, shape === 'circle' ? w.range : w.radius);
+      // how each weapon is shown: blast and slam as a circle at a distance,
+      // thrust as a line, the chain bolt as its cone
+      const shape = { blast: 'point', slam: 'point', thrust: 'line', chain: 'arc' }[w.shape] || w.shape;
+      this.aim.show(shape, P.x, P.z, st.x, st.z, w.shape === 'slam' ? 1 : st.power, w.range, w.arcDeg || w.coneDeg, w.width,
+        shape === 'circle' ? w.range : w.radius);
       return;
     }
     const id = P.slots[k - 1];
@@ -501,7 +510,7 @@ export class Game {
     }
     if (input.enterGate) {
       input.enterGate = false;
-      if (this.gates.near >= 0) this.gates.enter(this.gates.near);
+      this.gates.press();
     }
     if (input.armyBehavior) {
       input.armyBehavior = false;
@@ -580,6 +589,7 @@ export class Game {
     this.army.grantXp(src, xp);
     // kills of the army count only partly for the hunter
     this.player.addXp(src < 0 ? xp : xp * CONFIG.progression.armyKillXp);
+    if (src < 0) this.player.onKill();
     if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
     else this.loot.enemyDrop(E.x[i], E.z[i], level, tier);
   }

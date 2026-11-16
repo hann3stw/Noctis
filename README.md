@@ -93,7 +93,7 @@ HTTPS (or localhost) for offline mode and installing.
 | Ultimate | Ultimate button (charges by landing hits) | F |
 | Menu | Menu button (top right): Gear, Stats, Skills, Army, Look. Equipment, skills and your look can only be changed in the camp or a captured outpost; the army anywhere | click it |
 | Pause | Pause button (top right corner) | Esc |
-| Enter a gate | Enter button (appears next to a gate) | G |
+| Enter / leave a gate | Enter button (appears next to a gate); Leave button once the boss is beaten | G |
 | Minimap | Tap it: close view <-> whole world | M |
 
 ## World
@@ -123,18 +123,22 @@ HTTPS (or localhost) for offline mode and installing.
   drop loot. Their shadows get an ability: tanks taunt, melee shadows cleave,
   ranged shadows fire a volley, healers heal everyone.
 - Four outposts per zone (north, east, south, west) start in enemy hands: beat
-  the guards, then stay in the circle for 12 seconds. A captured outpost is
+  the guards, then stay in the circle for 6 seconds. A captured outpost is
   safe like the camp (healing, gear, army, look), opens its chest (3 items), is
   your respawn point after dying, and you can travel between all captured
   outposts.
-- Every zone always has three gates open: Normal, Hard and Deadly (boss level
+- The zone you are in has three gates open: Normal, Hard and Deadly (boss level
   at 20 %, 50 % and 85 % of the zone's levels; Hard and Deadly bosses also have
   more health and damage, elite helpers and better loot: 3 / 4 / 5 items).
   A gate leads into an arena with the zone's boss (own attack patterns,
   telegraphed with red circles). It closes once you enter, win or lose, and
-  opens again 2.5-5 minutes later at another spot of the zone. Gates are for
-  loot and strong shadows: souls inside a gate are easier to raise (+20 %).
-  The minimap outlines gates in their difficulty colour (white, orange, red).
+  opens again 2.5-5 minutes later at another spot of the zone. Gates of other
+  zones are not there (and not on the minimap) until you walk into that zone.
+  After the boss falls you stay in the arena as long as you like (raise the
+  boss, collect the loot) and leave with the Leave button; loot still lying
+  around comes out with you. Gates are for loot and strong shadows: souls
+  inside a gate are easier to raise (+20 %). The minimap outlines gates in
+  their difficulty colour (white, orange, red).
 - Bosses have 8x the health of their level: a boss of your level takes about
   1.5-2 minutes alone with ordinary gear and still 10-30 seconds with the best
   legendary gear, in every rank.
@@ -161,6 +165,20 @@ HTTPS (or localhost) for offline mode and installing.
   depends on the rank: rank E gives at most Epic, Legendary starts in D,
   Mythic in B, and the better ones get more common in every later rank.
   Elites, chests, Perception and gates (Deadly: at least Epic) raise the luck.
+- Eight weapons, all about equally strong but played differently: Daggers
+  (very fast, short), Sword (wide arc), Spear (long thrust through a row of
+  enemies), Hammer (slow slam that stuns), Scythe (full circle), Bow (long
+  line), Staff (delayed blast at a point), Grimoire (bolt that jumps between
+  enemies).
+- Six armour sets with their own look and emblem (shown on every item tile):
+  Stalker (crit, damage), Bulwark (health, less damage taken), Gravecaller
+  (stronger and bigger army), Stormrunner (reload, speed, a fourth attack
+  charge), Voidweaver (mana, skill damage, shorter cooldowns), Bloodreaver
+  (heal on kill and on hit). 2 and 4 pieces give the set bonuses.
+- 14 skills and 6 ultimates. Skill damage comes from the weapon's item level
+  and rarity, not from its type (`skillBase`), so every weapon suits every
+  skill. The ultimate does not charge while an ultimate is running (Eclipse,
+  Void Storm, Umbral Aegis).
 - Inventory (80 slots): best items first. "Dismantle…" turns all items of
   one rarity into essence at once (it keeps upgraded items and the best item
   of each slot if it beats what you wear). Auto-dismantle turns weak drops
@@ -176,13 +194,25 @@ HTTPS (or localhost) for offline mode and installing.
 
 ## Saving
 
-- 3 save slots, stored in the browser (IndexedDB, localStorage as fallback).
-  Clearing the browser data of the site deletes the saves.
+- 3 save slots, stored in the browser twice (IndexedDB and a copy in
+  localStorage; the newer one is loaded). The game asks the browser to keep
+  the storage. Updates of the game never delete saves: old saves are brought
+  up to date when they are loaded.
+- Clearing the browser data of the site or removing the app still deletes
+  them. Against that, Load Game has "Save as file" for every world (a small
+  .json file) and "Load from a file" for empty slots; that also moves a world
+  to another device.
 - Autosave every 60 seconds, when entering the camp, when the pause menu
   opens, when the app is closed or sent to the background, and when going
   back to the main menu. "Save Now" is in the pause menu.
 - Every world has its own random seed: chests and decoration differ.
 - Deleting or overwriting a world always asks first.
+- New World has a Tutorial switch (on by default as long as there is no
+  world yet): 17 short steps in the real world explain moving, attacking,
+  dodging, skills, the ultimate, Arise, the army, loot, the menu, zones,
+  outposts and gates. It can be skipped at any time; the step is saved.
+- In the skin editor the character can be turned by dragging and is drawn at
+  the full resolution of the screen.
 
 ## Where to change things
 
@@ -190,7 +220,8 @@ HTTPS (or localhost) for offline mode and installing.
   world size, graphics presets, autosave interval, colour palettes …)
 - `src/strings.js` – all in-game text (add another language block here)
 
-URL options: `?seed=123` starts a test world straight away (never saved),
+URL options: `?seed=123` starts a test world straight away (never saved; add
+`&tutorial=1` for the tutorial),
 `?debug` shows the frame rate and exposes the game as `window.__noctis`.
 
 ## Status
@@ -199,10 +230,10 @@ All six milestones are done:
 
 1. World with camp and first zone, movement, aiming, one enemy type
 2. Shadow army: Arise, behaviours, shadow levels and evolution, revive
-3. Player levels and stat points, 5 weapons, armour with rarities and 3 sets,
-   8 skills, 3 ultimates, chests and loot, inventory, upgrading, menu
-4. Title screen, 3 save slots, New World with skin editor, Load Game,
-   autosave, pause menu, settings, sound effects
+3. Player levels and stat points, 8 weapons, armour with rarities and 6 sets,
+   14 skills, 6 ultimates, chests and loot, inventory, upgrading, menu
+4. Title screen, 3 save slots, New World with skin editor and tutorial,
+   Load Game with file backup, autosave, pause menu, settings, sound effects
 5. Six big zones (x10 per rank), 18 enemy types, elites and champions, six
    gates (three difficulties per zone) with arena bosses, 24 outposts to capture, minimap
 6. PWA (offline, installable, fullscreen landscape, icons drawn in code),

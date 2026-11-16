@@ -91,6 +91,20 @@ export class Loot {
     this.pAge[slot] = 0;
   }
 
+  // Moves every drop within r of c to a ring around (x, z).
+  moveAll(c, r, x, z) {
+    let n = 0;
+    for (let i = 0; i < MAX_PICKUPS; i++) {
+      if (!this.items[i]) continue;
+      const dx = this.px[i] - c.x, dz = this.pz[i] - c.z;
+      if (dx * dx + dz * dz > r * r) continue;
+      const a = n++ * 1.1;
+      this.px[i] = x + Math.cos(a) * 1.2; // in reach: picked up at once when there is room
+      this.pz[i] = z + Math.sin(a) * 1.2;
+      this.pAge[i] = 0;
+    }
+  }
+
   // loot of a defeated enemy; tier 0 = normal ... 3 = boss
   enemyDrop(x, z, level, tier) {
     const P = this.game.player;

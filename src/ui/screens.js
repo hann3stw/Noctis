@@ -61,6 +61,30 @@ export class Screens {
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('input', (e) => this.onInput(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    this.msg = ''; // note on the Load Game screen (import result)
+    // the character in the skin editor is turned by dragging over it
+    let drag = -1, lastX = 0, lastT = 0;
+    this.el.addEventListener('pointerdown', (e) => {
+      if (!this.preview || this.current !== 'editor' || !e.target.closest('.ed-stage')) return;
+      drag = e.pointerId;
+      lastX = e.clientX;
+      lastT = performance.now();
+      this.preview.dragStart();
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== drag || !this.preview) return;
+      const now = performance.now();
+      this.preview.dragMove(e.clientX - lastX, (now - lastT) / 1000);
+      lastX = e.clientX;
+      lastT = now;
+    });
+    const end = (e) => {
+      if (e.pointerId !== drag) return;
+      drag = -1;
+      if (this.preview) this.preview.dragEnd();
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
   }
 
   show(name, params = {}) {
@@ -68,6 +92,7 @@ export class Screens {
     this.current = name;
     this.params = params;
     this.confirmBox = null;
+    this.msg = '';
     document.body.classList.toggle('editing', name === 'editor');
     this.el.className = 'on scr-' + name;
     if (name === 'editor') this.openEditor(params);
@@ -114,6 +139,14 @@ export class Screens {
       case 'toTitle': this.show('title'); break;
       // load
       case 'load': app.loadSlot(slot); break;
+      case 'export': app.exportSlot(slot); break;
+      case 'import':
+        app.importSlot(slot, (ok) => {
+          if (this.current !== 'load') return;
+          this.msg = t(ok ? 'slot.imported' : 'slot.importFailed');
+          this.render();
+        });
+        break;
       case 'delete':
         this.confirm(t('confirm.delete', { name: app.slots[slot].name }), t('confirm.deleteYes'), () => app.removeSlot(slot));
         break;
@@ -137,8 +170,9 @@ export class Screens {
         break;
       case 'edDone':
         if (this.params.mode === 'camp') app.closeEditorInCamp({ ...this.ed.look });
-        else app.startNew(this.params.slot, this.worldName(), { ...this.ed.look }, this.ed.diff);
+        else app.startNew(this.params.slot, this.worldName(), { ...this.ed.look }, this.ed.diff, this.ed.tutorial);
         break;
+      case 'tutorial': this.ed.tutorial = !this.ed.tutorial; this.render(); break;
       // difficulty: in the new world editor, or of the running world
       case 'diff':
         if (this.ed) this.ed.diff = v;
@@ -222,18 +256,20 @@ export class Screens {
         <div class="logo"><svg class="moon" viewBox="0 0 64 64"><path d="M40 6a26 26 0 1 0 18 44A22 22 0 1 1 40 6z" fill="currentColor"/></svg><h1>NOCTIS</h1><p>${t('title.tagline')}</p></div>
         <div class="title-menu">${cont}
           <button class="sbtn main" data-act="newWorld">${t('title.new')}</button>
-          <button class="sbtn main" data-act="loadGame"${this.app.slots.some(Boolean) ? '' : ' disabled'}>${t('title.load')}</button>
+          <button class="sbtn main" data-act="loadGame">${t('title.load')}</button>
           <button class="sbtn main" data-act="settings">${t('title.settings')}</button>
         </div>
       </div>`;
   }
 
   load() {
+    // Backup: a world can be saved as a file and put back into an empty slot
     const cards = [0, 1, 2].map((i) => this.slotCard(i, this.app.slots[i]
       ? `<div class="scr-row"><button class="sbtn" data-act="load" data-slot="${i}">${t('slot.load')}</button>
-         <button class="sbtn danger" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>`
-      : '')).join('');
-    return `<div class="scr-page">${this.header(t('title.load'), 'toTitle')}<div class="slots">${cards}</div></div>`;
+         <button class="sbtn danger" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>
+         <button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('slot.export')}</button>`
+      : `<button class="sbtn ghost small" data-act="import" data-slot="${i}">${t('slot.import')}</button>`)).join('');
+    return `<div class="scr-page">${this.header(t('title.load'), 'toTitle')}<p class="scr-hint">${this.msg || t('slot.backupHint')}</p><div class="slots">${cards}</div></div>`;
   }
 
   newSlot() {
@@ -320,6 +356,7 @@ export class Screens {
       look: { ...CONFIG.defaultAppearance, ...start },
       name: params.mode === 'new' ? t('new.defaultName', { n: params.slot + 1 }) : '',
       diff: CONFIG.difficulty.default,
+      tutorial: !this.app.slots.some(Boolean), // on for the first world
       equip: params.equip || { weapon: { kind: 'weapon', type: CONFIG.player.startWeapon, rarity: 0, level: 1, up: 0 } },
     };
     if (!this.preview) this.preview = new Preview();
@@ -356,10 +393,11 @@ export class Screens {
     }).join('');
     const name = isNew
       ? `<label class="ed-name"><b>${t('new.name')}</b><input type="text" data-act="name" maxlength="${CONFIG.save.nameMaxLength}" value="${esc(this.ed.name)}" autocomplete="off" spellcheck="false"></label>
-        <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small></div>`
+        <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small></div>
+        <div class="ed-tut"><b>${t('new.tutorial')}</b><button class="seg${this.ed.tutorial ? ' on' : ''}" data-act="tutorial">${this.ed.tutorial ? t('set.on') : t('set.off')}</button><small>${t('new.tutorialHint')}</small></div>`
       : '';
     return `<div class="ed">
-      <div class="ed-stage"><h2>${isNew ? t('new.title2') : t('ed.title')}</h2><p>${t('ed.note')}</p></div>
+      <div class="ed-stage"><h2>${isNew ? t('new.title2') : t('ed.title')}</h2><p><b>↔ ${t('ed.rotate')}</b><br>${t('ed.note')}</p></div>
       <div class="ed-panel">${name}
         <div class="ed-opts" data-scroll="ed">${rows}</div>
         <div class="scr-row ed-bar">
