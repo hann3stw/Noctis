@@ -6,13 +6,14 @@ import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
+import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
 import { RANKS } from '../world/gates.js';
 import { skillDef } from '../combat/skills.js';
 import {
-  EQUIP_SLOTS, RARITY_CSS, itemName, weaponDamage, armorDefense, armorBonus, bonusText,
+  EQUIP_SLOTS, RARITY_CSS, itemName, weaponDamage, weaponDps, armorDefense, armorBonus, bonusText,
   upgradeCost, dismantleValue, itemPower, slotOf,
 } from '../core/items.js';
 
@@ -33,7 +34,13 @@ const ICONS = {
   gloves: svg('M7 22V12L5 9V5h2v4h1V3h2v6h1V2h2v7h1V4h2v9l-1 3v6z'),
   boots: svg('M7 2h6v12l7 4v4H5v-6l2-2z'),
 };
-const iconOf = (item) => ICONS[item.kind === 'weapon' ? item.type : item.type];
+ICONS.weapon = ICONS.sword; // empty weapon slot and the slot filter
+const iconOf = (item) => gearIcon(item) || ICONS[item.type];
+const FUNNEL = svg('M3 4h18l-7 8v6l-4 2v-8z');
+
+// the filter of the inventory; sort: rarity, level, power, gain, newest
+const SORTS = ['rarity', 'level', 'power', 'gain', 'newest'];
+const newFilter = () => ({ slot: 'all', wtype: 'all', set: 'all', bonus: 'all', minR: 0, better: false, sort: 'rarity' });
 
 const pct = (v) => Math.round(v * 100) + '%';
 
@@ -54,6 +61,8 @@ export class Menu {
     this.bulk = false; // the "dismantle all" panel is shown
     this.bulkConfirm = -1; // rarity waiting for a second tap
     this.bulkDone = '';
+    this.flt = newFilter(); // stays while the game runs
+    this.fpanel = false; // the filter panel is shown
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
@@ -77,6 +86,7 @@ export class Menu {
     this.selSkill = null;
     this.confirmId = 0;
     this.bulk = false;
+    this.fpanel = false;
     this.bulkDone = '';
     this.game.setPaused(true);
     this.el.classList.add('on');
@@ -131,9 +141,16 @@ export class Menu {
     } else if (act === 'item') {
       this.selItem = this.findItem(Number(target.dataset.id));
       this.bulk = false;
+      this.fpanel = false;
     } else if (act === 'bulk') {
       this.bulk = !this.bulk;
+      this.fpanel = false;
       this.bulkDone = '';
+    } else if (act === 'fpanel') {
+      this.fpanel = !this.fpanel;
+      this.bulk = false;
+    } else if (act === 'flt') {
+      this.setFilter(target.dataset.k, target.dataset.v);
     } else if (act === 'bulkGo') {
       // epic and better: a second tap confirms
       const r = Number(target.dataset.r), list = P.bulkList(r);
@@ -210,8 +227,18 @@ export class Menu {
       ${iconOf(item)}${set}<small>${item.level}${item.up ? '+' + item.up : ''}</small>${better ? '<em>▲</em>' : ''}${item.n ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
   }
 
+  // DPS for weapons, defence for armour
   mainStat(item) {
-    return item.kind === 'weapon' ? Math.round(weaponDamage(item)) : armorDefense(item);
+    return item.kind === 'weapon' ? Math.round(weaponDps(item)) : armorDefense(item);
+  }
+
+  mainLabel(item) {
+    return t(item.kind === 'weapon' ? 'item.dps' : 'item.defense');
+  }
+
+  diffOf(v, cur) {
+    const d = Math.round(v - cur);
+    return d === 0 ? '' : `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
   }
 
   detail(item) {
@@ -222,19 +249,20 @@ export class Menu {
     const color = RARITY_CSS[item.rarity];
     const rows = [];
     const main = this.mainStat(item);
-    let diff = '';
-    if (!equipped) {
-      const d = main - (cur ? this.mainStat(cur) : 0);
-      diff = d === 0 ? '' : `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
-    }
-    rows.push(`<div class="row"><span>${t(item.kind === 'weapon' ? 'item.damage' : 'item.defense')}</span><b>${main} ${diff}</b></div>`);
+    const diff = equipped ? '' : this.diffOf(main, cur ? this.mainStat(cur) : 0);
+    rows.push(`<div class="row main"><span>${this.mainLabel(item)}</span><b>${main} ${diff}</b></div>`);
     if (item.kind === 'weapon') {
       const w = CONFIG.weapons[item.type];
+      const hit = Math.round(weaponDamage(item));
+      const hitDiff = equipped ? '' : this.diffOf(hit, cur ? Math.round(weaponDamage(cur)) : 0);
+      rows.push(`<div class="row"><span>${t('item.hit')}</span><b>${hit} ${hitDiff}</b></div>`);
+      rows.push(`<div class="row"><span>${t('item.hits')}</span><b>${t('shape.' + w.shape, { n: w.jumps || 0 })}</b></div>`);
       rows.push(`<div class="row"><span>${t('item.reload')}</span><b>${w.reload}s</b></div>`);
       rows.push(`<div class="row"><span>${t('item.range')}</span><b>${w.range}</b></div>`);
       if (w.stun) rows.push(`<div class="row"><span>${t('item.stun')}</span><b>${w.stun}s</b></div>`);
       if (w.jumps) rows.push(`<div class="row"><span>${t('item.jumps')}</span><b>${w.jumps}</b></div>`);
       rows.push(`<p>${t('weapon.' + item.type + '.desc')}</p>`);
+      rows.push(`<p class="hint">${t('item.dpsHint')}</p>`);
     } else {
       rows.push(`<p class="bonus">${bonusText(item.bonus, armorBonus(item))}</p>`);
       const have = P.setCount[item.set] || 0;
@@ -267,22 +295,99 @@ export class Menu {
       const it = P.equip[slot];
       if (!it) return `<div class="g-slot empty"><div class="tile none">${ICONS[slot] || ''}</div><div><b>${t('slot.' + slot)}</b><small>—</small></div></div>`;
       return `<div class="g-slot${this.selItem === it ? ' sel' : ''}" data-act="item" data-id="${it.id}">${this.tile(it)}
-        <div><b style="color:${RARITY_CSS[it.rarity]}">${itemName(it)}</b><small>${t(it.kind === 'weapon' ? 'item.damage' : 'item.defense')} ${this.mainStat(it)}</small></div></div>`;
+        <div><b style="color:${RARITY_CSS[it.rarity]}">${itemName(it)}</b><small>${this.mainLabel(it)} ${this.mainStat(it)}</small></div></div>`;
     }).join('');
-    // best first: rarity, then item level
-    const sorted = [...P.inventory].sort((a, b) => b.rarity - a.rarity || b.level - a.level || b.id - a.id);
-    const inv = sorted.length
-      ? sorted.map((it) => this.tile(it)).join('')
-      : `<div class="g-none">${t('gear.empty')}</div>`;
-    const detail = this.bulk ? this.bulkPanel()
+    const shown = this.filtered();
+    const inv = shown.length ? shown.map((it) => this.tile(it)).join('')
+      : P.inventory.length ? `<div class="g-none">${t('flt.none')}<button class="ap-btn small ghost" data-act="flt" data-k="reset">${t('flt.reset')}</button></div>`
+        : `<div class="g-none">${t('gear.empty')}</div>`;
+    const detail = this.bulk ? this.bulkPanel() : this.fpanel ? this.filterPanel()
       : this.selItem ? this.detail(this.selItem) : `<div class="g-none">${t('item.select')}</div>`;
     const full = P.inventory.length >= CONFIG.items.inventorySize;
+    const n = this.filterCount();
+    // quick filter by slot
+    const quick = ['all', ...EQUIP_SLOTS].map((s) => `<button class="${this.flt.slot === s ? 'on' : ''}" data-act="flt" data-k="slot" data-v="${s}"
+      aria-label="${s === 'all' ? t('flt.all') : t('slot.' + s)}">${s === 'all' ? t('flt.all') : ICONS[s]}</button>`).join('');
     return `<div class="gear">
       <div class="g-left" data-scroll="eq">${slots}<div class="g-ess">${t('gear.essence', { n: P.essence })}</div></div>
       <div class="g-mid"><div class="g-head"><h3 class="${full ? 'full' : ''}">${t('gear.bag', { n: P.inventory.length, max: CONFIG.items.inventorySize })}</h3>
-        <button class="ap-btn small${this.bulk ? ' on' : ''}" data-act="bulk">${this.bulk ? t('gear.back') : t('gear.bulk')}</button></div>
+        <div class="g-btns"><button class="ap-btn small ico${this.fpanel ? ' on' : ''}${n ? ' act' : ''}" data-act="fpanel" aria-label="${t('flt.btn')}">${FUNNEL}${n ? `<i>${n}</i>` : ''}</button>
+        <button class="ap-btn small${this.bulk ? ' on' : ''}" data-act="bulk">${this.bulk ? t('gear.back') : t('gear.bulk')}</button></div></div>
+        <div class="g-quick">${quick}</div>
         <div class="g-grid" data-scroll="inv">${inv}</div></div>
       <div class="g-right">${detail}</div></div>`;
+  }
+
+  // ---- filter -------------------------------------------------------------------
+  setFilter(k, v) {
+    const f = this.flt;
+    if (k === 'reset') { this.flt = newFilter(); return; }
+    if (k === 'better') { f.better = !f.better; return; }
+    if (k === 'minR') { f.minR = Number(v); return; }
+    f[k] = v;
+    // weapon type and set / bonus exclude each other
+    if (k === 'slot' && v === 'weapon') f.set = f.bonus = 'all';
+    if (k === 'slot' && v !== 'weapon' && v !== 'all') f.wtype = 'all';
+    if (k === 'wtype' && v !== 'all') { f.set = f.bonus = 'all'; if (f.slot !== 'all') f.slot = 'weapon'; }
+    if ((k === 'set' || k === 'bonus') && v !== 'all') { f.wtype = 'all'; if (f.slot === 'weapon') f.slot = 'all'; }
+  }
+
+  // how many filters are on (slot and sorting not counted)
+  filterCount() {
+    const f = this.flt;
+    return (f.wtype !== 'all') + (f.set !== 'all') + (f.bonus !== 'all') + (f.minR > 0) + f.better;
+  }
+
+  // the bag after the filter, sorted
+  filtered() {
+    const P = this.game.player, f = this.flt;
+    // how much better than what is worn (x1.2 = 20 % better); empty slot = huge
+    const gain = (it) => {
+      const cur = P.equip[slotOf(it)];
+      return cur ? itemPower(it) / Math.max(1e-6, itemPower(cur)) : 1e9;
+    };
+    const list = P.inventory.filter((it) => (f.slot === 'all' || slotOf(it) === f.slot)
+      && it.rarity >= f.minR
+      && (f.wtype === 'all' || (it.kind === 'weapon' && it.type === f.wtype))
+      && (f.set === 'all' || it.set === f.set)
+      && (f.bonus === 'all' || it.bonus === f.bonus)
+      && (!f.better || gain(it) > 1));
+    const kind = (a, b) => (a.kind === b.kind ? 0 : a.kind === 'weapon' ? -1 : 1);
+    const by = {
+      rarity: (a, b) => b.rarity - a.rarity || b.level - a.level,
+      level: (a, b) => b.level - a.level || b.rarity - a.rarity,
+      power: (a, b) => kind(a, b) || itemPower(b) - itemPower(a),
+      gain: (a, b) => gain(b) - gain(a),
+      newest: () => 0,
+    }[f.sort] || (() => 0);
+    return list.sort((a, b) => by(a, b) || b.id - a.id);
+  }
+
+  filterPanel() {
+    const f = this.flt;
+    const seg = (k, v, label, on, extra = '') => `<button class="seg${on ? ' on' : ''}${extra}" data-act="flt" data-k="${k}" data-v="${v}">${label}</button>`;
+    const sorts = SORTS.map((s) => seg('sort', s, t('flt.s.' + s), f.sort === s)).join('');
+    const rar = [seg('minR', 0, t('flt.all'), f.minR === 0)].concat(RARITY_CSS.slice(1).map((c, i) => {
+      const r = i + 1;
+      return `<button class="seg${f.minR === r ? ' on' : ''}" style="--rc:${c}" data-act="flt" data-k="minR" data-v="${r}">${t('rarity.' + r)}</button>`;
+    })).join('');
+    const parts = [`<h4 class="bk-auto">${t('flt.sort')}</h4><div class="segs bk-segs fl-segs">${sorts}</div>`,
+      `<h4 class="bk-auto">${t('flt.rarity')}</h4><div class="segs bk-segs fl-segs">${rar}</div>`,
+      `<div class="segs bk-segs fl-segs fl-one">${seg('better', 1, t('flt.better'), f.better)}</div>`];
+    if (f.slot === 'all' || f.slot === 'weapon') {
+      const types = Object.keys(CONFIG.weapons).map((w) => `<button class="seg ico${f.wtype === w ? ' on' : ''}" data-act="flt" data-k="wtype" data-v="${w}"
+        title="${t('weapon.' + w)}" aria-label="${t('weapon.' + w)}">${WEAPON_ICONS[w]}</button>`).join('');
+      parts.push(`<h4 class="bk-auto">${t('flt.weapon')}</h4><div class="segs bk-segs fl-segs">${seg('wtype', 'all', t('flt.all'), f.wtype === 'all')}${types}</div>`);
+    }
+    if (f.slot !== 'weapon') {
+      const sets = Object.keys(CONFIG.items.sets).map((s) => `<button class="seg ico${f.set === s ? ' on' : ''}" style="color:${SET_CSS[s]}" data-act="flt" data-k="set" data-v="${s}"
+        title="${t('set.' + s)}" aria-label="${t('set.' + s)}">${SET_ICONS[s]}</button>`).join('');
+      const bonuses = Object.keys(CONFIG.items.bonuses).map((b) => seg('bonus', b, t('bname.' + b), f.bonus === b)).join('');
+      parts.push(`<h4 class="bk-auto">${t('flt.set')}</h4><div class="segs bk-segs fl-segs">${seg('set', 'all', t('flt.all'), f.set === 'all')}${sets}</div>`);
+      parts.push(`<h4 class="bk-auto">${t('flt.bonus')}</h4><div class="segs bk-segs fl-segs">${seg('bonus', 'all', t('flt.all'), f.bonus === 'all')}${bonuses}</div>`);
+    }
+    parts.push(`<button class="ap-btn small ghost fl-reset" data-act="flt" data-k="reset">${t('flt.reset')}</button>`);
+    return `<h3>${t('flt.title')}</h3><div class="d-rows" data-scroll="flt">${parts.join('')}</div>`;
   }
 
   // dismantle every item of one rarity at once, and the auto-dismantle setting
@@ -310,7 +415,7 @@ export class Menu {
       <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('');
     const d = [
       ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],
-      ['damage', fmt(P.power())], ['skill', fmt(P.skillPower())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
+      ['damage', fmt(P.power())], ['dps', fmt(P.power() * (1 + P.crit * (P.critDmg - 1)) / P.reloadTime)], ['skill', fmt(P.skillPower())], ['crit', pct(P.crit)], ['critDmg', pct(P.critDmg)], ['defense', P.defense],
       ['reduction', pct(1 - P.takenFactor())], ['speed', P.speed.toFixed(1)], ['reload', P.reloadTime.toFixed(2) + 's'],
       ['charges', P.maxCharges],
       ['drop', '+' + pct(P.drop)], ['slots', this.game.army.maxDeployed()], ['armyRange', Math.round(this.game.army.huntRange())],

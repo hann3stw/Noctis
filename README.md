@@ -179,7 +179,15 @@ HTTPS (or localhost) for offline mode and installing.
   and rarity, not from its type (`skillBase`), so every weapon suits every
   skill. The ultimate does not charge while an ultimate is running (Eclipse,
   Void Storm, Umbral Aegis).
-- Inventory (80 slots): best items first. "Dismantle…" turns all items of
+- Weapons are compared by DPS (damage per second on one enemy = damage per
+  hit / reload time); the item shows DPS, damage per hit and what it hits.
+  The Stats tab shows your real DPS with reload speed and crits.
+- Every weapon type and every armour piece of every set has its own coloured
+  icon (src/ui/gearIcons.js); accents take the rarity colour.
+- Inventory (80 slots): best items first. Quick buttons filter by slot; the
+  funnel button opens filter and sort: sort by rarity, item level, DPS /
+  defence, best upgrade or newest; filter by minimum rarity, only upgrades,
+  weapon type, set and bonus. "Dismantle…" turns all items of
   one rarity into essence at once (it keeps upgraded items and the best item
   of each slot if it beats what you wear). Auto-dismantle turns weak drops
   (up to Common, Uncommon or Rare) into essence as soon as you pick them up.

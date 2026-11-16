@@ -1516,3 +1516,113 @@ button,
   from { filter: drop-shadow(0 0 calc(var(--u) * 0.6) #ffd24a); }
   to { filter: drop-shadow(0 0 calc(var(--u) * 2.6) #ffd24a) brightness(1.25); }
 }
+
+/* ---- gear icons and the inventory filter --------------------------------------- */
+.tile svg.gi {
+  width: 82%;
+  height: 82%;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8));
+}
+.d-rows .row.main b {
+  font-size: 1.15em;
+  color: #fff;
+}
+.d-rows p.hint {
+  font-size: calc(var(--u) * 2.3);
+  opacity: 0.6;
+}
+.g-btns {
+  display: flex;
+  gap: calc(var(--u) * 1);
+}
+.ap-btn.ico {
+  position: relative;
+  padding: 0 calc(var(--u) * 1.6);
+}
+.ap-btn.ico svg {
+  width: calc(var(--u) * 3.6);
+  height: calc(var(--u) * 3.6);
+  display: block;
+}
+.ap-btn.ico.act {
+  border-color: var(--gold);
+}
+.ap-btn.ico i {
+  position: absolute;
+  right: calc(var(--u) * -1);
+  top: calc(var(--u) * -1);
+  min-width: calc(var(--u) * 3.4);
+  height: calc(var(--u) * 3.4);
+  border-radius: calc(var(--u) * 1.7);
+  background: var(--gold);
+  color: #2a1700;
+  font-style: normal;
+  font-size: calc(var(--u) * 2.2);
+  line-height: calc(var(--u) * 3.4);
+  text-align: center;
+  text-shadow: none;
+}
+.g-quick {
+  flex: none;
+  display: flex;
+  gap: calc(var(--u) * 0.8);
+}
+.g-quick button {
+  flex: 1 1 0;
+  min-width: 0;
+  height: calc(var(--u) * 6);
+  padding: 0;
+  border-radius: calc(var(--u) * 1.4);
+  border: 1px solid rgba(200, 170, 255, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  color: #cfc4ea;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: calc(var(--u) * 2.3);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.g-quick button svg {
+  width: calc(var(--u) * 3.8);
+  height: calc(var(--u) * 3.8);
+}
+.g-quick button.on {
+  background: linear-gradient(180deg, #7d52f0 0%, #4a22b0 100%);
+  border-color: var(--gold);
+  color: #fff;
+}
+.fl-segs .seg {
+  flex: 0 1 auto;
+  min-height: calc(var(--u) * 5.6);
+  padding: 0 calc(var(--u) * 1.6);
+  font-size: calc(var(--u) * 2.3);
+}
+.fl-segs .seg.ico {
+  padding: 0 calc(var(--u) * 1);
+}
+.fl-segs .seg.ico svg {
+  width: calc(var(--u) * 4.2);
+  height: calc(var(--u) * 4.2);
+  display: block;
+}
+.fl-segs .seg.on[style*='--rc'] {
+  border-color: var(--rc);
+  color: var(--rc);
+}
+.fl-segs .seg.ico.on[style*='color'] {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: currentColor;
+}
+.fl-one {
+  margin-top: calc(var(--u) * 1.2);
+}
+.fl-reset {
+  margin-top: calc(var(--u) * 1.6);
+  width: 100%;
+}
+.g-none .ap-btn {
+  display: block;
+  margin-top: calc(var(--u) * 1.2);
+}

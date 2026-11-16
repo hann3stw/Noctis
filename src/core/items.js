@@ -84,6 +84,13 @@ export function weaponDamage(item) {
   return CONFIG.weapons[item.type].damage * factor(item);
 }
 
+// Damage per second on one enemy: every attack uses a charge and the charges
+// come back at the weapon's reload time. Agility and gear speed up the reload
+// of every weapon alike, so they are left out to compare weapons.
+export function weaponDps(item) {
+  return weaponDamage(item) / CONFIG.weapons[item.type].reload;
+}
+
 // base damage of skills: the same for every weapon type (see CONFIG.skillBase)
 export function skillDamage(item) {
   return CONFIG.skillBase * factor(item);
@@ -110,7 +117,7 @@ export function dismantleValue(item) {
 
 // rough single number to compare two items of the same slot
 export function itemPower(item) {
-  return item.kind === 'weapon' ? weaponDamage(item) : armorDefense(item);
+  return item.kind === 'weapon' ? weaponDps(item) : armorDefense(item);
 }
 
 // ---- text -------------------------------------------------------------------
