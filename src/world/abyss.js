@@ -7,7 +7,7 @@
 import { CONFIG } from '../config.js';
 import { arenaCenter } from './gates.js';
 import { ST_CHASE } from '../entities/enemies.js';
-import { rollLoot, makeUnique, UNIQUE } from '../core/items.js';
+import { rollLoot, makeUnique } from '../core/items.js';
 import { hashSeed } from '../core/rng.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
@@ -168,6 +168,12 @@ export class Abyss {
     const record = this.floor > this.best;
     if (record) this.best = this.floor;
     for (let k = 0; k < A.clearItems; k++) this.dropLoot(c.x + k * 2, c.z, false);
+    // one chance per floor for a unique item (more on boss floors)
+    if (Math.random() < this.uniqueChance(this.isBoss(this.floor))) {
+      const item = makeUnique(this.itemLevel());
+      game.loot.drop(c.x, c.z + 2, item);
+      game.hud.uniqueDrop(item, c.x, c.z + 2);
+    }
     const ess = Math.round(A.essencePerFloor * this.floor * (1 + game.gates.runMods.length * CONFIG.modifiers.luck));
     P.essence += ess;
     game.hud.banner(t('abyss.cleared', { n: this.floor }), record && this.floor > 1 ? t('abyss.record', { n: this.floor }) : t('toast.essence', { n: ess }));
@@ -200,11 +206,7 @@ export class Abyss {
 
   dropLoot(x, z, boss) {
     const game = this.game, P = game.player;
-    const item = Math.random() < this.uniqueChance(boss)
-      ? makeUnique(this.itemLevel())
-      : rollLoot(this.itemLevel(), this.luck(), P.known, boss ? 3 : 1, !boss);
-    game.loot.drop(x, z, item);
-    if (item.rarity === UNIQUE) game.hud.uniqueDrop(item, x, z);
+    game.loot.drop(x, z, rollLoot(this.itemLevel(), this.luck(), P.known, boss ? 3 : 1, !boss));
   }
 
   onKill(i, tier) {

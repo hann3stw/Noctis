@@ -341,8 +341,9 @@ export const CONFIG = {
     itemLevelPerFloor: 5, // abyss items have level 1000 + floor x this
     luckPerFloor: 0.03,
     essencePerFloor: 30,
-    // Unique items drop only here: chance per item (bosses more), a little
-    // more on deep floors and with modifiers, never above max / bossMax.
+    // Unique items drop only here: one chance per cleared floor (chance on a
+    // normal floor, bossChance on a boss floor), a little more on deep floors
+    // and with modifiers, never above max / bossMax.
     unique: { chance: 0.002, bossChance: 0.01, perFloor: 0.04, perModifier: 0.25, max: 0.03, bossMax: 0.06 },
   },
 

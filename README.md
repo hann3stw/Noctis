@@ -170,8 +170,8 @@ HTTPS (or localhost) for offline mode and installing.
   Hardened (+50 % enemy health), Mana Curse (skills cost double). Every
   modifier gives +25 % loot luck and +25 % XP.
 - **Unique items** (rarity 8, x6.5, rainbow frame) drop only in the Abyss:
-  about 0.2 % per item, 1 % from Abyss bosses, a bit more on deep floors and
-  with modifiers. A drop shows a big card with rays and its own sound. Each
+  one chance per cleared floor, 0.2 % on a normal floor and 1 % on a boss
+  floor, a bit more on deep floors and with modifiers. A drop shows a big card with rays and its own sound. Each
   has one special effect: Echo of the Fallen (every 5th attack a shadow
   wave), Stormbinder (hits zap 2 enemies), Soulreaper (kills heal and give a
   charge back), Last Rites (+80 % damage below 30 % health), Crown of Insight
