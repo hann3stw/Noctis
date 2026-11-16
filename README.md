@@ -202,7 +202,7 @@ HTTPS (or localhost) for offline mode and installing.
   Commander (2x, 30), Marshal (1x, 36) and Grand Marshal (1x, 40) are titles
   for Elite Knights that can be taken away again. Officers (General and
   above) get a name and grow with the hunter: their strength follows the
-  hunter's level when it is higher. Values:  -> .
+  hunter's level when it is higher. Values: `src/config.js` -> `shadows.ranks`.
 - The army tab sorts by power, level or rank and filters by rank group
   (officers, knights, normal) and role; the right side shows the selected
   shadow with promote, titles, name and dismiss, or the title overview.
