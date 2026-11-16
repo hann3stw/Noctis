@@ -2021,3 +2021,253 @@ button,
   padding-left: calc(var(--u) * 3);
   padding-right: calc(var(--u) * 3);
 }
+
+/* ===================================== army tab ===================================== */
+/* left: the list with sort and filters, right: the selected shadow */
+.ap-root {
+  display: grid;
+  grid-template-columns: 62fr 38fr;
+  gap: calc(var(--u) * 2);
+}
+.ap-left,
+.ap-right {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.2);
+  padding: calc(var(--u) * 1.6);
+  border-radius: calc(var(--u) * 2);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  box-shadow: var(--bevel), var(--lift);
+}
+.ap-head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 2);
+}
+.ap-note {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(var(--u) * 2.4);
+  color: #ffc06a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ap-tools {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.8) calc(var(--u) * 2);
+}
+.ap-segs {
+  display: flex;
+  gap: calc(var(--u) * 0.6);
+}
+.ap-segs .seg {
+  min-height: calc(var(--u) * 5.4);
+  padding: 0 calc(var(--u) * 1.4);
+  font-size: calc(var(--u) * 2.2);
+  letter-spacing: 0.04em;
+}
+/* the list itself: no second frame inside the panel */
+.ap-left .ap-grid {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 40), 1fr));
+  gap: calc(var(--u) * 1);
+}
+.ap-card {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 1.1) calc(var(--u) * 1.4);
+  border-left: calc(var(--u) * 0.6) solid var(--sc);
+}
+.ap-card > div {
+  flex: 1;
+  min-width: 0;
+}
+.ap-card em {
+  flex: none;
+  width: calc(var(--u) * 6);
+  height: calc(var(--u) * 6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-weight: 800;
+  font-size: calc(var(--u) * 2.2);
+  color: #120c1e;
+  background: var(--sc);
+  box-shadow: 0 0 calc(var(--u) * 1.5) color-mix(in srgb, var(--sc) 60%, transparent);
+}
+.ap-card b {
+  font-size: calc(var(--u) * 2.8);
+}
+.ap-card small {
+  font-size: calc(var(--u) * 2.2);
+}
+.ap-card span {
+  display: block;
+  font-size: calc(var(--u) * 2.2);
+  color: #ffd870;
+}
+.ap-card i {
+  flex-basis: 100%;
+  margin-top: calc(var(--u) * 0.8);
+}
+.ap-card.r3,
+.ap-card.r4,
+.ap-card.r5,
+.ap-card.r6 {
+  border-color: color-mix(in srgb, var(--sc) 70%, transparent);
+  box-shadow: var(--bevel), 0 0 calc(var(--u) * 2) color-mix(in srgb, var(--sc) 35%, transparent);
+}
+.ap-card.sel {
+  border-left-color: var(--sc);
+}
+.ap-right h3 {
+  font-size: calc(var(--u) * 4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ap-right .sub {
+  opacity: 0.75;
+  font-size: calc(var(--u) * 2.6);
+}
+.ap-right .row b small {
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: calc(var(--u) * 2.2);
+}
+.ap-hint {
+  font-size: calc(var(--u) * 2.3);
+  opacity: 0.65;
+}
+.ap-rank h4 {
+  margin: calc(var(--u) * 1.4) 0 calc(var(--u) * 0.8);
+  font-size: calc(var(--u) * 2.8);
+  color: var(--gold-hi);
+}
+.ap-rank .ap-btn.wide {
+  width: 100%;
+  margin-top: calc(var(--u) * 1.2);
+  min-height: calc(var(--u) * 9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--u) * 2.8);
+}
+.ap-rank .ap-btn.wide small {
+  font-size: calc(var(--u) * 2.1);
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+.ap-titles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--u) * 0.8);
+}
+.ap-titles .seg {
+  min-height: calc(var(--u) * 7.4);
+  padding: 0 calc(var(--u) * 1);
+  font-size: calc(var(--u) * 2.2);
+  letter-spacing: 0.02em;
+  display: flex;
+  flex-direction: column;
+}
+.ap-titles .seg small {
+  font-size: calc(var(--u) * 2);
+  text-transform: none;
+  opacity: 0.8;
+}
+.ap-titles .seg.on {
+  border-color: var(--sc);
+  color: var(--sc);
+  background: rgba(255, 255, 255, 0.1);
+}
+.ap-titles .seg[disabled] {
+  opacity: 0.4;
+}
+.ap-rank .ap-btn.small {
+  margin-top: calc(var(--u) * 1);
+}
+.ap-name {
+  display: flex;
+  gap: calc(var(--u) * 1);
+  margin-bottom: calc(var(--u) * 0.8);
+}
+.ap-name input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 700;
+  font-size: calc(var(--u) * 2.8);
+  color: #fff;
+  padding: calc(var(--u) * 1) calc(var(--u) * 1.4);
+  border-radius: calc(var(--u) * 1.4);
+  border: 1px solid var(--line-hi);
+  background: rgba(0, 0, 0, 0.35);
+}
+.ap-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--u) * 1);
+  font-size: calc(var(--u) * 2.5);
+}
+.ap-confirm span {
+  flex-basis: 100%;
+}
+/* overview of the ranks */
+.ap-rk {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 0.7) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.ap-rk em {
+  flex: none;
+  width: calc(var(--u) * 5.4);
+  height: calc(var(--u) * 5.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-weight: 800;
+  font-size: calc(var(--u) * 2);
+  color: #120c1e;
+  background: var(--sc);
+}
+.ap-rk b {
+  display: block;
+  font-size: calc(var(--u) * 2.7);
+  color: var(--sc);
+}
+.ap-rk b u {
+  text-decoration: none;
+  color: #e8dcff;
+  font-weight: 400;
+  font-size: calc(var(--u) * 2.3);
+}
+.ap-rk small {
+  display: block;
+  font-size: calc(var(--u) * 2.2);
+  opacity: 0.75;
+}
+.ap-rk small i {
+  opacity: 0.5;
+}

@@ -4,7 +4,7 @@
 // either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { enemyPower, rankHp } from '../core/levels.js';
+import { enemyPower, rankHp, rankOf } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
@@ -73,7 +73,7 @@ export class Army {
       if (!u) continue;
       units.push({
         type: u.type, role: u.role, tier: u.tier, zone: u.zone, plv: u.plv, level: u.level, xp: u.xp, totalXp: u.totalXp,
-        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT,
+        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT, rank: u.rank, nick: u.nick,
       });
     }
     return { units, behavior: this.behavior, out: this.out };
@@ -92,6 +92,8 @@ export class Army {
         plv: d.plv || (CONFIG.world.zones[d.zone || 0] || CONFIG.world.zones[0]).level,
         abT: 2, tauntT: 0,
         level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
+        rank: Math.max(0, Math.min(CONFIG.shadows.ranks.length - 1, d.rank | 0)),
+        nick: typeof d.nick === 'string' ? d.nick.slice(0, CONFIG.shadows.nameMaxLength) : '',
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
         x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
         target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
@@ -102,6 +104,8 @@ export class Army {
       this.units[slot++] = u;
     }
     this.rebuild();
+    this.checkTitles();
+    for (const u of this.deployed) this.recalc(u);
     // the army appears in formation around the player
     for (const u of this.deployed) if (u.alive) this.placeAtHome(u, false);
   }
@@ -129,22 +133,124 @@ export class Army {
   }
 
   name(u) {
+    if (u.nick) return u.nick;
     const base = t('enemy.' + u.type);
     const name = u.tier === 1 || u.tier === 2 ? t('tier.' + u.tier, { name: base }) : base;
     return t('shadow.stage.' + u.stage, { name });
   }
 
+  // ---- ranks ------------------------------------------------------------------
+  rankDef(u) {
+    return CONFIG.shadows.ranks[u.rank || 0];
+  }
+
+  // officers (General and above) grow with the hunter
+  isOfficer(u) {
+    return !!this.rankDef(u).max;
+  }
+
+  // the level a shadow's strength comes from
+  powerLevel(u) {
+    return this.isOfficer(u) ? Math.max(u.plv, this.game.player.level) : u.plv;
+  }
+
+  // one number for sorting and comparing
+  power(u) {
+    return Math.round(Math.sqrt(u.maxHp * u.dmg));
+  }
+
+  // essence for the next bought rank (Knight, Elite Knight)
+  promoteCost(u) {
+    const S = CONFIG.shadows, next = S.ranks[(u.rank || 0) + 1];
+    if (!next || next.max) return 0;
+    return Math.round(next.cost * Math.pow(S.rankCostGrowth, rankOf(u.plv)));
+  }
+
+  // why the next bought rank is not possible ('' = it is)
+  promoteBlock(u) {
+    const next = CONFIG.shadows.ranks[(u.rank || 0) + 1];
+    if (!next || next.max) return 'max';
+    if (u.level < next.level) return 'level';
+    if (this.game.player.essence < this.promoteCost(u)) return 'essence';
+    return '';
+  }
+
+  promote(u) {
+    if (this.promoteBlock(u)) return false;
+    this.game.player.essence -= this.promoteCost(u);
+    u.rank = (u.rank || 0) + 1;
+    this.afterRank(u);
+    return true;
+  }
+
+  titleCount(r) {
+    let n = 0;
+    for (const u of this.deployed) if ((u.rank || 0) === r) n++;
+    return n;
+  }
+
+  // why title r cannot go to this shadow ('' = it can)
+  titleBlock(u, r) {
+    const R = CONFIG.shadows.ranks[r];
+    if (!R || !R.max) return 'none';
+    if ((u.rank || 0) === r) return 'has';
+    if ((u.rank || 0) < 2) return 'elite';
+    if (u.level < R.level) return 'level';
+    if (this.titleCount(r) >= R.max) return 'full';
+    return '';
+  }
+
+  setTitle(u, r) {
+    if (this.titleBlock(u, r)) return false;
+    u.rank = r;
+    this.afterRank(u);
+    return true;
+  }
+
+  // back to Elite Knight; the title is free again
+  removeTitle(u) {
+    if (!this.isOfficer(u)) return;
+    u.rank = 2;
+    this.afterRank(u);
+  }
+
+  rename(u, name) {
+    u.nick = String(name || '').replace(/\s+/g, ' ').trim().slice(0, CONFIG.shadows.nameMaxLength);
+    this.version++;
+  }
+
+  afterRank(u) {
+    this.recalc(u);
+    if (u.alive) u.hp = u.maxHp;
+    this.version++;
+    if (u.alive && this.out) {
+      this.game.effects.burst(u.x, 1.2, u.z, 30, 0xffd870, 7, 0.24, 0.9);
+      this.game.effects.ring(u.x, u.z, 0.4, 3, 0xffd870, 0.5);
+    }
+  }
+
+  // a broken save may hold more titles than allowed: the extra ones become Elite Knights
+  checkTitles() {
+    const R = CONFIG.shadows.ranks;
+    for (let r = 0; r < R.length; r++) {
+      if (!R[r].max) continue;
+      let n = 0;
+      for (const u of this.deployed) if (u.rank === r && ++n > R[r].max) u.rank = 2;
+    }
+  }
+
   recalc(u) {
     const S = CONFIG.shadows, role = S.roles[u.role];
     const def = CONFIG.enemies.types[u.type];
-    const tier = S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus);
+    const tier = S.tierFactor[u.tier] * (1 + u.stage * S.evolveBonus) * this.rankDef(u).mult;
+    const plv = this.powerLevel(u);
     // shadows are as strong as the enemy they were raised from
-    const pw = enemyPower(u.plv);
+    const pw = enemyPower(plv);
     const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * pw;
     const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * pw;
     const lv = Math.pow(S.levelGrowth, u.level - 1);
     u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + this.game.player.armyHp));
-    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv * Math.sqrt(rankHp(u.plv));
+    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv * Math.sqrt(rankHp(plv));
     u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
     u.radius = def.radius * u.scale;
     u.speed = def.speed * S.combatSpeedFactor;
@@ -273,7 +379,7 @@ export class Army {
     const u = {
       slot, type, ti: this.game.enemies.typeIndex[type],
       role: role || CONFIG.enemies.types[type].shadowRole,
-      tier, zone, plv: plv || CONFIG.world.zones[zone].level, level: 1, xp: 0, totalXp: 0, stage: 0,
+      tier, zone, plv: plv || CONFIG.world.zones[zone].level, level: 1, xp: 0, totalXp: 0, stage: 0, rank: 0, nick: '',
       abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
@@ -414,7 +520,7 @@ export class Army {
   // ---- experience -----------------------------------------------------------
   xpNeed(level, u) {
     const S = CONFIG.shadows;
-    const pw = enemyPower(u ? u.plv : 1);
+    const pw = enemyPower(u ? this.powerLevel(u) : 1);
     return Math.round(S.xpBase * pw * Math.pow(S.xpGrowth, level - 1));
   }
 

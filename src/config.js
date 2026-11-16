@@ -612,6 +612,26 @@ export const CONFIG = {
 
     revive: { cooldown: 12, cooldownPerLevel: 1, cost: 6, costPerLevel: 2 },
 
+    // Ranks of shadows, given in the army tab. mult = health and damage
+    // (Elite Knight = the strength shadows had before ranks existed).
+    // Knight and Elite Knight are bought one after the other with essence
+    // (cost x rankCostGrowth ^ rank of the shadow's zone) and need a shadow
+    // level. General and above are titles: only max of each, they need an
+    // Elite Knight of that level, can be taken away again, carry a name and
+    // grow with the hunter (their strength follows the hunter's level when
+    // it is higher than their own).
+    ranks: [
+      { id: 'normal', mult: 0.6 },
+      { id: 'knight', mult: 0.8, level: 8, cost: 30 },
+      { id: 'eliteKnight', mult: 1, level: 16, cost: 90 },
+      { id: 'general', mult: 1.3, level: 24, max: 3 },
+      { id: 'commander', mult: 1.6, level: 30, max: 2 },
+      { id: 'marshal', mult: 2, level: 36, max: 1 },
+      { id: 'grandMarshal', mult: 2.5, level: 40, max: 1 },
+    ],
+    rankCostGrowth: 1.6,
+    nameMaxLength: 20,
+
     // Elite, champion and boss shadows get an ability of their role.
     // power grows with the tier: x (1 + tierPower * (tier - 1)).
     tierPower: 0.5,
