@@ -195,6 +195,22 @@ const BUILDERS = {
   magmaBrute: () => biped({ skin: 0x3a2a2a, dark: 0x201818, w: 1.05, h: 1.0, legH: 0.7, arm: 1.05, thick: 0.32, head: 0.55, shoulders: 0x2a1e1e, glow: 0xff7020, horns: 0x1a1414 }),
   emberImp: () => biped({ skin: 0xa03020, dark: 0x501818, w: 0.5, h: 0.55, legH: 0.45, arm: 0.5, thick: 0.13, head: 0.42, horns: 0x2a1010, wings: 0x501818 }),
   cinderhound: () => quad({ fur: 0x2a2222, dark: 0x181414, w: 0.7, h: 0.6, len: 1.45, legH: 0.55, head: 0.55, ears: true, glow: 0xff7020 }),
+  // shattered expanse
+  shardGolem: () => biped({ skin: 0x7a6a9a, dark: 0x463a5e, w: 1.05, h: 1.0, legH: 0.7, arm: 1.05, thick: 0.32, head: 0.5, shoulders: 0xd8a0ff, horns: 0xe0b8ff, glow: 0xc080ff }),
+  prismWisp: () => wisp({ body: 0xc8a0ff, spike: 0xffffff }),
+  glassStalker: () => quad({ fur: 0x9a8ab8, dark: 0x5a4a78, w: 0.7, h: 0.55, len: 1.5, legH: 0.6, head: 0.5, spikes: 0xe8c8ff, ears: true }),
+  // stormspire highlands
+  stormBrute: () => biped({ skin: 0x4a5468, dark: 0x2a3040, w: 1.05, h: 1.0, legH: 0.7, arm: 1.1, thick: 0.32, head: 0.52, helm: 0x3a4458, shoulders: 0x3a4458, glow: 0x50d0ff, weapon: 'club', weaponColor: 0x6a7a90 }),
+  voltWisp: () => wisp({ body: 0x4a80ff, spike: 0xc8f0ff }),
+  thunderhorn: () => quad({ fur: 0x3e4658, dark: 0x242a38, w: 0.85, h: 0.7, len: 1.4, legH: 0.6, head: 0.6, antlers: 0x80e0ff, glow: 0x50d0ff, tail: false }),
+  // titans' graveyard
+  boneColossus: () => biped({ skin: 0xd8d0b8, dark: 0x8a8270, w: 1.1, h: 1.05, legH: 0.7, arm: 1.15, thick: 0.32, head: 0.55, hunch: true, horns: 0xeae2cc, shoulders: 0xb8b098, belly: 0x6a6458 }),
+  gravePriest: () => biped({ skin: 0xc8c0a8, dark: 0x3a3a2e, w: 0.6, h: 0.9, legH: 0.6, arm: 0.75, thick: 0.15, head: 0.42, hood: 0x34382a, weapon: 'staff', orb: 0x80ff90 }),
+  ribHound: () => quad({ fur: 0xc8c0a8, dark: 0x6a6250, w: 0.7, h: 0.55, len: 1.5, legH: 0.6, head: 0.55, spikes: 0xe8e0c8, ears: true }),
+  // throne of the void
+  voidKnight: () => biped({ skin: 0x4a3e66, dark: 0x241c34, w: 0.9, h: 1.0, legH: 0.75, arm: 0.95, thick: 0.26, head: 0.48, helm: 0x3a3050, shoulders: 0x4a3a6a, glow: 0xa060ff, weapon: 'sword', weaponColor: 0x7050c0 }),
+  voidEye: () => wisp({ body: 0x6a3aa0, spike: 0xc890ff }),
+  nightmare: () => quad({ fur: 0x3e3058, dark: 0x1e1630, w: 0.75, h: 0.62, len: 1.55, legH: 0.62, head: 0.58, ears: true, glow: 0xa060ff, spikes: 0x5a2a90 }),
 
   // ---- bosses (drawn at the type's scale)
   thornmaw: () => quad({ fur: 0x3a3048, dark: 0x221c2e, w: 0.85, h: 0.7, len: 1.5, head: 0.65, ears: true, spikes: 0x4a8a3a }),
@@ -203,6 +219,10 @@ const BUILDERS = {
   hollowKing: () => biped({ skin: 0x4a4a58, dark: 0x2a2a34, w: 1.0, h: 1.05, legH: 0.75, arm: 1.0, thick: 0.28, head: 0.5, helm: 0x3a3a48, crown: 0xffc030, shoulders: 0x5a5a6a, weapon: 'sword' }),
   rimeclaw: () => biped({ skin: 0xe0ecf6, dark: 0x8aa0b8, w: 1.1, h: 1.05, legH: 0.7, arm: 1.15, thick: 0.34, head: 0.6, hunch: true, horns: 0x80c8ff, shoulders: 0xa0d8ff }),
   pyrelord: () => biped({ skin: 0x2a1e1e, dark: 0x140e0e, w: 0.95, h: 1.1, legH: 0.75, arm: 1.0, thick: 0.26, head: 0.5, crown: 0xff7020, horns: 0x140e0e, glow: 0xff5010, weapon: 'staff', orb: 0xff5010, wings: 0x3a1a1a }),
+  crystalTyrant: () => biped({ skin: 0x5a4a7a, dark: 0x2e2446, w: 1.15, h: 1.1, legH: 0.7, arm: 1.15, thick: 0.36, head: 0.6, hunch: true, crown: 0xe0b0ff, shoulders: 0xc080ff, glow: 0xd090ff }),
+  stormcaller: () => biped({ skin: 0x3a4458, dark: 0x1e2430, w: 0.95, h: 1.1, legH: 0.75, arm: 1.0, thick: 0.26, head: 0.5, hood: 0x2a3a6a, crown: 0x80e0ff, glow: 0x50d0ff, weapon: 'staff', orb: 0x80e0ff, wings: 0x2a3a6a }),
+  titanLich: () => biped({ skin: 0xb8b098, dark: 0x5a5446, w: 1.1, h: 1.15, legH: 0.8, arm: 1.1, thick: 0.3, head: 0.55, hood: 0x2a2e24, crown: 0x80ff90, glow: 0x60e080, shoulders: 0x8a8270, weapon: 'sword', weaponColor: 0x9ab0a0 }),
+  voidSovereign: () => biped({ skin: 0x3a2e54, dark: 0x1a1228, w: 1.05, h: 1.15, legH: 0.8, arm: 1.05, thick: 0.28, head: 0.52, crown: 0xb070ff, horns: 0x2a2040, glow: 0xb070ff, wings: 0x2a1a40, weapon: 'sword', weaponColor: 0x9060e0, shoulders: 0x3a2a5a }),
 };
 
 export function buildEnemyGeometry(typeId) {

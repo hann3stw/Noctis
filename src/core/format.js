@@ -1,5 +1,5 @@
-// Short numbers for the HUD: 950, 12.4K, 3.1M, 2.0B ...
-const UNITS = ['', 'K', 'M', 'B', 'T'];
+// Short numbers for the HUD: 950, 12.4K, 3.1M, 2.0B, 4.5T, 6.7Qa (quadrillion) ...
+const UNITS = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
 
 export function fmt(n) {
   n = Math.round(n);

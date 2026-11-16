@@ -221,6 +221,96 @@ function emberCrystal() {
   ]);
 }
 
+// ---- shattered expanse
+function shardCrystal() {
+  return merge([
+    cone(0.4, 2.6, 5, 0xc080ff, 0, 1.3, 0),
+    cone(0.28, 1.6, 5, 0xe0b0ff, 0.5, 0.7, 0.1, 0, 0, -0.45),
+    cone(0.25, 1.3, 5, 0x9a60e0, -0.4, 0.6, -0.2, 0.35, 0, 0.45),
+    cone(0.18, 0.9, 5, 0xffd0ff, 0.1, 0.4, 0.5, -0.6, 0, 0),
+  ]);
+}
+
+function crystalTuft() {
+  return merge([
+    blob(0.16, 0x5a4c6c, 0, 0.04, 0, 1.4, 0.4, 1.2),
+    cone(0.06, 0.34, 4, 0xb890e0, 0, 0.17, 0, 0, 0, 0.15),
+    cone(0.05, 0.26, 4, 0x9a78c8, 0.12, 0.13, 0.06, 0.3, 0, -0.4),
+    cone(0.05, 0.28, 4, 0xc8a8f0, -0.1, 0.14, -0.08, -0.3, 0, 0.45),
+  ]);
+}
+
+// ---- stormspire highlands
+function stormRock() {
+  return merge([
+    cyl(0.6, 1.0, 3.2, 5, 0x4a5262, 0, 1.6, 0),
+    cone(0.6, 1.3, 5, 0x566070, 0, 3.85, 0),
+    blob(0.6, 0x3e4654, 0.9, 0.3, 0.2, 1, 0.7, 1),
+    blob(0.4, 0x46505e, -0.7, 0.2, -0.4, 1, 0.7, 1),
+  ]);
+}
+
+function pylon() {
+  return merge([
+    box(0.9, 2.6, 0.6, 0x3a4252, 0, 1.3, 0),
+    box(0.14, 1.7, 0.64, 0x60d8ff, 0, 1.4, 0),
+    box(0.55, 0.14, 0.64, 0x60d8ff, 0, 1.9, 0),
+    box(0.4, 0.12, 0.64, 0x60d8ff, 0, 0.9, 0),
+    cone(0.45, 0.5, 4, 0x2e3644, 0, 2.85, 0, 0, Math.PI / 4, 0),
+    box(1.3, 0.25, 1.0, 0x2e3644, 0, 0.12, 0),
+  ]);
+}
+
+// ---- titans' graveyard
+function ribs() {
+  const p = [box(0.4, 0.35, 4.4, 0xcfc7ae, 0, 0.18, 0)];
+  for (let i = 0; i < 5; i++) {
+    const z = -1.7 + i * 0.85, h = 2.4 + Math.sin(i * 0.8) * 0.5;
+    p.push(box(0.2, h, 0.22, 0xe2dac2, 1.0, h / 2, z, 0, 0, -0.35));
+    p.push(box(0.2, h, 0.22, 0xe2dac2, -1.0, h / 2, z, 0, 0, 0.35));
+  }
+  return merge(p);
+}
+
+function skull() {
+  return merge([
+    blob(1.1, 0xe0d8c0, 0, 0.9, 0, 1, 0.85, 1.05),
+    box(1.2, 0.45, 0.9, 0xd0c8b0, 0, 0.22, 0.55),
+    box(0.38, 0.32, 0.2, 0x2a2620, 0.4, 1.0, 1.02),
+    box(0.38, 0.32, 0.2, 0x2a2620, -0.4, 1.0, 1.02),
+    box(0.2, 0.25, 0.2, 0x2a2620, 0, 0.62, 1.05),
+  ]);
+}
+
+function boneShard() {
+  return merge([
+    box(0.08, 0.08, 0.7, 0xe0d8c0, 0, 0.05, 0, 0, 0.5, 0),
+    blob(0.08, 0xe8e0c8, 0.17, 0.05, 0.3),
+    blob(0.08, 0xe8e0c8, -0.17, 0.05, -0.3),
+    box(0.07, 0.07, 0.45, 0xd8d0b8, 0.25, 0.04, -0.15, 0, -0.9, 0),
+  ]);
+}
+
+// ---- throne of the void
+function voidSpire() {
+  return merge([
+    cyl(0.55, 0.85, 4.2, 4, 0x1a1624, 0, 2.1, 0, 0, Math.PI / 4, 0),
+    cone(0.55, 1.4, 4, 0x221c30, 0, 4.9, 0, 0, Math.PI / 4, 0),
+    box(0.1, 3.0, 0.1, 0xb070ff, 0.62, 2.0, 0),
+    box(0.1, 3.0, 0.1, 0xb070ff, -0.62, 2.0, 0),
+    blob(0.2, 0xd8a8ff, 0, 5.7, 0),
+    box(1.6, 0.3, 1.6, 0x14101c, 0, 0.15, 0),
+  ]);
+}
+
+function voidCrystal() {
+  return merge([
+    cone(0.34, 2.0, 5, 0x8040e0, 0, 1.0, 0),
+    cone(0.24, 1.3, 5, 0xb070ff, 0.42, 0.55, 0.1, 0, 0, -0.4),
+    cone(0.22, 1.1, 5, 0x5a20b0, -0.34, 0.5, -0.2, 0.3, 0, 0.4),
+  ]);
+}
+
 // collide: collision radius at scale 1 (0 = walk through)
 // tint: 'shade' = slight brightness variation, 'flower' = random petal colour
 // glow: drawn unlit, so it shines in the dark
@@ -250,6 +340,15 @@ export const DECOR = {
   lavaPool: { build: lavaPool, collide: 0, scale: [0.7, 1.5], tint: 'shade', glow: true },
   charredTree: { build: charredTree, collide: 0.4, scale: [0.8, 1.3], tint: 'shade' },
   emberCrystal: { build: emberCrystal, collide: 0.5, scale: [0.7, 1.3], tint: 'shade', glow: true },
+  shardCrystal: { build: shardCrystal, collide: 0.55, scale: [0.7, 1.5], tint: 'shade', glow: true },
+  crystalTuft: { build: crystalTuft, collide: 0, scale: [0.8, 1.5], tint: 'shade' },
+  stormRock: { build: stormRock, collide: 0.9, scale: [0.7, 1.3], tint: 'shade' },
+  pylon: { build: pylon, collide: 0.6, scale: [0.8, 1.2], tint: 'shade', glow: true },
+  ribs: { build: ribs, collide: 1.2, scale: [0.8, 1.3], tint: 'shade' },
+  skull: { build: skull, collide: 1.0, scale: [0.7, 1.3], tint: 'shade' },
+  boneShard: { build: boneShard, collide: 0, scale: [0.8, 1.5], tint: 'shade' },
+  voidSpire: { build: voidSpire, collide: 0.8, scale: [0.8, 1.3], tint: 'shade', glow: true },
+  voidCrystal: { build: voidCrystal, collide: 0.5, scale: [0.7, 1.4], tint: 'shade', glow: true },
 };
 
 // ---- gates ------------------------------------------------------------------------

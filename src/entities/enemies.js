@@ -5,7 +5,7 @@
 // use reserved slots that only come alive inside their arena.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { enemyPower, levelAt } from '../core/levels.js';
+import { enemyPower, levelAt, rankHp } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
@@ -247,10 +247,11 @@ export class Enemies {
     }
     this.lvl[i] = lv;
     const pw = enemyPower(lv);
-    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM);
+    const rk = def.boss ? 1 : rankHp(lv); // later ranks: tougher normal enemies
+    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM * rk);
     this.hp[i] = this.maxHp[i];
     this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;
-    this.xpv[i] = Math.round(def.xp * pw * T.xp);
+    this.xpv[i] = Math.round(def.xp * pw * T.xp * Math.sqrt(rk));
     this.scale[i] = def.scale * T.scale;
     this.radius[i] = def.radius * this.scale[i];
     this.state[i] = ST_IDLE;

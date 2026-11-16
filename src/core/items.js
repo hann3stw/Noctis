@@ -7,9 +7,9 @@ import { CONFIG } from '../config.js';
 import { itemLevelPower, rankProgress, rankOf } from './levels.js';
 import { t } from '../strings.js';
 
-// common, uncommon, rare, epic, legendary, mythic
-export const RARITY_COLORS = [0xb8b8c8, 0x5cd65c, 0x4aa3ff, 0xb45cff, 0xffb02e, 0xff4a6e];
-export const RARITY_CSS = ['#b8b8c8', '#6ee06e', '#4aa3ff', '#c07cff', '#ffb02e', '#ff5a7a'];
+// common, uncommon, rare, epic, legendary, mythic, exotic
+export const RARITY_COLORS = [0xb8b8c8, 0x5cd65c, 0x4aa3ff, 0xb45cff, 0xffb02e, 0xff4a6e, 0x3ff0e0];
+export const RARITY_CSS = ['#b8b8c8', '#6ee06e', '#4aa3ff', '#c07cff', '#ffb02e', '#ff5a7a', '#3ff0e0'];
 export const RARITIES = RARITY_CSS.length;
 export const ARMOR_SLOTS = ['helmet', 'chest', 'gloves', 'boots'];
 export const EQUIP_SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots'];

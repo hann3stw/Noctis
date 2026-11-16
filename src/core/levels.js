@@ -6,7 +6,10 @@ import { CONFIG } from '../config.js';
 
 const L = CONFIG.levels;
 
-// rank index of a level: 0 = E ... 5 = S
+// names of the ranks: E, D, C, B, A, S, SS, SSS, L, M
+export const RANKS = L.rankNames;
+
+// rank index of a level: 0 = E ... 9 = M
 export function rankOf(level) {
   let r = 0;
   for (let i = 0; i < L.rankLevels.length; i++) if (level >= L.rankLevels[i]) r = i;
@@ -28,6 +31,11 @@ export function levelFromProgress(p) {
 export function enemyPower(level) {
   const p = rankProgress(level), r = Math.floor(p);
   return Math.pow(L.enemyRank, r + (p - r) * L.zoneSpread);
+}
+
+// extra health of normal enemies of this level (see CONFIG.levels.enemyHpRank)
+export function rankHp(level) {
+  return L.enemyHpRank[rankOf(level)] || 1;
 }
 
 // the hunter's damage and health from the level alone

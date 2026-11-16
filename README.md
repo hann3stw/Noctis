@@ -98,16 +98,25 @@ HTTPS (or localhost) for offline mode and installing.
 
 ## World
 
-- Six big ring shaped zones around the camp: Whispering Meadow (E), Gloomwood
+- Ten big ring shaped zones around the camp: Whispering Meadow (E), Gloomwood
   (D), Rotmire Swamp (C), Sunken Ruins (B), Frostfang Peaks (A), Ashen Caldera
-  (S). Every rank multiplies enemy health, damage and XP by 10: enemies two
-  ranks above you kill you with one hit, but they also give 10x the XP.
+  (S), Shattered Expanse (SS), Stormspire Highlands (SSS), Titans' Graveyard
+  (L) and Throne of the Void (M). Every rank multiplies enemy health, damage
+  and XP by 10: enemies two ranks above you kill you with one hit, but they
+  also give 10x the XP. New zones are only added at the outside, so saved
+  worlds keep their outposts, gates and chests.
 - The rank comes from the level: E = level 1-9, D = 10-24, C = 25-49,
-  B = 50-99, A = 100-199, S = 200-300. Every zone covers the levels of its
-  rank; enemies get higher levels (up to about x3 stronger) towards the outer
-  edge of their zone. Every new rank gives many stat points (10, 12, 15, 18,
-  20); levels give 3 points in E, 2 in D, 1 in C and B, and one every second
-  level in A and S.
+  B = 50-99, A = 100-199, S = 200-299, SS = 300-449, SSS = 450-649,
+  L = 650-849, M = 850-1000. Every zone covers the levels of its rank;
+  enemies get higher levels (up to about x6 stronger) towards the outer edge
+  of their zone. Every new rank gives many stat points (10, 12, 15, 18, 20,
+  22, 25, 28, 30); levels give 3 points in E, 2 in D, 1 in C and B, one every
+  second level in A and S and one every third level from SS on.
+- Normal enemies get extra health in later ranks (`levels.enemyHpRank`):
+  with good gear an enemy of your level takes about 2-3 hits from rank A on,
+  about one with perfect gear; early ranks stay quick. Kills give a bit more
+  XP and shadows deal a bit more damage to make up for it. Bosses keep their
+  health.
 - The hunter grows x6 per rank from levels alone. The rest of the step to the
   next zone must come from better gear, stat points and the army. All level
   values sit in `src/config.js` -> `levels`. Old saves are moved to the new
@@ -164,10 +173,11 @@ HTTPS (or localhost) for offline mode and installing.
 
 ## Items and stats
 
-- Six rarities: Common x1, Uncommon x1.2, Rare x1.5, Epic x2, Legendary x2.7,
-  Mythic x3.6; the item level adds x1.27 per rank. Which rarities drop
-  depends on the rank: rank E gives at most Epic, Legendary starts in D,
-  Mythic in B, and the better ones get more common in every later rank.
+- Seven rarities: Common x1, Uncommon x1.2, Rare x1.5, Epic x2, Legendary x2.7,
+  Mythic x3.6, Exotic x4.8 (turquoise, shimmering); the item level adds x1.27
+  per rank. Which rarities drop depends on the rank: rank E gives at most
+  Epic, Legendary starts in D, Mythic in B, Exotic in SSS, and the better ones
+  get more common in every later rank.
   Elites, chests, Perception and gates (Deadly: at least Epic) raise the luck.
 - Eight weapons, all about equally strong but played differently: Daggers
   (very fast, short), Sword (wide arc), Spear (long thrust through a row of
@@ -246,7 +256,8 @@ All six milestones are done:
    14 skills, 6 ultimates, chests and loot, inventory, upgrading, menu
 4. Title screen, 3 save slots, New World with skin editor and tutorial,
    Load Game with file backup, autosave, pause menu, settings, sound effects
-5. Six big zones (x10 per rank), 18 enemy types, elites and champions, six
-   gates (three difficulties per zone) with arena bosses, 24 outposts to capture, minimap
+5. Ten big zones (x10 per rank, up to level 1000), 30 enemy types, elites
+   and champions, 30 gates (three difficulties per zone) with 10 arena bosses,
+   40 outposts to capture, minimap
 6. PWA (offline, installable, fullscreen landscape, icons drawn in code),
    automatic graphics preset, performance check, hosting and install guide

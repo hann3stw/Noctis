@@ -4,7 +4,7 @@
 // either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { enemyPower } from '../core/levels.js';
+import { enemyPower, rankHp } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
@@ -144,7 +144,7 @@ export class Army {
     const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * pw;
     const lv = Math.pow(S.levelGrowth, u.level - 1);
     u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + this.game.player.armyHp));
-    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv;
+    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv * Math.sqrt(rankHp(u.plv));
     u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
     u.radius = def.radius * u.scale;
     u.speed = def.speed * S.combatSpeedFactor;

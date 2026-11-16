@@ -15,7 +15,7 @@ import { hashSeed } from '../core/rng.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
-export const RANKS = 'EDCBAS';
+export { RANKS } from '../core/levels.js';
 const PAUSE = 0, WINDUP = 1, CHARGE = 2;
 
 // arenas lie far outside the world, one per gate

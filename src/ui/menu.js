@@ -238,7 +238,7 @@ export class Menu {
 
   diffOf(v, cur) {
     const d = Math.round(v - cur);
-    return d === 0 ? '' : `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d}</span>`;
+    return d === 0 ? '' : `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${fmt(d)}</span>`;
   }
 
   detail(item) {
@@ -250,12 +250,12 @@ export class Menu {
     const rows = [];
     const main = this.mainStat(item);
     const diff = equipped ? '' : this.diffOf(main, cur ? this.mainStat(cur) : 0);
-    rows.push(`<div class="row main"><span>${this.mainLabel(item)}</span><b>${main} ${diff}</b></div>`);
+    rows.push(`<div class="row main"><span>${this.mainLabel(item)}</span><b>${fmt(main)} ${diff}</b></div>`);
     if (item.kind === 'weapon') {
       const w = CONFIG.weapons[item.type];
       const hit = Math.round(weaponDamage(item));
       const hitDiff = equipped ? '' : this.diffOf(hit, cur ? Math.round(weaponDamage(cur)) : 0);
-      rows.push(`<div class="row"><span>${t('item.hit')}</span><b>${hit} ${hitDiff}</b></div>`);
+      rows.push(`<div class="row"><span>${t('item.hit')}</span><b>${fmt(hit)} ${hitDiff}</b></div>`);
       rows.push(`<div class="row"><span>${t('item.hits')}</span><b>${t('shape.' + w.shape, { n: w.jumps || 0 })}</b></div>`);
       rows.push(`<div class="row"><span>${t('item.reload')}</span><b>${w.reload}s</b></div>`);
       rows.push(`<div class="row"><span>${t('item.range')}</span><b>${w.range}</b></div>`);
@@ -273,7 +273,7 @@ export class Menu {
         rows.push(`<p class="setb${have >= Number(need) ? ' on' : ''}">${t('item.setBonus', { n: need, text })}</p>`);
       }
     }
-    if (!equipped && cur) rows.push(`<p class="cmp">${t('item.equipped')}: <b style="color:${RARITY_CSS[cur.rarity]}">${itemName(cur)}</b> (${this.mainStat(cur)})</p>`);
+    if (!equipped && cur) rows.push(`<p class="cmp">${t('item.equipped')}: <b style="color:${RARITY_CSS[cur.rarity]}">${itemName(cur)}</b> (${fmt(this.mainStat(cur))})</p>`);
 
     const maxed = item.up >= I.maxUpgrade;
     const cost = upgradeCost(item);
@@ -295,7 +295,7 @@ export class Menu {
       const it = P.equip[slot];
       if (!it) return `<div class="g-slot empty"><div class="tile none">${ICONS[slot] || ''}</div><div><b>${t('slot.' + slot)}</b><small>—</small></div></div>`;
       return `<div class="g-slot${this.selItem === it ? ' sel' : ''}" data-act="item" data-id="${it.id}">${this.tile(it)}
-        <div><b style="color:${RARITY_CSS[it.rarity]}">${itemName(it)}</b><small>${this.mainLabel(it)} ${this.mainStat(it)}</small></div></div>`;
+        <div><b style="color:${RARITY_CSS[it.rarity]}">${itemName(it)}</b><small>${this.mainLabel(it)} ${fmt(this.mainStat(it))}</small></div></div>`;
     }).join('');
     const shown = this.filtered();
     const inv = shown.length ? shown.map((it) => this.tile(it)).join('')

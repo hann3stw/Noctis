@@ -9,7 +9,7 @@ import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 
-const RANKS = 'EDCBAS';
+import { RANKS } from '../core/levels.js';
 const HAIR_KEYS = ['short', 'spiky', 'long', 'ponytail', 'mohawk', 'swept'];
 const BUTTON_SIZES = [0.85, 1, 1.15, 1.3];
 const PALETTE_ROWS = [

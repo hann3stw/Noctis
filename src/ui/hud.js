@@ -490,6 +490,7 @@ export class Hud {
       this.vLevel = P.level;
       this.vRank = game.rankIndex;
       this.xpLabel.textContent = P.level;
+      this.xpLabel.dataset.n = String(P.level).length; // 4 digits get a smaller font
       this.rankLabel.textContent = t('hud.rankShort', { rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
     }
     // "!" on the menu when there is something new (points, items, skills)

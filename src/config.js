@@ -11,7 +11,9 @@ export const CONFIG = {
     voidWidth: 70, // dark ground beyond the last zone
     groundTile: 120, // the ground is drawn in square tiles of this size
     groundCell: 8, // colour resolution of the ground
-    // Ring shaped zones from the camp outwards, one per rank (E, D, C, B, A, S).
+    // Ring shaped zones from the camp outwards, one per rank (E, D, C, B, A, S,
+    // SS, SSS, L, M). New zones are only ever added at the outside, so the
+    // places of old ones (and the outposts and gates of saved worlds) stay.
     // Their levels come from levels.rankLevels (see below).
     //   packs, champions, chests  how many of each the zone gets
     //   decor      average decoration pieces per chunk
@@ -70,6 +72,42 @@ export const CONFIG = {
         enemyTypes: ['magmaBrute', 'emberImp', 'cinderhound'],
         boss: 'pyrelord', gateColor: 0xff4050,
         light: { sky: 0xffa880, ground: 0x402018, sun: 0xffb890, sky_i: 1.6 },
+      },
+      {
+        id: 'shardwaste', rank: 'SS', inner: 1480, outer: 1720,
+        packs: 420, champions: 20, chests: 72,
+        groundColors: [0x6a5a7c, 0x5e5070, 0x786888],
+        decor: { crystalTuft: 10, shardCrystal: 2, rock: 1, rubble: 3 },
+        enemyTypes: ['shardGolem', 'prismWisp', 'glassStalker'],
+        boss: 'crystalTyrant', gateColor: 0xd080ff,
+        light: { sky: 0xe0c8ff, ground: 0x3a2a48, sun: 0xffe8ff, sky_i: 1.4 },
+      },
+      {
+        id: 'stormspire', rank: 'SSS', inner: 1720, outer: 1960,
+        packs: 440, champions: 21, chests: 74,
+        groundColors: [0x4a5464, 0x424c5a, 0x56606e],
+        decor: { dryGrass: 8, stormRock: 1.5, pylon: 0.7, rubble: 2.5, deadTree: 0.8 },
+        enemyTypes: ['stormBrute', 'voltWisp', 'thunderhorn'],
+        boss: 'stormcaller', gateColor: 0x50d0ff,
+        light: { sky: 0xa8c0e8, ground: 0x1e2430, sun: 0xd8e8ff, sky_i: 1.25 },
+      },
+      {
+        id: 'bonefield', rank: 'L', inner: 1960, outer: 2200,
+        packs: 460, champions: 22, chests: 76,
+        groundColors: [0x5a5e4e, 0x52564a, 0x64685a],
+        decor: { boneShard: 6, ribs: 0.6, skull: 0.5, deadTree: 1.4, ash: 5 },
+        enemyTypes: ['boneColossus', 'gravePriest', 'ribHound'],
+        boss: 'titanLich', gateColor: 0x80ff90,
+        light: { sky: 0xc8d8c0, ground: 0x2a2e24, sun: 0xe8f0d8, sky_i: 1.2 },
+      },
+      {
+        id: 'voidthrone', rank: 'M', inner: 2200, outer: 2440,
+        packs: 480, champions: 23, chests: 78,
+        groundColors: [0x3a3048, 0x42364e, 0x342a40],
+        decor: { ash: 6, voidCrystal: 2, voidSpire: 1, basalt: 0.8 },
+        enemyTypes: ['voidKnight', 'voidEye', 'nightmare'],
+        boss: 'voidSovereign', gateColor: 0xb070ff,
+        light: { sky: 0xb8a0ff, ground: 0x1a1028, sun: 0xe0d0ff, sky_i: 1.5 },
       },
     ],
   },
@@ -145,10 +183,18 @@ export const CONFIG = {
   //   E = level 1-9, D = 10-24, C = 25-49, B = 50-99, A = 100-199, S = 200-300.
   // Inside a zone the enemy level rises from the inner to the outer edge.
   levels: {
-    rankLevels: [1, 10, 25, 50, 100, 200], // first level of rank E, D, C, B, A, S
-    maxLevel: 300,
+    rankLevels: [1, 10, 25, 50, 100, 200, 300, 450, 650, 850], // first level of rank E, D, C, B, A, S, SS, SSS, L, M
+    rankNames: ['E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'L', 'M'],
+    maxLevel: 1000,
     enemyRank: 10, // enemies (health, damage, XP) and their shadows: x10 per rank
-    zoneSpread: 0.5, // inside a zone enemies grow up to x10^0.5 (about x3) towards the outer edge
+    zoneSpread: 0.8, // inside a zone enemies grow up to x10^0.8 (about x6) towards the outer edge
+    // Extra health of normal enemies per rank (bosses keep theirs). Gear,
+    // stat points and rarity grow faster than x6 per rank, so without this
+    // everything died to one hit later on. With it a normal enemy of your
+    // level takes about 2-3 hits with good gear from rank A on, about one with
+    // perfect gear; early ranks stay quick. Kills give sqrt(this) more XP and
+    // shadows deal sqrt(this) more damage, so they keep up.
+    enemyHpRank: [1, 1.3, 1.8, 2.6, 3.6, 4.6, 4.4, 5, 4.8, 4.4],
     // The hunter from levels alone: damage x6 and health x8 per rank. Enemies
     // grow x10, so gear, stat points and the army must close the gap.
     playerRank: 6,
@@ -164,8 +210,8 @@ export const CONFIG = {
     // Enemies above your level give more, a higher rank gives 10x.
     xpBase: 150,
     xpPerLevel: 0.005,
-    pointsPerLevel: [3, 2, 1, 1, 0.5, 0.5], // stat points per level in rank E, D, C, B, A, S (0.5 = one every second level)
-    rankPoints: [0, 10, 12, 15, 18, 20], // stat points for reaching rank D, C, B, A, S
+    pointsPerLevel: [3, 2, 1, 1, 0.5, 0.5, 1 / 3, 1 / 3, 1 / 3, 1 / 3], // stat points per level in rank E ... M (0.5 = one every second level)
+    rankPoints: [0, 10, 12, 15, 18, 20, 22, 25, 28, 30], // stat points for reaching rank D, C, B, A, S, SS, SSS, L, M
     armyKillXp: 0.5, // share of the XP you get when one of your shadows lands the kill
     // What one stat point does. The stats decide the play style:
     //   Strength      hard hitting hunter
@@ -213,28 +259,32 @@ export const CONFIG = {
 
   // ---- items ----------------------------------------------------------------
   items: {
-    // Six rarities: common, uncommon, rare, epic, legendary, mythic.
+    // Seven rarities: common, uncommon, rare, epic, legendary, mythic, exotic.
     // Which ones drop depends on the rank of the item level: early ranks give
     // mostly common and uncommon items, legendary items start in rank D,
-    // mythic ones in rank B. A 0 means: not in this rank.
+    // mythic ones in rank B, exotic ones in rank SSS. A 0 means: not in this rank.
     rarityWeights: [
-      [60, 30, 9, 1, 0, 0], // E
-      [42, 34, 17, 6, 1, 0], // D
-      [30, 32, 23, 11, 4, 0], // C
-      [20, 27, 26, 17, 8, 2], // B
-      [12, 21, 27, 22, 13, 5], // A
-      [7, 15, 24, 27, 18, 9], // S
+      [60, 30, 9, 1, 0, 0, 0], // E
+      [42, 34, 17, 6, 1, 0, 0], // D
+      [30, 32, 23, 11, 4, 0, 0], // C
+      [20, 27, 26, 17, 8, 2, 0], // B
+      [12, 21, 27, 22, 13, 5, 0], // A
+      [7, 15, 24, 27, 18, 9, 0], // S
+      [5, 12, 22, 28, 21, 12, 0], // SS
+      [4, 10, 20, 28, 23, 13, 2], // SSS
+      [3, 8, 18, 27, 25, 15, 4], // L
+      [2, 6, 15, 26, 27, 18, 6], // M
     ],
     // luck (elites, chests, gates, Perception) multiplies the weight of
     // rarity r by (1 + luck) ^ (r * luckStep)
     luckStep: 0.6,
     // Rarity counts more than the item level: a rarer item is nearly always
     // better than a more common one from the next zone.
-    rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6], // stat factor per rarity
+    rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6, 4.8], // stat factor per rarity
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
-    upgradeCost: [2, 3, 5, 8, 14, 24], // essence per rarity, times (upgrade + 1)
-    dismantle: [1, 2, 4, 8, 18, 40], // essence per rarity
+    upgradeCost: [2, 3, 5, 8, 14, 24, 40], // essence per rarity, times (upgrade + 1)
+    dismantle: [1, 2, 4, 8, 18, 40, 90], // essence per rarity
     inventorySize: 80,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
     // one bonus per armour piece: value x (1 + bonusRarity x rarity), so a
@@ -349,6 +399,22 @@ export const CONFIG = {
       magmaBrute: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 95, damage: 11, speed: 3.9, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
       emberImp: { behavior: 'ranged', shadowRole: 'ranged', xp: 13, hp: 36, damage: 8, speed: 5, radius: 0.55, scale: 1, aggroRange: 15, attackRange: 12, attackWindup: 0.45, attackCooldown: 1.7, shotSpeed: 19, shotColor: 0xff7020 },
       cinderhound: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 52, damage: 12, speed: 5.6, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 25, chargeTime: 0.55 },
+      // ---- shattered expanse (SS)
+      shardGolem: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 100, damage: 11, speed: 3.8, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
+      prismWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 14, hp: 38, damage: 9, speed: 4.6, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.5, attackCooldown: 1.8, shotSpeed: 20, shotColor: 0xd080ff },
+      glassStalker: { behavior: 'charger', shadowRole: 'melee', xp: 14, hp: 55, damage: 12, speed: 5.6, radius: 0.8, scale: 1.05, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 26, chargeTime: 0.55 },
+      // ---- stormspire highlands (SSS)
+      stormBrute: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 105, damage: 12, speed: 3.9, radius: 1, scale: 1.2, aggroRange: 10, attackRange: 2.4, attackWindup: 0.6, attackCooldown: 1.7 },
+      voltWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 14, hp: 36, damage: 10, speed: 5, radius: 0.6, scale: 1, aggroRange: 16, attackRange: 13, attackWindup: 0.45, attackCooldown: 1.6, shotSpeed: 24, shotColor: 0x60d0ff },
+      thunderhorn: { behavior: 'charger', shadowRole: 'melee', xp: 15, hp: 60, damage: 13, speed: 5.4, radius: 0.85, scale: 1.1, aggroRange: 14, attackRange: 2, attackWindup: 0.6, attackCooldown: 2.6, chargeRange: 15, chargeSpeed: 27, chargeTime: 0.55 },
+      // ---- titans' graveyard (L)
+      boneColossus: { behavior: 'melee', shadowRole: 'tank', xp: 16, hp: 115, damage: 12, speed: 3.6, radius: 1.05, scale: 1.25, aggroRange: 10, attackRange: 2.5, attackWindup: 0.65, attackCooldown: 1.8 },
+      gravePriest: { behavior: 'ranged', shadowRole: 'healer', xp: 15, hp: 42, damage: 10, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2, shotSpeed: 16, shotColor: 0x80ff90 },
+      ribHound: { behavior: 'charger', shadowRole: 'melee', xp: 15, hp: 56, damage: 13, speed: 5.8, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.5, chargeRange: 14, chargeSpeed: 26, chargeTime: 0.55 },
+      // ---- throne of the void (M)
+      voidKnight: { behavior: 'melee', shadowRole: 'melee', xp: 17, hp: 95, damage: 14, speed: 4.4, radius: 0.9, scale: 1.15, aggroRange: 12, attackRange: 2.4, attackWindup: 0.5, attackCooldown: 1.4 },
+      voidEye: { behavior: 'ranged', shadowRole: 'ranged', xp: 16, hp: 40, damage: 11, speed: 4.8, radius: 0.65, scale: 1, aggroRange: 16, attackRange: 14, attackWindup: 0.45, attackCooldown: 1.6, shotSpeed: 22, shotColor: 0xb070ff },
+      nightmare: { behavior: 'charger', shadowRole: 'melee', xp: 16, hp: 60, damage: 14, speed: 6, radius: 0.85, scale: 1.1, aggroRange: 15, attackRange: 2, attackWindup: 0.5, attackCooldown: 2.4, chargeRange: 15, chargeSpeed: 28, chargeTime: 0.55 },
 
       // ---- gate bosses (meadow values, multiplied by their zone like everything else)
       // patterns: see bossPatterns. shadowBase = stats of the boss as a shadow.
@@ -358,6 +424,10 @@ export const CONFIG = {
       hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1000, damage: 13, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
       rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1100, damage: 13, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
       pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1200, damage: 14, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
+      crystalTyrant: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1300, damage: 15, speed: 3.8, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'volley', 'summon'], adds: 'shardGolem', shadowBase: { hp: 180, damage: 17 } },
+      stormcaller: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1300, damage: 16, speed: 4.2, radius: 1.9, scale: 2.4, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['volley', 'charge', 'nova', 'summon'], adds: 'voltWisp', shadowBase: { hp: 160, damage: 22 } },
+      titanLich: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 1450, damage: 16, speed: 3.4, radius: 2.1, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.7, attackCooldown: 1.5, patterns: ['eruption', 'slam', 'summon', 'nova'], adds: 'boneColossus', shadowBase: { hp: 190, damage: 15 } },
+      voidSovereign: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1600, damage: 18, speed: 4.4, radius: 2, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.55, attackCooldown: 1.3, patterns: ['eruption', 'nova', 'volley', 'charge', 'summon'], adds: 'voidKnight', shadowBase: { hp: 200, damage: 24 } },
     },
   },
 
@@ -490,8 +560,8 @@ export const CONFIG = {
   },
 
   sim: {
-    maxEnemies: 9000,
-    maxPacks: 1800,
+    maxEnemies: 20000,
+    maxPacks: 4000,
     activeRadius: 55, // enemies further away are not simulated
     respawnTime: 40,
     respawnMinPlayerDist: 45, // packs only respawn when the player is away
