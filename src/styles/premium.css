@@ -2153,6 +2153,13 @@ button,
   font-size: calc(var(--u) * 2.3);
   opacity: 0.65;
 }
+.ap-rank h4 em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: calc(var(--u) * 2.3);
+  color: #e8dcff;
+  margin-left: calc(var(--u) * 1);
+}
 .ap-rank h4 {
   margin: calc(var(--u) * 1.4) 0 calc(var(--u) * 0.8);
   font-size: calc(var(--u) * 2.8);

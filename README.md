@@ -195,14 +195,15 @@ HTTPS (or localhost) for offline mode and installing.
   less attractive), melee shadows that cannot get through strike from the
   second row, and healers shoot weak bolts while nobody needs healing.
   Values: src/config.js -> shadows.crowd, blockedTime, blockedReach.
-- Shadow ranks (army tab), as health and damage: Normal x0.6, Knight x0.8,
-  Elite Knight x1 (the strength shadows had before), General x1.3,
-  Commander x1.6, Marshal x2, Grand Marshal x2.5. Knight (shadow level 8) and
-  Elite Knight (level 16) are bought with essence; General (3x, level 24),
-  Commander (2x, 30), Marshal (1x, 36) and Grand Marshal (1x, 40) are titles
-  for Elite Knights that can be taken away again. Officers (General and
-  above) get a name and grow with the hunter: their strength follows the
-  hunter's level when it is higher. Values: `src/config.js` -> `shadows.ranks`.
+- Shadow ranks (army tab), as health and damage: Normal x1 (every new
+  shadow), Knight x1.35 (10x, shadow level 8), Elite Knight x1.7 (5x,
+  level 16, about the strength shadows had before ranks), General x2.2 (3x,
+  level 24), Commander x2.7 (2x, 30), Marshal x3.4 (1x, 36) and Grand Marshal
+  x4.2 (1x, 40). A rank can be taken away again (back to Normal). Every
+  shadow has an aura in the colour of its rank on the field. Officers
+  (General and above) get a name, have no level cap and level up like the
+  hunter: their strength then comes from their own level on the hunter's
+  scale. Values: `src/config.js` -> `shadows.ranks`.
 - The army tab sorts by power, level or rank and filters by rank group
   (officers, knights, normal) and role; the right side shows the selected
   shadow with promote, titles, name and dismiss, or the title overview.

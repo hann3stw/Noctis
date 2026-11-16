@@ -1,7 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
-import { playerPower, playerHpPower, enemyPower, rankOf } from '../core/levels.js';
+import { playerPower, playerHpPower, enemyPower, rankOf, hunterXpNeed } from '../core/levels.js';
 import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
@@ -316,8 +316,7 @@ export class Player {
   }
 
   xpNeed() {
-    const G = CONFIG.progression;
-    return Math.round(G.xpBase * enemyPower(this.level) * (1 + G.xpPerLevel * (this.level - 1)));
+    return hunterXpNeed(this.level);
   }
 
   addXp(amount) {

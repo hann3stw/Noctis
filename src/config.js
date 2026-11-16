@@ -577,8 +577,8 @@ export const CONFIG = {
     summonCooldown: 2, // seconds between summoning and recalling the army
     tierFactor: [1, 1.8, 2.6, 4], // stat factor: normal, elite, champion, boss
 
-    hpFactor: 1.4, // shadow stats relative to the enemy it was raised from
-    damageFactor: 1.5,
+    hpFactor: 0.84, // shadow stats relative to the enemy it was raised from (rank Normal)
+    damageFactor: 0.9,
     scale: 0.95,
     followSpeed: 10.5,
     combatSpeedFactor: 1.25, // relative to the enemy's own speed
@@ -613,23 +613,21 @@ export const CONFIG = {
     revive: { cooldown: 12, cooldownPerLevel: 1, cost: 6, costPerLevel: 2 },
 
     // Ranks of shadows, given in the army tab. mult = health and damage
-    // (Elite Knight = the strength shadows had before ranks existed).
-    // Knight and Elite Knight are bought one after the other with essence
-    // (cost x rankCostGrowth ^ rank of the shadow's zone) and need a shadow
-    // level. General and above are titles: only max of each, they need an
-    // Elite Knight of that level, can be taken away again, carry a name and
-    // grow with the hunter (their strength follows the hunter's level when
-    // it is higher than their own).
+    // (Elite Knight is about as strong as shadows were before ranks).
+    // Every rank above Normal has a limited number (max) and needs a shadow
+    // level; a rank can be taken away again. Officers (General and above)
+    // carry a name, have no level cap and level up like the hunter: their
+    // strength then comes from their own level on the hunter's scale.
+    // color = aura on the field and in the army tab.
     ranks: [
-      { id: 'normal', mult: 0.6 },
-      { id: 'knight', mult: 0.8, level: 8, cost: 30 },
-      { id: 'eliteKnight', mult: 1, level: 16, cost: 90 },
-      { id: 'general', mult: 1.3, level: 24, max: 3 },
-      { id: 'commander', mult: 1.6, level: 30, max: 2 },
-      { id: 'marshal', mult: 2, level: 36, max: 1 },
-      { id: 'grandMarshal', mult: 2.5, level: 40, max: 1 },
+      { id: 'normal', mult: 1, color: 0xb8b8c8 },
+      { id: 'knight', mult: 1.35, level: 8, max: 10, color: 0x7fb8ff },
+      { id: 'eliteKnight', mult: 1.7, level: 16, max: 5, color: 0x5cf0c8 },
+      { id: 'general', mult: 2.2, level: 24, max: 3, officer: true, color: 0xffd870 },
+      { id: 'commander', mult: 2.7, level: 30, max: 2, officer: true, color: 0xffa040 },
+      { id: 'marshal', mult: 3.4, level: 36, max: 1, officer: true, color: 0xff6a8a },
+      { id: 'grandMarshal', mult: 4.2, level: 40, max: 1, officer: true, color: 0xe8a0ff },
     ],
-    rankCostGrowth: 1.6,
     nameMaxLength: 20,
 
     // Elite, champion and boss shadows get an ability of their role.

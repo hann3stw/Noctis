@@ -4,7 +4,7 @@
 // either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { enemyPower, rankHp, rankOf } from '../core/levels.js';
+import { enemyPower, rankHp, hunterXpNeed } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
@@ -15,6 +15,28 @@ export const BEHAVIORS = ['attack', 'guard'];
 const B_ATTACK = 0;
 const MAX_UNITS = 128;
 const MAX_VISIBLE = 64; // per type
+
+// soft round glow for the rank aura under every shadow
+function auraTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const cx = cv.getContext('2d');
+  const g = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,0.9)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  g.addColorStop(0.75, 'rgba(255,255,255,0.12)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, 128, 128);
+  // a clear ring so the colour also shows on bright ground
+  cx.strokeStyle = 'rgba(255,255,255,0.85)';
+  cx.lineWidth = 5;
+  cx.beginPath();
+  cx.arc(64, 64, 50, 0, Math.PI * 2);
+  cx.stroke();
+  return new THREE.CanvasTexture(cv);
+}
+const _ac = new THREE.Color();
 const TAU = Math.PI * 2;
 
 export class Army {
@@ -54,6 +76,22 @@ export class Army {
       this.types.push({ id: et.id, def: et.def, mesh, n: 0 });
     }
 
+    // the aura in the colour of each shadow's rank, on the ground
+    const auraGeo = new THREE.PlaneGeometry(1, 1);
+    auraGeo.rotateX(-Math.PI / 2);
+    this.aura = new THREE.InstancedMesh(auraGeo, new THREE.MeshBasicMaterial({
+      map: auraTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }), MAX_UNITS);
+    this.aura.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.aura.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_UNITS * 3).fill(1), 3);
+    this.aura.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    this.aura.frustumCulled = false;
+    this.aura.renderOrder = 2;
+    this.aura.count = 0;
+    this.auraN = 0;
+    this.time = 0;
+    game.scene.add(this.aura);
+
   }
 
   // aura tint, applied per instance on top of the near-black model
@@ -73,7 +111,7 @@ export class Army {
       if (!u) continue;
       units.push({
         type: u.type, role: u.role, tier: u.tier, zone: u.zone, plv: u.plv, level: u.level, xp: u.xp, totalXp: u.totalXp,
-        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT, rank: u.rank, nick: u.nick,
+        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT, rank: u.rank, nick: u.nick, olv: u.olv || 0, oxp: u.oxp || 0,
       });
     }
     return { units, behavior: this.behavior, out: this.out };
@@ -94,6 +132,7 @@ export class Army {
         level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
         rank: Math.max(0, Math.min(CONFIG.shadows.ranks.length - 1, d.rank | 0)),
         nick: typeof d.nick === 'string' ? d.nick.slice(0, CONFIG.shadows.nameMaxLength) : '',
+        olv: d.olv || 0, oxp: d.oxp || 0,
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
         x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
         target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
@@ -104,7 +143,7 @@ export class Army {
       this.units[slot++] = u;
     }
     this.rebuild();
-    this.checkTitles();
+    this.checkRanks();
     for (const u of this.deployed) this.recalc(u);
     // the army appears in formation around the player
     for (const u of this.deployed) if (u.alive) this.placeAtHome(u, false);
@@ -144,14 +183,30 @@ export class Army {
     return CONFIG.shadows.ranks[u.rank || 0];
   }
 
-  // officers (General and above) grow with the hunter
+  // officers (General and above): a name, no level cap, they level like the hunter
   isOfficer(u) {
-    return !!this.rankDef(u).max;
+    return !!this.rankDef(u).officer;
   }
 
   // the level a shadow's strength comes from
   powerLevel(u) {
-    return this.isOfficer(u) ? Math.max(u.plv, this.game.player.level) : u.plv;
+    return this.isOfficer(u) ? Math.max(u.plv, u.olv || 0) : u.plv;
+  }
+
+  // the level shown for a shadow: officers show their own (hunter scale) level
+  shownLevel(u) {
+    return this.isOfficer(u) ? this.powerLevel(u) : u.level;
+  }
+
+  // XP an officer needs for its next level (the hunter's curve)
+  officerNeed(u) {
+    return hunterXpNeed(this.powerLevel(u));
+  }
+
+  // share of the way to the next level (0..1)
+  xpShare(u) {
+    if (this.isOfficer(u)) return this.powerLevel(u) >= CONFIG.levels.maxLevel ? 1 : Math.min(1, (u.oxp || 0) / this.officerNeed(u));
+    return u.level >= CONFIG.shadows.maxLevel ? 1 : Math.min(1, u.xp / this.xpNeed(u.level, u));
   }
 
   // one number for sorting and comparing
@@ -159,59 +214,30 @@ export class Army {
     return Math.round(Math.sqrt(u.maxHp * u.dmg));
   }
 
-  // essence for the next bought rank (Knight, Elite Knight)
-  promoteCost(u) {
-    const S = CONFIG.shadows, next = S.ranks[(u.rank || 0) + 1];
-    if (!next || next.max) return 0;
-    return Math.round(next.cost * Math.pow(S.rankCostGrowth, rankOf(u.plv)));
-  }
-
-  // why the next bought rank is not possible ('' = it is)
-  promoteBlock(u) {
-    const next = CONFIG.shadows.ranks[(u.rank || 0) + 1];
-    if (!next || next.max) return 'max';
-    if (u.level < next.level) return 'level';
-    if (this.game.player.essence < this.promoteCost(u)) return 'essence';
-    return '';
-  }
-
-  promote(u) {
-    if (this.promoteBlock(u)) return false;
-    this.game.player.essence -= this.promoteCost(u);
-    u.rank = (u.rank || 0) + 1;
-    this.afterRank(u);
-    return true;
-  }
-
-  titleCount(r) {
+  rankCount(r) {
     let n = 0;
     for (const u of this.deployed) if ((u.rank || 0) === r) n++;
     return n;
   }
 
-  // why title r cannot go to this shadow ('' = it can)
-  titleBlock(u, r) {
+  // why rank r cannot go to this shadow ('' = it can)
+  rankBlock(u, r) {
     const R = CONFIG.shadows.ranks[r];
-    if (!R || !R.max) return 'none';
+    if (!R) return 'none';
     if ((u.rank || 0) === r) return 'has';
-    if ((u.rank || 0) < 2) return 'elite';
+    if (r === 0) return '';
     if (u.level < R.level) return 'level';
-    if (this.titleCount(r) >= R.max) return 'full';
+    if (this.rankCount(r) >= R.max) return 'full';
     return '';
   }
 
-  setTitle(u, r) {
-    if (this.titleBlock(u, r)) return false;
+  setRank(u, r) {
+    if (this.rankBlock(u, r)) return false;
     u.rank = r;
+    // an officer starts its own levels where its strength came from
+    if (this.isOfficer(u) && !(u.olv > 0)) { u.olv = u.plv; u.oxp = 0; }
     this.afterRank(u);
     return true;
-  }
-
-  // back to Elite Knight; the title is free again
-  removeTitle(u) {
-    if (!this.isOfficer(u)) return;
-    u.rank = 2;
-    this.afterRank(u);
   }
 
   rename(u, name) {
@@ -219,23 +245,27 @@ export class Army {
     this.version++;
   }
 
+  rankColor(u) {
+    return this.rankDef(u).color;
+  }
+
   afterRank(u) {
     this.recalc(u);
     if (u.alive) u.hp = u.maxHp;
     this.version++;
     if (u.alive && this.out) {
-      this.game.effects.burst(u.x, 1.2, u.z, 30, 0xffd870, 7, 0.24, 0.9);
-      this.game.effects.ring(u.x, u.z, 0.4, 3, 0xffd870, 0.5);
+      const c = this.rankColor(u);
+      this.game.effects.burst(u.x, 1.2, u.z, 30, c, 7, 0.24, 0.9);
+      this.game.effects.ring(u.x, u.z, 0.4, 3, c, 0.5);
     }
   }
 
-  // a broken save may hold more titles than allowed: the extra ones become Elite Knights
-  checkTitles() {
+  // a broken save may hold more of a rank than allowed: the extra ones become Normal
+  checkRanks() {
     const R = CONFIG.shadows.ranks;
-    for (let r = 0; r < R.length; r++) {
-      if (!R[r].max) continue;
+    for (let r = 1; r < R.length; r++) {
       let n = 0;
-      for (const u of this.deployed) if (u.rank === r && ++n > R[r].max) u.rank = 2;
+      for (const u of this.deployed) if (u.rank === r && ++n > R[r].max) u.rank = 0;
     }
   }
 
@@ -379,7 +409,7 @@ export class Army {
     const u = {
       slot, type, ti: this.game.enemies.typeIndex[type],
       role: role || CONFIG.enemies.types[type].shadowRole,
-      tier, zone, plv: plv || CONFIG.world.zones[zone].level, level: 1, xp: 0, totalXp: 0, stage: 0, rank: 0, nick: '',
+      tier, zone, plv: plv || CONFIG.world.zones[zone].level, level: 1, xp: 0, totalXp: 0, stage: 0, rank: 0, nick: '', olv: 0, oxp: 0,
       abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
@@ -530,8 +560,10 @@ export class Army {
     if (!this.out) return; // resting shadows learn nothing
     for (let i = 0; i < this.deployed.length; i++) {
       const u = this.deployed[i];
-      if (!u.alive || u.level >= S.maxLevel) continue;
+      if (!u.alive) continue;
       const gain = u.slot === killer ? xp : xp * S.xpShare;
+      if (this.isOfficer(u)) { this.officerXp(u, gain); continue; }
+      if (u.level >= S.maxLevel) continue;
       u.xp += gain;
       u.totalXp += gain;
       let leveled = false;
@@ -551,6 +583,25 @@ export class Army {
       if (evolved) this.game.hud.toast(t('toast.evolved', { name: this.name(u) }));
       this.version++;
     }
+  }
+
+  officerXp(u, gain) {
+    const max = CONFIG.levels.maxLevel;
+    u.totalXp += gain;
+    if (this.powerLevel(u) >= max) return;
+    if (!(u.olv > 0)) u.olv = u.plv;
+    u.oxp = (u.oxp || 0) + gain;
+    let ups = 0;
+    while (u.olv < max && u.oxp >= this.officerNeed(u)) {
+      u.oxp -= this.officerNeed(u);
+      u.olv = Math.max(u.olv, u.plv) + 1;
+      ups++;
+    }
+    if (!ups) return;
+    this.recalc(u);
+    u.hp = u.maxHp;
+    this.game.effects.burst(u.x, 1.2, u.z, 12, this.rankColor(u), 5, 0.2, 0.7);
+    this.version++;
   }
 
   // The enemy a fighter goes for: the closest one, but every shadow already on
@@ -590,6 +641,8 @@ export class Army {
     this.total = this.alive = this.ready = this.readyCost = 0;
     this.nextReady = 0;
     for (let t2 = 0; t2 < this.types.length; t2++) this.types[t2].n = 0;
+    this.auraN = 0;
+    this.time += dt;
     const out = this.out;
     // how many shadows are on each enemy (spreads the army over the enemies)
     const claims = this.claims;
@@ -811,6 +864,7 @@ export class Army {
       const dx = u.x - P.x, dz = u.z - P.z;
       if (dx * dx + dz * dz > renderR2) continue;
       this.draw(u);
+      this.drawAura(u);
       const rise = u.riseT > 0 ? u.riseT : 0;
       fx.blob(u.x, u.z, u.radius * (1.1 + rise * 1.6));
       if (rise > 0) {
@@ -820,6 +874,12 @@ export class Army {
       }
     }
 
+    this.aura.count = this.auraN;
+    this.aura.visible = this.auraN > 0;
+    if (this.auraN > 0) {
+      this.aura.instanceMatrix.needsUpdate = true;
+      this.aura.instanceColor.needsUpdate = true;
+    }
     for (let t2 = 0; t2 < this.types.length; t2++) {
       const ty = this.types[t2];
       ty.mesh.count = ty.n;
@@ -830,6 +890,23 @@ export class Army {
       }
     }
 
+  }
+
+  // the rank aura: bigger and brighter for higher ranks, officers pulse
+  drawAura(u) {
+    if (this.auraN >= MAX_UNITS || u.riseT > 0) return;
+    const r = u.rank || 0, n = this.auraN++;
+    const pulse = r >= 3 ? 1 + Math.sin(this.time * 3 + u.slot) * 0.08 : 1;
+    const size = u.radius * (2.6 + r * 0.35) * pulse;
+    const a = this.aura.instanceMatrix.array, o = n * 16;
+    a[o] = size; a[o + 1] = 0; a[o + 2] = 0; a[o + 3] = 0;
+    a[o + 4] = 0; a[o + 5] = 1; a[o + 6] = 0; a[o + 7] = 0;
+    a[o + 8] = 0; a[o + 9] = 0; a[o + 10] = size; a[o + 11] = 0;
+    a[o + 12] = u.x; a[o + 13] = 0.05; a[o + 14] = u.z; a[o + 15] = 1;
+    const k = r === 0 ? 0.3 : r < 3 ? 0.9 : 1.3;
+    _ac.setHex(this.rankColor(u));
+    const c = this.aura.instanceColor.array;
+    c[n * 3] = _ac.r * k; c[n * 3 + 1] = _ac.g * k; c[n * 3 + 2] = _ac.b * k;
   }
 
   draw(u) {
@@ -853,7 +930,13 @@ export class Army {
     if (u.flash > 0) { c[k] = 2.5; c[k + 1] = 0.6; c[k + 2] = 0.8; }
     else {
       const b = 1 + u.stage * 0.45; // evolved shadows glow brighter
-      c[k] = this.tr * b; c[k + 1] = this.tg * b; c[k + 2] = this.tb * b;
+      if (u.rank > 0) {
+        _ac.setHex(this.rankColor(u));
+        const m = Math.max(_ac.r, _ac.g, _ac.b, 0.001);
+        c[k] = (0.3 + (_ac.r / m) * 0.7) * b; c[k + 1] = (0.3 + (_ac.g / m) * 0.7) * b; c[k + 2] = (0.3 + (_ac.b / m) * 0.7) * b;
+      } else {
+        c[k] = this.tr * b; c[k + 1] = this.tg * b; c[k + 2] = this.tb * b;
+      }
     }
   }
 }

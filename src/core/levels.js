@@ -33,6 +33,12 @@ export function enemyPower(level) {
   return Math.pow(L.enemyRank, r + (p - r) * L.zoneSpread);
 }
 
+// XP the hunter needs for the next level (officer shadows use it too)
+export function hunterXpNeed(level) {
+  const G = CONFIG.progression;
+  return Math.round(G.xpBase * enemyPower(level) * (1 + G.xpPerLevel * (level - 1)));
+}
+
 // extra health of normal enemies of this level (see CONFIG.levels.enemyHpRank)
 export function rankHp(level) {
   return L.enemyHpRank[rankOf(level)] || 1;

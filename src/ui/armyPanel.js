@@ -1,8 +1,8 @@
 // Army tab of the menu. Left: every shadow as a card, sorted by power, level
 // or rank and filtered by rank group and role. Right: the selected shadow
-// with its values, its rank (buy Knight / Elite Knight, give or take a title),
-// its name (officers only) and Dismiss. With nothing selected the right side
-// shows the titles and who holds them.
+// with its values, its rank (every rank has a limited number), its name
+// (officers only) and Dismiss. With nothing selected the right side shows
+// every rank and who holds it.
 import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
 import { fmt } from '../core/format.js';
@@ -15,8 +15,8 @@ function esc(s) {
 const SORTS = ['power', 'level', 'rank'];
 const GROUPS = ['all', 'officers', 'knights', 'normal'];
 const ROLES = ['all', 'tank', 'melee', 'ranged', 'healer'];
-// colour of every shadow rank
-export const SRANK_CSS = ['#b8b8c8', '#7fb8ff', '#5cf0c8', '#ffd870', '#ffa040', '#ff6a8a', '#e8a0ff'];
+// colour of every shadow rank (the same as its aura in the field)
+export const SRANK_CSS = CONFIG.shadows.ranks.map((R) => '#' + R.color.toString(16).padStart(6, '0'));
 
 export class ArmyPanel {
   constructor(game) {
@@ -56,12 +56,10 @@ export class ArmyPanel {
       this.role = target.dataset.v;
     } else if (this.locked) {
       return;
-    } else if (act === 'promote' && sel) {
-      if (army.promote(sel)) this.game.hud.toast(t('army.promoted', { name: army.name(sel), rank: t('srank.' + army.rankDef(sel).id) }));
-    } else if (act === 'title' && sel) {
-      if (army.setTitle(sel, Number(target.dataset.r))) this.game.hud.toast(t('army.promoted', { name: army.name(sel), rank: t('srank.' + army.rankDef(sel).id) }));
-    } else if (act === 'untitle' && sel) {
-      army.removeTitle(sel);
+    } else if (act === 'rank' && sel) {
+      if (army.setRank(sel, Number(target.dataset.r)) && sel.rank > 0) {
+        this.game.hud.toast(t('army.promoted', { name: army.name(sel), rank: t('srank.' + army.rankDef(sel).id) }));
+      }
     } else if (act === 'rename' && sel) {
       const input = this.el.querySelector('.ap-name input');
       if (input) army.rename(sel, input.value);
@@ -102,10 +100,10 @@ export class ArmyPanel {
     const army = this.game.army;
     const r = u.rank || 0, R = CONFIG.shadows.ranks[r];
     const state = u.alive ? t('role.' + u.role) : t('army.fallen');
-    const xp = u.level >= CONFIG.shadows.maxLevel ? 100 : Math.round((u.xp / army.xpNeed(u.level, u)) * 100);
+    const xp = Math.round(army.xpShare(u) * 100);
     return `<div class="ap-card r${r}${u.slot === this.selected ? ' sel' : ''}${u.alive ? '' : ' dead'}" data-slot="${u.slot}" style="--sc:${SRANK_CSS[r]}">
       <em>${t('srankS.' + R.id)}</em><div><b>${esc(army.name(u))}</b>
-      <small>${t('army.level', { level: u.level })} · ${RANKS[rankOf(army.powerLevel(u))]} · ${state}</small>
+      <small>${t('army.level', { level: army.shownLevel(u) })} · ${RANKS[rankOf(army.powerLevel(u))]} · ${state}</small>
       <span>${t('army.power', { n: fmt(army.power(u)) })}</span></div><i style="--p:${xp}%"></i></div>`;
   }
 
@@ -118,12 +116,12 @@ export class ArmyPanel {
     const army = this.game.army, S = CONFIG.shadows;
     const rows = S.ranks.map((R, r) => {
       let holders = '';
-      if (R.max) {
+      if (R.officer) {
         const names = army.deployed.filter((u) => u.rank === r).map((u) => esc(army.name(u)));
         while (names.length < R.max) names.push(`<i>${t('army.free')}</i>`);
         holders = `<small>${names.join(' · ')}</small>`;
       }
-      return `<div class="ap-rk" style="--sc:${SRANK_CSS[r]}"><em>${t('srankS.' + R.id)}</em><div><b>${t('srank.' + R.id)}${R.max ? ` <u>${army.titleCount(r)}/${R.max}</u>` : ''}</b>
+      return `<div class="ap-rk" style="--sc:${SRANK_CSS[r]}"><em>${t('srankS.' + R.id)}</em><div><b>${t('srank.' + R.id)}${R.max ? ` <u>${army.rankCount(r)}/${R.max}</u>` : ''}</b>
         <small>${t('army.mult', { v: R.mult })}${R.level ? ' · ' + t('army.level', { level: R.level }) : ''}</small>${holders}</div></div>`;
     }).join('');
     return `<h3>${t('army.overview')}</h3><div class="d-rows" data-scroll="apd"><p class="ap-hint">${t('army.overviewHint')}</p>${rows}
@@ -133,38 +131,27 @@ export class ArmyPanel {
   detail(u) {
     const army = this.game.army, S = CONFIG.shadows, P = this.game.player;
     const r = u.rank || 0, R = S.ranks[r];
-    const xp = u.level >= S.maxLevel ? 100 : Math.round((u.xp / army.xpNeed(u.level, u)) * 100);
+    const xp = Math.round(army.xpShare(u) * 100);
+    const officer = army.isOfficer(u);
     const row = (k, v) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
     const rows = [
       row(t('army.powerL'), fmt(army.power(u))),
       row(t('army.health'), fmt(u.maxHp)),
       row(t('army.damage'), fmt(u.dmg)),
       row(t('army.role'), t('role.' + u.role)),
-      row(t('army.levelL'), `${u.level} <small>${t('army.xp', { p: xp })}</small>`),
+      row(t('army.levelL'), `${army.shownLevel(u)} <small>${t('army.xp', { p: xp })}${officer ? ' · ' + t('army.noCap') : ''}</small>`),
       row(t('army.strength'), `${t('army.level', { level: army.powerLevel(u) })} · ${RANKS[rankOf(army.powerLevel(u))]}`),
     ];
-    // rank: buy the next one, or titles for Elite Knights and officers
-    const next = S.ranks[r + 1];
-    let rank = '';
-    if (next && !next.max) {
-      const block = army.promoteBlock(u), cost = army.promoteCost(u);
-      const why = block === 'level' ? t('army.needLevel', { level: next.level })
-        : block === 'essence' ? t('army.needEss', { cost: fmt(cost), have: fmt(P.essence) }) : t('army.cost', { cost: fmt(cost) });
-      rank = `<button class="ap-btn wide" data-act="promote"${block || this.locked ? ' disabled' : ''}>${t('army.promote', { rank: t('srank.' + next.id) })}<small>${why}</small></button>
-        <p class="ap-hint">${t('army.titleNeedsElite')}</p>`;
-    } else {
-      const titles = S.ranks.map((T, k) => {
-        if (!T.max) return '';
-        const block = army.titleBlock(u, k);
-        const lv = block === 'level' ? ` · ${t('army.level', { level: T.level })}` : '';
-        return `<button class="seg ttl${k === r ? ' on' : ''}" style="--sc:${SRANK_CSS[k]}" data-act="title" data-r="${k}"${block && block !== 'has' || this.locked ? ' disabled' : ''}>
-          ${t('srank.' + T.id)}<small>${army.titleCount(k)}/${T.max}${lv}</small></button>`;
-      }).join('');
-      rank = `<h4>${t('army.titles')}</h4><div class="ap-titles">${titles}</div>
-        ${R.max ? `<button class="ap-btn ghost small" data-act="untitle"${this.locked ? ' disabled' : ''}>${t('army.removeTitle')}</button>` : ''}
-        <p class="ap-hint">${t('army.officerHint')}</p>`;
-    }
-    const name = R.max ? `<div class="ap-name"><input type="text" maxlength="${S.nameMaxLength}" value="${esc(u.nick || '')}" placeholder="${esc(army.name(u))}" aria-label="${t('army.name')}">
+    // rank: every rank with how many are given out; Normal takes a rank away
+    const ranks = S.ranks.map((T, k) => {
+      const block = army.rankBlock(u, k);
+      const info = k === 0 ? t('army.mult', { v: T.mult }) : `${army.rankCount(k)}/${T.max}${block === 'level' ? ' · ' + t('army.level', { level: T.level }) : ''}`;
+      return `<button class="seg ttl${k === r ? ' on' : ''}" style="--sc:${SRANK_CSS[k]}" data-act="rank" data-r="${k}"${(block && block !== 'has') || this.locked ? ' disabled' : ''}>
+        ${t('srank.' + T.id)}<small>${info}</small></button>`;
+    }).join('');
+    const rank = `<h4>${t('army.rank')} <em>${t('army.mult', { v: R.mult })}</em></h4><div class="ap-titles">${ranks}</div>
+      <p class="ap-hint">${t('army.officerHint')}</p>`;
+    const name = officer ? `<div class="ap-name"><input type="text" maxlength="${S.nameMaxLength}" value="${esc(u.nick || '')}" placeholder="${esc(army.name(u))}" aria-label="${t('army.name')}">
       <button class="ap-btn small" data-act="rename"${this.locked ? ' disabled' : ''}>${t('army.rename')}</button></div>` : '';
     const sub = `${t('srank.' + R.id)}${u.nick ? ' · ' + esc(t('enemy.' + u.type)) : ''}`;
     const dismiss = this.confirm
