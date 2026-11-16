@@ -199,8 +199,9 @@ HTTPS (or localhost) for offline mode and installing.
   shadow), Knight x1.35 (10x, shadow level 8), Elite Knight x1.7 (5x,
   level 16, about the strength shadows had before ranks), General x2.2 (3x,
   level 24), Commander x2.7 (2x, 30), Marshal x3.4 (1x, 36) and Grand Marshal
-  x4.2 (1x, 40). A rank can be taken away again (back to Normal). Every
-  shadow has an aura in the colour of its rank on the field. Officers
+  x4.2 (1x, 40). A rank can be taken away again (back to Normal). Elite
+  Knights get a faint glowing outline in their rank colour, officers a
+  bright pulsing one; ranks below have none. Officers
   (General and above) get a name, have no level cap and level up like the
   hunter: their strength then comes from their own level on the hunter's
   scale. Values: `src/config.js` -> `shadows.ranks`.

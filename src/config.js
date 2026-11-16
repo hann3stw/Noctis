@@ -618,7 +618,7 @@ export const CONFIG = {
     // level; a rank can be taken away again. Officers (General and above)
     // carry a name, have no level cap and level up like the hunter: their
     // strength then comes from their own level on the hunter's scale.
-    // color = aura on the field and in the army tab.
+    // color = glowing outline on the field (Elite Knight faint, officers bright) and in the army tab.
     ranks: [
       { id: 'normal', mult: 1, color: 0xb8b8c8 },
       { id: 'knight', mult: 1.35, level: 8, max: 10, color: 0x7fb8ff },

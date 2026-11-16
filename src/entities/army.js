@@ -16,27 +16,9 @@ const B_ATTACK = 0;
 const MAX_UNITS = 128;
 const MAX_VISIBLE = 64; // per type
 
-// soft round glow for the rank aura under every shadow
-function auraTexture() {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = 128;
-  const cx = cv.getContext('2d');
-  const g = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, 'rgba(255,255,255,0.9)');
-  g.addColorStop(0.45, 'rgba(255,255,255,0.45)');
-  g.addColorStop(0.75, 'rgba(255,255,255,0.12)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  cx.fillStyle = g;
-  cx.fillRect(0, 0, 128, 128);
-  // a clear ring so the colour also shows on bright ground
-  cx.strokeStyle = 'rgba(255,255,255,0.85)';
-  cx.lineWidth = 5;
-  cx.beginPath();
-  cx.arc(64, 64, 50, 0, Math.PI * 2);
-  cx.stroke();
-  return new THREE.CanvasTexture(cv);
-}
 const _ac = new THREE.Color();
+// the glowing outline: a slightly bigger copy of the body, drawn from the inside
+const GLOW_SIZE = 1.1;
 const TAU = Math.PI * 2;
 
 export class Army {
@@ -73,24 +55,20 @@ export class Army {
       const a = mesh.instanceMatrix.array;
       for (let i = 0; i < MAX_VISIBLE; i++) a[i * 16 + 15] = 1;
       game.scene.add(mesh);
-      this.types.push({ id: et.id, def: et.def, mesh, n: 0 });
+      // rank aura: the same body a bit bigger, only its back faces, glowing
+      const glow = new THREE.InstancedMesh(mesh.geometry, new THREE.MeshBasicMaterial({
+        side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      }), MAX_VISIBLE);
+      glow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      glow.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_VISIBLE * 3).fill(1), 3);
+      glow.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      glow.frustumCulled = false;
+      glow.count = 0;
+      game.scene.add(glow);
+      this.types.push({ id: et.id, def: et.def, mesh, n: 0, glow, g: 0 });
     }
 
-    // the aura in the colour of each shadow's rank, on the ground
-    const auraGeo = new THREE.PlaneGeometry(1, 1);
-    auraGeo.rotateX(-Math.PI / 2);
-    this.aura = new THREE.InstancedMesh(auraGeo, new THREE.MeshBasicMaterial({
-      map: auraTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    }), MAX_UNITS);
-    this.aura.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.aura.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_UNITS * 3).fill(1), 3);
-    this.aura.instanceColor.setUsage(THREE.DynamicDrawUsage);
-    this.aura.frustumCulled = false;
-    this.aura.renderOrder = 2;
-    this.aura.count = 0;
-    this.auraN = 0;
     this.time = 0;
-    game.scene.add(this.aura);
 
   }
 
@@ -640,8 +618,7 @@ export class Army {
     if (this.summonCd > 0) this.summonCd -= dt;
     this.total = this.alive = this.ready = this.readyCost = 0;
     this.nextReady = 0;
-    for (let t2 = 0; t2 < this.types.length; t2++) this.types[t2].n = 0;
-    this.auraN = 0;
+    for (let t2 = 0; t2 < this.types.length; t2++) { this.types[t2].n = 0; this.types[t2].g = 0; }
     this.time += dt;
     const out = this.out;
     // how many shadows are on each enemy (spreads the army over the enemies)
@@ -864,7 +841,6 @@ export class Army {
       const dx = u.x - P.x, dz = u.z - P.z;
       if (dx * dx + dz * dz > renderR2) continue;
       this.draw(u);
-      this.drawAura(u);
       const rise = u.riseT > 0 ? u.riseT : 0;
       fx.blob(u.x, u.z, u.radius * (1.1 + rise * 1.6));
       if (rise > 0) {
@@ -874,39 +850,22 @@ export class Army {
       }
     }
 
-    this.aura.count = this.auraN;
-    this.aura.visible = this.auraN > 0;
-    if (this.auraN > 0) {
-      this.aura.instanceMatrix.needsUpdate = true;
-      this.aura.instanceColor.needsUpdate = true;
-    }
     for (let t2 = 0; t2 < this.types.length; t2++) {
       const ty = this.types[t2];
       ty.mesh.count = ty.n;
       ty.mesh.visible = ty.n > 0;
+      ty.glow.count = ty.g;
+      ty.glow.visible = ty.g > 0;
+      if (ty.g > 0) {
+        ty.glow.instanceMatrix.needsUpdate = true;
+        ty.glow.instanceColor.needsUpdate = true;
+      }
       if (ty.n > 0) {
         ty.mesh.instanceMatrix.needsUpdate = true;
         ty.mesh.instanceColor.needsUpdate = true;
       }
     }
 
-  }
-
-  // the rank aura: bigger and brighter for higher ranks, officers pulse
-  drawAura(u) {
-    if (this.auraN >= MAX_UNITS || u.riseT > 0) return;
-    const r = u.rank || 0, n = this.auraN++;
-    const pulse = r >= 3 ? 1 + Math.sin(this.time * 3 + u.slot) * 0.08 : 1;
-    const size = u.radius * (2.6 + r * 0.35) * pulse;
-    const a = this.aura.instanceMatrix.array, o = n * 16;
-    a[o] = size; a[o + 1] = 0; a[o + 2] = 0; a[o + 3] = 0;
-    a[o + 4] = 0; a[o + 5] = 1; a[o + 6] = 0; a[o + 7] = 0;
-    a[o + 8] = 0; a[o + 9] = 0; a[o + 10] = size; a[o + 11] = 0;
-    a[o + 12] = u.x; a[o + 13] = 0.05; a[o + 14] = u.z; a[o + 15] = 1;
-    const k = r === 0 ? 0.3 : r < 3 ? 0.9 : 1.3;
-    _ac.setHex(this.rankColor(u));
-    const c = this.aura.instanceColor.array;
-    c[n * 3] = _ac.r * k; c[n * 3 + 1] = _ac.g * k; c[n * 3 + 2] = _ac.b * k;
   }
 
   draw(u) {
@@ -930,13 +889,20 @@ export class Army {
     if (u.flash > 0) { c[k] = 2.5; c[k + 1] = 0.6; c[k + 2] = 0.8; }
     else {
       const b = 1 + u.stage * 0.45; // evolved shadows glow brighter
-      if (u.rank > 0) {
-        _ac.setHex(this.rankColor(u));
-        const m = Math.max(_ac.r, _ac.g, _ac.b, 0.001);
-        c[k] = (0.3 + (_ac.r / m) * 0.7) * b; c[k + 1] = (0.3 + (_ac.g / m) * 0.7) * b; c[k + 2] = (0.3 + (_ac.b / m) * 0.7) * b;
-      } else {
-        c[k] = this.tr * b; c[k + 1] = this.tg * b; c[k + 2] = this.tb * b;
-      }
+      c[k] = this.tr * b; c[k + 1] = this.tg * b; c[k + 2] = this.tb * b;
     }
+    // rank aura: none below Elite Knight, a faint one for Elite Knights,
+    // a bright pulsing one for officers
+    const r = u.rank || 0;
+    if (r < 2 || u.riseT > 0 || ty.g >= MAX_VISIBLE) return;
+    const gn = ty.g++, ga = ty.glow.instanceMatrix.array, go = gn * 16;
+    for (let q = 0; q < 16; q++) ga[go + q] = a[o + q];
+    const gs = GLOW_SIZE + (r >= 3 ? 0.04 : 0);
+    for (const q of [0, 1, 2, 4, 5, 6, 8, 9, 10]) ga[go + q] *= gs;
+    ga[go + 13] -= 0.04 * s; // the outline reaches a little under the feet too
+    const k2 = r === 2 ? 0.08 : 0.75 + Math.sin(this.time * 4 + u.slot) * 0.2;
+    _ac.setHex(this.rankColor(u));
+    const gc = ty.glow.instanceColor.array;
+    gc[gn * 3] = _ac.r * k2; gc[gn * 3 + 1] = _ac.g * k2; gc[gn * 3 + 2] = _ac.b * k2;
   }
 }
