@@ -25,6 +25,7 @@ export class Army {
     this.deployed = []; // every shadow, rebuilt whenever the roster changes
     this.version = 0; // goes up on every roster change (for the UI)
     this.pickW = 0;
+    this.claims = new Map(); // enemy index -> shadows on it (see update)
     this.buffDamage = 0;
     this.buffT = 0;
     this.behavior = B_ATTACK;
@@ -93,7 +94,7 @@ export class Army {
         level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
         alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
         x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
-        target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0,
+        target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
         reviveT: d.reviveT || 0, riseT: 0, flash: 0, lunge: 0, phase: Math.random() * TAU, moving: false,
       };
       this.recalc(u);
@@ -276,7 +277,7 @@ export class Army {
       abT: 2, tauntT: 0,
       alive: true, hp: 1, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
       x, z, yaw: Math.random() * TAU, ox: 0, oz: 0,
-      target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0,
+      target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
       reviveT: 0, riseT: 1, flash: 0, lunge: 0, phase: Math.random() * TAU, moving: false,
     };
     this.recalc(u);
@@ -446,6 +447,27 @@ export class Army {
     }
   }
 
+  // The enemy a fighter goes for: the closest one, but every shadow already on
+  // an enemy makes it look `crowd` units further away (its own target not
+  // counted), so the army spreads over the enemies instead of piling up.
+  pickEnemy(u, ax, az, range, crowd) {
+    const E = this.game.enemies, claims = this.claims;
+    let best = -1, bs = 1e9;
+    for (let k = 0; k < E.activeCount; k++) {
+      const i = E.active[k];
+      if (!E.alive[i]) continue;
+      const hx = E.x[i] - ax, hz = E.z[i] - az;
+      const reach = range + E.radius[i];
+      if (hx * hx + hz * hz > reach * reach) continue;
+      const dx = E.x[i] - u.x, dz = E.z[i] - u.z;
+      let c = claims.get(i) || 0;
+      if (i === u.target) c--;
+      const s = Math.sqrt(dx * dx + dz * dz) + crowd * Math.max(0, c);
+      if (s < bs) { bs = s; best = i; }
+    }
+    return best;
+  }
+
   // ---- simulation -----------------------------------------------------------
   update(dt) {
     const game = this.game, P = game.player, E = game.enemies, fx = game.effects, world = game.world;
@@ -462,6 +484,15 @@ export class Army {
     this.nextReady = 0;
     for (let t2 = 0; t2 < this.types.length; t2++) this.types[t2].n = 0;
     const out = this.out;
+    // how many shadows are on each enemy (spreads the army over the enemies)
+    const claims = this.claims;
+    claims.clear();
+    if (out) {
+      for (let n = 0; n < D.length; n++) {
+        const u = D[n];
+        if (u.alive && u.target >= 0) claims.set(u.target, (claims.get(u.target) || 0) + 1);
+      }
+    }
 
     for (let n = 0; n < D.length; n++) {
       const u = D[n];
@@ -504,7 +535,9 @@ export class Army {
       let mvx = 0, mvz = 0, speed = 0;
 
       if (role.heal) {
-        // ---- healer: stays in formation and mends the most wounded ally
+        // ---- healer: mends the most wounded ally; with nobody to heal it
+        // walks into reach of the nearest enemy and shoots weak bolts
+        if (u.chase >= 0 && !E.alive[u.chase]) u.chase = -1;
         if (u.atkCd <= 0) {
           u.atkCd = 0.4;
           const r2 = role.range * role.range;
@@ -531,6 +564,22 @@ export class Army {
             u.lunge = 0.6;
             u.atkCd = role.cooldown;
             fx.burst(tx, 1.4, tz, 6, 0x5cf08a, 2.5, 0.16, 0.6);
+            u.chase = -1;
+          } else {
+            // nobody to heal: a weak bolt at the nearest enemy in reach
+            const tg = E.nearestAround(u.x, u.z, ax, az, range);
+            u.chase = tg;
+            if (tg >= 0) {
+              const dx = E.x[tg] - u.x, dz = E.z[tg] - u.z;
+              const reach = role.range + E.radius[tg];
+              if (dx * dx + dz * dz <= reach * reach) {
+                const dmg = Math.max(1, Math.round(u.dmg * dmgMult * (1 + (Math.random() * 2 - 1) * variance)));
+                game.projectiles.fire(u.x, u.z, tg, role.projectileSpeed, dmg, u.slot);
+                u.yaw = Math.atan2(dx, dz);
+                u.lunge = 1;
+                u.atkCd = role.cooldown * (0.85 + Math.random() * 0.3);
+              }
+            }
           }
         }
       } else {
@@ -547,7 +596,13 @@ export class Army {
         u.tgtT -= dt;
         if (u.tgtT <= 0 && u.windup <= 0) {
           u.tgtT = 0.3 + Math.random() * 0.2;
-          tg = E.nearestAround(u.x, u.z, ax, az, range);
+          tg = this.pickEnemy(u, ax, az, range, role.projectileSpeed ? S.crowd.ranged : S.crowd.melee);
+        }
+        if (tg !== u.target) {
+          if (u.target >= 0) claims.set(u.target, (claims.get(u.target) || 1) - 1);
+          if (tg >= 0) claims.set(tg, (claims.get(tg) || 0) + 1);
+          u.block = 0;
+          u.pd = 1e9;
         }
         u.target = tg;
 
@@ -555,20 +610,31 @@ export class Army {
           const dx = E.x[tg] - u.x, dz = E.z[tg] - u.z;
           const d = Math.sqrt(dx * dx + dz * dz) || 0.001;
           const reach = role.range + E.radius[tg] + u.radius;
+          // no closer than a moment ago although walking: others are in the way
+          if (u.windup <= 0 && d > reach * 0.9 && u.pd - d < u.speed * dt * 0.3) u.block += dt;
+          else u.block = 0;
+          u.pd = d;
+          const blocked = u.block > S.blockedTime && d <= reach + S.blockedReach;
           if (u.windup > 0) {
             u.windup -= dt;
             u.yaw = Math.atan2(dx, dz);
             if (u.windup <= 0) {
               u.lunge = 1;
               u.atkCd = role.cooldown * (0.85 + Math.random() * 0.3);
-              if (d <= reach + 1.2) {
+              if (d <= reach + S.blockedReach + 0.6) {
                 const dmg = Math.max(1, Math.round(u.dmg * dmgMult * (1 + (Math.random() * 2 - 1) * variance)));
                 if (role.projectileSpeed) game.projectiles.fire(u.x, u.z, tg, role.projectileSpeed, dmg, u.slot);
                 else E.damage(tg, dmg, dx / d, dz / d, u.slot);
               }
             }
-          } else if (d > reach * 0.9) {
+          } else if (d > reach * 0.9 && !blocked) {
             mvx = dx; mvz = dz; speed = u.speed;
+            // stuck behind others: slide sideways around the enemy
+            if (u.block > 0.1) {
+              const side = u.slot % 2 ? 1 : -1;
+              mvx = dx / d + (-dz / d) * side * 1.2;
+              mvz = dz / d + (dx / d) * side * 1.2;
+            }
           } else {
             u.yaw = Math.atan2(dx, dz);
             if (u.atkCd <= 0) u.windup = role.windup;
@@ -576,8 +642,16 @@ export class Army {
         }
       }
 
+      // a healer with nobody to heal walks into reach of its enemy
+      let chasing = false;
+      if (role.heal && u.chase >= 0) {
+        const dx = E.x[u.chase] - u.x, dz = E.z[u.chase] - u.z;
+        const reach = role.range * 0.85 + E.radius[u.chase];
+        if (dx * dx + dz * dz > reach * reach) { mvx = dx; mvz = dz; speed = u.speed; chasing = true; }
+      }
+
       // ---- nothing to fight: back into formation
-      if (u.target < 0 || role.heal) {
+      if ((u.target < 0 || role.heal) && !chasing) {
         mvx = ax + u.ox - u.x;
         mvz = az + u.oz - u.z;
         const d2 = mvx * mvx + mvz * mvz;

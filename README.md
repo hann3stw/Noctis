@@ -154,6 +154,10 @@ HTTPS (or localhost) for offline mode and installing.
 - Army size comes from Intelligence (5 slots + 1 per 2 points, plus the
   Gravecaller set). On "Attack" the army hunts enemies 14 units around you,
   +0.25 per Perception point (up to 26). Shadows grow with their own levels and evolve.
+- Shadows spread over the enemies (every shadow already on an enemy makes it
+  less attractive), melee shadows that cannot get through strike from the
+  second row, and healers shoot weak bolts while nobody needs healing.
+  Values: src/config.js -> shadows.crowd, blockedTime, blockedReach.
 - The army can be managed anywhere. When it is full and you press Arise, the
   army list opens so you can dismiss a weaker shadow and raise the strong one
   (the game is paused meanwhile, so the soul does not fade).

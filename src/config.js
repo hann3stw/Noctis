@@ -444,6 +444,14 @@ export const CONFIG = {
     attackRange: 14, // "Attack": hunts enemies this far around the player (+ Perception, see progression.stats.per)
     attackRangeMax: 26,
     guardRange: 9, // "Protect": only fights enemies this close to the player
+    // Shadows spread over the enemies: every shadow already on an enemy makes
+    // it look this much further away (melee / ranged), so a big army does not
+    // pile up on one enemy while others are free.
+    crowd: { melee: 1.8, ranged: 0.6 },
+    // a melee shadow that cannot get closer (others in the way) strikes from
+    // the second row after this many seconds, up to this far past its reach
+    blockedTime: 0.3,
+    blockedReach: 1.6,
 
     riseTime: 0.8,
     campRegen: 0.25, // share of max health per second inside the camp
@@ -476,7 +484,8 @@ export const CONFIG = {
       melee: { hp: 1.0, damage: 1.0, range: 1.9, windup: 0.3, cooldown: 1.1, threat: 1 },
       ranged: { hp: 0.7, damage: 0.9, range: 11, windup: 0.35, cooldown: 1.5, threat: 0.8, projectileSpeed: 22 },
       // healers do not attack; heal = health restored per cast
-      healer: { hp: 0.8, damage: 0, range: 9, windup: 0, cooldown: 2.5, threat: 0.6, heal: 0.1 }, // heal = share of the target's max health
+      // healers heal first and shoot weak bolts when nobody needs healing
+      healer: { hp: 0.8, damage: 0.5, range: 9, windup: 0, cooldown: 2.5, threat: 0.6, heal: 0.1, projectileSpeed: 20 }, // heal = share of the target's max health
     },
   },
 
