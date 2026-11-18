@@ -3,13 +3,16 @@
 // confirmation dialogs. Everything is rendered into #screens; clicks are
 // handled by one delegated listener (data-act attributes).
 import { CONFIG } from '../config.js';
-import { flashClass } from '../core/format.js';
+import { flashClass, fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 import { readSaveText } from '../core/storage.js';
-import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore } from '../net/online.js';
+import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore, net } from '../net/online.js';
+import { WorldStages } from './worldStages.js';
+import { Board } from './board.js';
+import { UI_ICONS } from './icons.js';
 
 import { RANKS } from '../core/levels.js';
 const HAIR_KEYS = ['short', 'spiky', 'long', 'ponytail', 'mohawk', 'swept'];
@@ -68,8 +71,15 @@ export class Screens {
     this.code = ''; // transfer code once shown
     this.setMsg = ''; // note in the online part of the settings
     this.busy = false;
+    this.stages = new WorldStages(); // 3D hunters on the world cards
+    this.stageKey = '';
+    this.board = new Board(() => { if (this.current === 'board') this.render(); }, () => flushScore());
     // typing a name or a code must not reach the game keys
-    this.el.addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') e.stopPropagation(); });
+    this.el.addEventListener('keydown', (e) => {
+      if (e.target.tagName !== 'INPUT') return;
+      e.stopPropagation();
+      if (e.key === 'Enter' && e.target.closest('.lb-name')) this.board.saveName(this.el);
+    });
     // the character in the skin editor is turned by dragging over it
     let drag = -1, lastX = 0, lastT = 0;
     this.el.addEventListener('pointerdown', (e) => {
@@ -104,14 +114,18 @@ export class Screens {
     document.body.classList.toggle('editing', name === 'editor');
     this.el.className = 'on scr-' + name;
     if (name === 'editor') this.openEditor(params);
+    if (name !== 'load') { this.stages.stop(); this.stageKey = ''; }
     if (name === 'load') this.fetchCloud();
-    if (name === 'settings') { this.code = ''; this.setMsg = ''; }
+    if (name === 'online') { this.code = ''; this.setMsg = ''; }
+    if (name === 'board') { this.board.naming = false; this.board.fetch(); }
     this.render();
     flashClass(this.el, 'enter');
   }
 
   hide() {
     if (this.current === 'editor') this.closeEditor();
+    this.stages.stop();
+    this.stageKey = '';
     this.current = null;
     this.confirmBox = null;
     document.body.classList.remove('editing');
@@ -140,8 +154,17 @@ export class Screens {
       else this.render();
       return;
     }
+    if (this.board.handle(act, this.el)) return;
     switch (act) {
       // title
+      case 'worlds': this.show('load'); break;
+      case 'board': this.show('board'); break;
+      case 'online': this.show('online', { back: this.current === 'settings' ? 'settings' : 'title', settingsBack: this.params && this.params.back }); break;
+      case 'onlineBack':
+        if (this.params.back === 'settings') this.show('settings', { back: this.params.settingsBack });
+        else this.show('title');
+        break;
+      case 'newIn': this.show('editor', { mode: 'new', slot }); break;
       case 'continue': app.continueLast(); break;
       case 'newWorld': this.show('newSlot'); break;
       case 'loadGame': this.show('load'); break;
@@ -185,7 +208,7 @@ export class Screens {
       case 'random': this.ed.look = randomLook(); this.lookChanged(); break;
       case 'edBack':
         if (this.params.mode === 'camp') app.closeEditorInCamp(null);
-        else this.show('newSlot');
+        else this.show('load');
         break;
       case 'edDone':
         if (this.params.mode === 'camp') app.closeEditorInCamp({ ...this.ed.look });
@@ -268,9 +291,10 @@ export class Screens {
     this.busy = true;
     this.code = t('set.codeLoading');
     this.render();
+    // (the page is 'online')
     try { this.code = formatCode(await transferCode()); this.setMsg = ''; } catch (_) { this.code = ''; this.setMsg = t('set.offline'); }
     this.busy = false;
-    if (this.current === 'settings') this.render();
+    if (this.current === 'online') this.render();
   }
 
   async claim() {
@@ -287,14 +311,14 @@ export class Screens {
       this.setMsg = e.message === 'invalid code' ? t('set.claimBad') : t('set.offline');
     }
     this.busy = false;
-    if (this.current === 'settings') this.render();
+    if (this.current === 'online') this.render();
   }
 
   // ---- rendering --------------------------------------------------------------
   render() {
     const views = {
       title: () => this.title(), load: () => this.load(), newSlot: () => this.newSlot(),
-      editor: () => this.editor(), settings: () => this.settingsView(), pause: () => this.pause(), travel: () => this.travel(),
+      editor: () => this.editor(), settings: () => this.settingsView(), board: () => this.boardPage(), online: () => this.onlinePage(), pause: () => this.pause(), travel: () => this.travel(),
     };
     const keepScroll = [...this.el.querySelectorAll('[data-scroll]')].map((x) => [x.dataset.scroll, x.scrollTop]);
     let html = views[this.current] ? views[this.current]() : '';
@@ -309,6 +333,12 @@ export class Screens {
       if (x) x.scrollTop = top;
     }
     if (this.current === 'editor' && this.preview) this.preview.anchor = this.el.querySelector('.ed-stage');
+    if (this.current === 'load') {
+      const els = [0, 1, 2].map((i) => this.el.querySelector(`.wc-stage[data-slot="${i}"]`));
+      const key = this.app.slots.map((x) => (x ? x.updated : 0)).join(',');
+      if (key !== this.stageKey) { this.stageKey = key; this.stages.set(this.app.slots, els); }
+      else this.stages.rebind(els);
+    }
   }
 
   header(title, back) {
@@ -350,27 +380,84 @@ export class Screens {
   title() {
     const last = this.app.lastSave();
     const cont = last
-      ? `<button class="sbtn main" data-act="continue">${t('title.continue')}<small>${esc(last.name)} · ${t('slot.rankLevel', { rank: RANKS[last.rankIndex || 0], level: (last.player && last.player.level) || 1 })}</small></button>`
-      : `<button class="sbtn main" disabled>${t('title.continue')}</button>`;
+      ? `<button class="sbtn main tm-cont" data-act="continue">${t('title.continue')}<small>${esc(last.name)} · ${t('slot.rankLevel', { rank: RANKS[last.rankIndex || 0], level: (last.player && last.player.level) || 1 })}</small></button>`
+      : `<button class="sbtn main tm-cont" data-act="worlds">${t('title.start')}<small>${t('title.noWorld')}</small></button>`;
+    const sq = (act, icon, label, extra = '') => `<button class="tm-sq" data-act="${act}">${icon}<span>${label}</span>${extra}</button>`;
+    const name = settings.hunterName ? `<small class="tm-who">${esc(settings.hunterName)}</small>` : '';
     return `<div class="title-bg"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="title">
         <div class="logo"><svg class="moon" viewBox="0 0 64 64"><path d="M40 6a26 26 0 1 0 18 44A22 22 0 1 1 40 6z" fill="currentColor"/></svg><h1>NOCTIS</h1><p>${t('title.tagline')}</p></div>
         <div class="title-menu">${cont}
-          <button class="sbtn main" data-act="newWorld">${t('title.new')}</button>
-          <button class="sbtn main" data-act="loadGame">${t('title.load')}</button>
-          <button class="sbtn main" data-act="settings">${t('title.settings')}</button>
+          <button class="sbtn main tm-worlds" data-act="worlds">${UI_ICONS.worlds}<span>${t('title.worlds')}<small>${t('title.worldsSub')}</small></span></button>
+          <div class="tm-row">
+            ${sq('board', UI_ICONS.trophy, t('title.board'))}
+            ${sq('online', UI_ICONS.cloud, t('title.online'), name)}
+            ${sq('settings', UI_ICONS.gear, t('title.settings'))}
+          </div>
         </div>
       </div>`;
   }
 
+  // Worlds: one card per slot, the 3D hunter on top, the world and its
+  // values below, then Continue. Empty slots start a new world.
+  worldCard(i) {
+    const s = this.app.slots[i];
+    if (!s) {
+      return `<div class="wcard empty"><div class="wc-empty"><b>${t('slot.title', { n: i + 1 })}</b><span>${t('slot.empty')}</span></div>
+        ${this.cloudPart(i)}
+        <button class="sbtn" data-act="newIn" data-slot="${i}">${t('wc.new')}</button>
+        <button class="sbtn ghost small" data-act="import" data-slot="${i}">${t('slot.import')}</button></div>`;
+    }
+    const level = (s.player && s.player.level) || 1;
+    const dk = CONFIG.difficulty.levels[s.difficulty] ? s.difficulty : CONFIG.difficulty.oldSaves;
+    const army = Array.isArray(s.army) ? s.army.length : (s.army && Array.isArray(s.army.units) ? s.army.units.length : 0);
+    const best = (s.abyss && s.abyss.best) || 0;
+    const last = this.app.lastSave() === s;
+    const stat = (label, v) => `<span><small>${label}</small><b>${v}</b></span>`;
+    return `<div class="wcard${last ? ' last' : ''}">
+      <div class="wc-stage" data-slot="${i}">${last ? `<em class="wc-badge">${t('wc.last')}</em>` : ''}</div>
+      <div class="wc-info">
+        <b class="wc-name">${esc(s.name)}</b>
+        <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })} · <em class="dif-${dk}">${t('diff.' + dk)}</em></span>
+        <div class="wc-stats">${stat(t('wc.abyss'), best || '–')}${stat(t('wc.shadows'), army)}${stat(t('wc.kills'), fmt(s.kills || 0))}${stat(t('wc.played'), formatPlayTime(s.playTime || 0))}</div>
+        ${this.cloudPart(i)}
+        <button class="sbtn go" data-act="load" data-slot="${i}">${t('title.continue')}</button>
+        <div class="wc-more"><button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('wc.backup')}</button>
+          <button class="sbtn danger small" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>
+      </div></div>`;
+  }
+
   load() {
-    // Backup: a world can be saved as a file and put back into an empty slot
-    const cards = [0, 1, 2].map((i) => this.slotCard(i, this.app.slots[i]
-      ? `<div class="scr-row"><button class="sbtn" data-act="load" data-slot="${i}">${t('slot.load')}</button>
-         <button class="sbtn danger" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>
-         <button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('slot.export')}</button>`
-      : `<button class="sbtn ghost small" data-act="import" data-slot="${i}">${t('slot.import')}</button>`)).join('');
-    return `<div class="scr-page">${this.header(t('title.load'), 'toTitle')}<p class="scr-hint">${this.msg || t('slot.backupHint')}</p><div class="slots">${cards}</div></div>`;
+    const cards = [0, 1, 2].map((i) => this.worldCard(i)).join('');
+    return `<div class="scr-page">${this.header(t('title.worlds'), 'toTitle')}<p class="scr-hint">${this.msg || t('worlds.hint')}</p><div class="wcards">${cards}</div></div>`;
+  }
+
+  // the leaderboard from the main menu
+  boardPage() {
+    const anyBest = this.app.slots.some((x) => x && x.abyss && x.abyss.best > 0);
+    return `<div class="scr-page">${this.header(t('board.title'), 'toTitle')}
+      <div class="board-box">${this.board.html(anyBest)}</div>
+      <div class="scr-row end"><button class="sbtn" data-act="lbRefresh"${this.board.canRefresh() ? '' : ' disabled'}>${t('lb.refresh')}</button></div></div>`;
+  }
+
+  // hunter name, cloud save and the transfer code
+  onlinePage() {
+    const toggle = (act, on) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}">${on ? t('set.on') : t('set.off')}</button>`;
+    const ok = net.status !== 'offline';
+    return `<div class="scr-page">${this.header(t('online.title'), 'onlineBack')}
+      <p class="scr-hint"><i class="net-dot${ok ? ' ok' : ''}"></i>${ok ? t('online.ok') : t('online.off')}</p>
+      <div class="set-list" data-scroll="online">
+        ${this.setMsg ? `<p class="set-msg">${esc(this.setMsg)}</p>` : ''}
+        <div class="set-row set-hunter"><div><b>${t('set.hunter')}</b><small>${t('set.hunterHint')}</small></div>
+          <div class="segs"><input type="text" maxlength="20" value="${esc(settings.hunterName)}" placeholder="${t('lb.namePh')}" autocomplete="off" aria-label="${t('set.hunter')}">
+          <button class="seg" data-act="hunterSave">${t('lb.save')}</button></div></div>
+        <div class="set-row"><div><b>${t('set.cloud')}</b><small>${t('set.cloudHint')}</small></div><div class="segs">${toggle('cloud', settings.cloudSave)}</div></div>
+        <div class="set-row"><div><b>${t('set.code')}</b><small>${t('set.codeHint')}</small></div>
+          <div class="segs">${this.code ? `<span class="set-code">${esc(this.code)}</span>` : `<button class="seg wide" data-act="codeShow">${t('set.codeShow')}</button>`}</div></div>
+        <div class="set-row set-claim"><div><b>${t('set.claim')}</b><small>${t('set.claimHint')}</small></div>
+          <div class="segs"><input type="text" maxlength="16" placeholder="${t('set.claimPh')}" autocomplete="off" autocapitalize="characters" aria-label="${t('set.claim')}">
+          <button class="seg" data-act="claim">${t('set.claimGo')}</button></div></div>
+      </div></div>`;
   }
 
   newSlot() {
@@ -400,17 +487,8 @@ export class Screens {
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>
-        <h3 class="set-sec">${t('set.online')}</h3>
-        ${this.setMsg ? `<p class="set-msg">${esc(this.setMsg)}</p>` : ''}
-        <div class="set-row set-hunter"><div><b>${t('set.hunter')}</b><small>${t('set.hunterHint')}</small></div>
-          <div class="segs"><input type="text" maxlength="20" value="${esc(settings.hunterName)}" placeholder="${t('lb.namePh')}" autocomplete="off" aria-label="${t('set.hunter')}">
-          <button class="seg" data-act="hunterSave">${t('lb.save')}</button></div></div>
-        <div class="set-row"><div><b>${t('set.cloud')}</b><small>${t('set.cloudHint')}</small></div><div class="segs">${toggle('cloud', settings.cloudSave)}</div></div>
-        <div class="set-row"><div><b>${t('set.code')}</b><small>${t('set.codeHint')}</small></div>
-          <div class="segs">${this.code ? `<span class="set-code">${esc(this.code)}</span>` : `<button class="seg wide" data-act="codeShow">${t('set.codeShow')}</button>`}</div></div>
-        <div class="set-row set-claim"><div><b>${t('set.claim')}</b><small>${t('set.claimHint')}</small></div>
-          <div class="segs"><input type="text" maxlength="16" placeholder="${t('set.claimPh')}" autocomplete="off" autocapitalize="characters" aria-label="${t('set.claim')}">
-          <button class="seg" data-act="claim">${t('set.claimGo')}</button></div></div>
+        <div class="set-row"><div><b>${t('set.online')}</b><small>${t('set.onlineHint')}</small></div>
+          <div class="segs"><button class="seg wide" data-act="online">${t('set.onlineOpen')}</button></div></div>
       </div></div>`;
   }
 

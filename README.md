@@ -277,6 +277,18 @@ HTTPS (or localhost) for offline mode and installing.
 - In the skin editor the character can be turned by dragging and is drawn at
   the full resolution of the screen.
 
+## Main menu
+
+- Continue (the world played last), Worlds, and a row with Leaderboard,
+  Online and Settings.
+- Worlds: one card per slot with the hunter in 3D on top (drawn into the game
+  canvas, see `src/ui/worldStages.js`), below it the world, rank, level,
+  difficulty, best Abyss floor, shadows, kills and play time, then Continue,
+  a backup file and Delete. Empty slots start a new world or load a file or
+  a cloud copy.
+- Online: hunter name, cloud save, transfer code (also reachable from the
+  settings).
+
 ## Online (Supabase)
 
 - Every device signs in anonymously in the background (no e-mail, no
