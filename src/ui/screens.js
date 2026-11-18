@@ -13,18 +13,22 @@ import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, fl
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
 import { UI_ICONS } from './icons.js';
+import { LOOK_OPTIONS, normLook } from '../render/models/player.js';
 
 import { RANKS } from '../core/levels.js';
-const HAIR_KEYS = ['short', 'spiky', 'long', 'ponytail', 'mohawk', 'swept'];
 const BUTTON_SIZES = [0.85, 1, 1.15, 1.3];
-const PALETTE_ROWS = [
-  ['skin', 'skin'],
-  ['hair', 'hair'],
-  ['eyes', 'eyes'],
-  ['clothes', 'clothes'],
-  ['capeColor', 'cape'],
-  ['aura', 'aura'],
-];
+// The skin editor: one tab per part of the hunter. A row is a colour
+// ('c', look key, palette) or a choice ('o', look key from LOOK_OPTIONS).
+const ED_TABS = {
+  body: [['c', 'skin', 'skin'], ['o', 'build'], ['o', 'height']],
+  face: [['c', 'eyes', 'eyes'], ['o', 'eyeShape'], ['o', 'mark'], ['o', 'facialHair'], ['o', 'accessory']],
+  hair: [['o', 'hairStyle'], ['c', 'hair', 'hair']],
+  outfit: [['o', 'outfit'], ['c', 'clothes', 'clothes'], ['c', 'accent', 'accent'], ['c', 'pants', 'pants'], ['c', 'leather', 'leather']],
+  cape: [['o', 'capeStyle'], ['c', 'capeColor', 'cape']],
+  aura: [['o', 'auraStyle'], ['c', 'aura', 'aura']],
+};
+const ED_FACE = { face: 1, hair: 1 }; // tabs where the camera moves in on the head
+const GLOW_KEYS = { eyes: 1, aura: 1 };
 
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const diffSegs = (cur) => Object.keys(CONFIG.difficulty.levels).map((k) =>
@@ -47,11 +51,17 @@ export function formatDate(ts) {
 function randomLook() {
   const P = CONFIG.palettes;
   const pick = (a) => a[(Math.random() * a.length) | 0];
-  return {
-    skin: pick(P.skin), hair: pick(P.hair), hairStyle: (Math.random() * CONFIG.hairStyles) | 0,
-    eyes: pick(P.eyes), clothes: pick(P.clothes), cape: Math.random() < 0.75,
-    capeColor: pick(P.cape), aura: pick(P.aura),
-  };
+  const opt = (k) => (Math.random() * LOOK_OPTIONS[k].length) | 0;
+  // the plainer choices come up more often
+  const maybe = (k, chance) => (Math.random() < chance ? opt(k) : 0);
+  return normLook({
+    skin: pick(P.skin), hair: pick(P.hair), eyes: pick(P.eyes), clothes: pick(P.clothes),
+    accent: pick(P.accent), pants: pick(P.pants), leather: pick(P.leather), capeColor: pick(P.cape), aura: pick(P.aura),
+    build: opt('build'), height: opt('height'), hairStyle: opt('hairStyle'), eyeShape: maybe('eyeShape', 0.5),
+    mark: maybe('mark', 0.45), facialHair: maybe('facialHair', 0.4), accessory: maybe('accessory', 0.45),
+    outfit: opt('outfit'), capeStyle: Math.random() < 0.8 ? 1 + ((Math.random() * (LOOK_OPTIONS.capeStyle.length - 1)) | 0) : 0,
+    auraStyle: opt('auraStyle'),
+  });
 }
 
 export class Screens {
@@ -65,6 +75,7 @@ export class Screens {
     this.ed = null; // skin editor state
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('input', (e) => this.onInput(e));
+    this.el.addEventListener('change', (e) => { if (e.target.dataset.act === 'pick' && this.ed) this.render(); });
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.msg = ''; // note on the Load Game screen (import result)
     this.cloud = null; // cloud copies by slot: { slot: { saved_at, summary } }
@@ -203,8 +214,16 @@ export class Screens {
         break;
       // editor
       case 'color': this.ed.look[b.dataset.key] = Number(v); this.lookChanged(); break;
-      case 'hairStyle': this.ed.look.hairStyle = Number(v); this.lookChanged(); break;
-      case 'cape': this.ed.look.cape = !this.ed.look.cape; this.lookChanged(); break;
+      case 'opt':
+        this.ed.look[b.dataset.key] = Number(v);
+        this.ed.look.cape = this.ed.look.capeStyle > 0;
+        this.lookChanged();
+        break;
+      case 'edTab':
+        this.ed.tab = v;
+        this.preview.focus = ED_FACE[v] ? 1 : 0;
+        this.render();
+        break;
       case 'random': this.ed.look = randomLook(); this.lookChanged(); break;
       case 'edBack':
         if (this.params.mode === 'camp') app.closeEditorInCamp(null);
@@ -260,6 +279,18 @@ export class Screens {
       if (out) out.textContent = e.target.value + '%';
     } else if (e.target.dataset.act === 'name' && this.ed) {
       this.ed.name = e.target.value;
+    } else if (e.target.dataset.act === 'pick' && this.ed) {
+      // own colour: the hunter follows the picker at once, the panel when it closes
+      this.ed.look[e.target.dataset.key] = parseInt(e.target.value.slice(1), 16);
+      const sw = e.target.closest('.sw');
+      if (sw) sw.style.setProperty('--c', e.target.value);
+      if (!this.pickQueued) {
+        this.pickQueued = true;
+        requestAnimationFrame(() => {
+          this.pickQueued = false;
+          if (this.ed && this.preview) this.preview.setLook(this.ed.look, this.ed.equip);
+        });
+      }
     }
   }
 
@@ -543,7 +574,8 @@ export class Screens {
   openEditor(params) {
     const start = params.appearance ? { ...params.appearance } : randomLook();
     this.ed = {
-      look: { ...CONFIG.defaultAppearance, ...start },
+      look: normLook({ ...CONFIG.defaultAppearance, ...start }),
+      tab: params.mode === 'new' ? 'world' : 'body',
       name: params.mode === 'new' ? t('new.defaultName', { n: params.slot + 1 }) : '',
       diff: CONFIG.difficulty.default,
       tutorial: !this.app.slots.some(Boolean), // on for the first world
@@ -551,6 +583,7 @@ export class Screens {
     };
     if (!this.preview) this.preview = new Preview();
     this.preview.setLook(this.ed.look, this.ed.equip);
+    this.preview.focus = 0;
     this.preview.start(null);
   }
 
@@ -569,27 +602,36 @@ export class Screens {
     return n || t('new.defaultName', { n: this.params.slot + 1 });
   }
 
+  // one row of the editor: colour swatches with an own colour at the end, or choices
+  edRow([kind, key, pal]) {
+    const L = this.ed.look;
+    const label = `<b>${t('ed.' + key)}</b>`;
+    if (kind === 'o') {
+      const segs = LOOK_OPTIONS[key].map((o, i) => `<button class="seg${L[key] === i ? ' on' : ''}" data-act="opt" data-key="${key}" data-v="${i}">${t('opt.' + key + '.' + o)}</button>`).join('');
+      return `<div class="ed-row">${label}<div class="segs wrap">${segs}</div></div>`;
+    }
+    const P = CONFIG.palettes[pal], cur = L[key];
+    const glow = GLOW_KEYS[key] ? ' glow' : '';
+    const sw = P.map((c) => `<button class="sw${cur === c ? ' on' : ''}${glow}" style="--c:${hex(c)}" data-act="color" data-key="${key}" data-v="${c}" aria-label="${hex(c)}"></button>`).join('');
+    const own = !P.includes(cur);
+    const pick = `<label class="sw pick${own ? ' on' : ''}${glow}" style="--c:${hex(cur)}" title="${t('ed.own')}"><input type="color" data-act="pick" data-key="${key}" value="${hex(cur)}" aria-label="${t('ed.own')}"></label>`;
+    const off = key === 'capeColor' && !L.capeStyle;
+    return `<div class="ed-row">${label}<div class="sws${off ? ' off' : ''}">${sw}${pick}</div></div>`;
+  }
+
   editor() {
-    const L = this.ed.look, P = CONFIG.palettes, isNew = this.params.mode === 'new';
-    const rows = PALETTE_ROWS.map(([key, pal]) => {
-      const sw = P[pal].map((c) => `<button class="sw${L[key] === c ? ' on' : ''}${pal === 'eyes' || pal === 'aura' ? ' glow' : ''}" style="--c:${hex(c)}" data-act="color" data-key="${key}" data-v="${c}" aria-label="${hex(c)}"></button>`).join('');
-      const extra = key === 'capeColor'
-        ? `<button class="seg${L.cape ? ' on' : ''}" data-act="cape">${L.cape ? t('set.on') : t('set.off')}</button>`
-        : '';
-      const hair = key === 'hair'
-        ? `<div class="ed-row"><b>${t('ed.hairStyle')}</b><div class="segs wrap">${HAIR_KEYS.map((h, i) => `<button class="seg${L.hairStyle === i ? ' on' : ''}" data-act="hairStyle" data-v="${i}">${t('hair.' + h)}</button>`).join('')}</div></div>`
-        : '';
-      return `<div class="ed-row"><b>${t('ed.' + key)}${extra}</b><div class="sws${key === 'capeColor' && !L.cape ? ' off' : ''}">${sw}</div></div>${hair}`;
-    }).join('');
-    const name = isNew
+    const isNew = this.params.mode === 'new', tab = this.ed.tab;
+    const tabs = (isNew ? ['world'] : []).concat(Object.keys(ED_TABS)).map((k) => `<button class="seg${tab === k ? ' on' : ''}" data-act="edTab" data-v="${k}">${t('edtab.' + k)}</button>`).join('');
+    const rows = tab === 'world'
       ? `<label class="ed-name"><b>${t('new.name')}</b><input type="text" data-act="name" maxlength="${CONFIG.save.nameMaxLength}" value="${esc(this.ed.name)}" autocomplete="off" spellcheck="false"></label>
         <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small></div>
         <div class="ed-tut"><b>${t('new.tutorial')}</b><button class="seg${this.ed.tutorial ? ' on' : ''}" data-act="tutorial">${this.ed.tutorial ? t('set.on') : t('set.off')}</button><small>${t('new.tutorialHint')}</small></div>`
-      : '';
+      : ED_TABS[tab].map((r) => this.edRow(r)).join('');
     return `<div class="ed">
       <div class="ed-stage"><h2>${isNew ? t('new.title2') : t('ed.title')}</h2><p><b>↔ ${t('ed.rotate')}</b><br>${t('ed.note')}</p></div>
-      <div class="ed-panel">${name}
-        <div class="ed-opts" data-scroll="ed">${rows}</div>
+      <div class="ed-panel">
+        <div class="ed-tabs">${tabs}</div>
+        <div class="ed-opts" data-scroll="ed-${tab}">${rows}</div>
         <div class="scr-row ed-bar">
           <button class="sbtn ghost" data-act="edBack">${isNew ? t('menu.back') : t('confirm.cancel')}</button>
           <button class="sbtn" data-act="random">${t('ed.random')}</button>

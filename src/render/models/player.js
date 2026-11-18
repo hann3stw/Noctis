@@ -308,14 +308,65 @@ function buildWeapon(type, glow) {
   return g;
 }
 
+function dispose(group) {
+  group.traverse((o) => {
+    if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
+  });
+}
+
+// ---- the look of the hunter ----------------------------------------------------
+// Every option of the skin editor. The index of an entry is what is saved; the
+// name is the key of its label (strings: 'opt.<option>.<name>'). New entries
+// only ever go to the end, so saved looks stay the same.
+export const LOOK_OPTIONS = {
+  build: ['slim', 'normal', 'broad'],
+  height: ['short', 'normal', 'tall'],
+  hairStyle: ['short', 'spiky', 'long', 'ponytail', 'mohawk', 'swept', 'buzz', 'bun', 'braid', 'wild', 'undercut', 'twintails'],
+  facialHair: ['none', 'stubble', 'goatee', 'beard', 'moustache'],
+  eyeShape: ['normal', 'sharp', 'large', 'slit', 'visor'],
+  mark: ['none', 'scar', 'paint', 'runes', 'freckles', 'patch'],
+  accessory: ['none', 'earrings', 'headband', 'horns', 'halo', 'mask', 'circlet'],
+  outfit: ['tunic', 'coat', 'hoodie', 'vest', 'robe', 'jacket'],
+  capeStyle: ['none', 'cape', 'long', 'tattered', 'scarf', 'mantle'],
+  auraStyle: ['ring', 'double', 'runes', 'flames', 'orbs'],
+};
+const LOOK_DEFAULT = { build: 1, height: 1 };
+const LEATHER = 0x18161f;
+
+const shade = (hex, k) => new THREE.Color(hex).multiplyScalar(k).getHex();
+const mix = (a, b, k) => new THREE.Color(a).lerp(new THREE.Color(b), k).getHex();
+
+// A complete look: fills in what older saves do not have yet, so a hunter
+// made before an option existed looks exactly as before.
+export function normLook(a) {
+  const L = { ...a };
+  for (const k in LOOK_OPTIONS) {
+    const n = Number(L[k]);
+    L[k] = Number.isInteger(n) && n >= 0 && n < LOOK_OPTIONS[k].length ? n : (LOOK_DEFAULT[k] || 0);
+  }
+  if (a.capeStyle == null) L.capeStyle = a.cape === false ? 0 : 1;
+  L.cape = L.capeStyle > 0;
+  const second = shade(L.clothes, 0.62); // collar, cuffs and trousers of older looks
+  if (L.accent == null) L.accent = second;
+  if (L.pants == null) L.pants = second;
+  if (L.leather == null) L.leather = LEATHER;
+  return L;
+}
+
 // ---- hairstyles (head centre at the origin, head is 0.5 units wide) -----------
-// 0 short, 1 spiky, 2 long, 3 ponytail, 4 mohawk, 5 swept fringe
 function buildHair(style, m) {
   const g = new THREE.Group();
-  const add = (w, h, d, x, y, z, rx = 0, rz = 0) => {
+  const add = (w, h, d, x, y, z, rx = 0, rz = 0, ry = 0) => {
     const b = mesh(w, h, d, m, x, y, z);
-    b.rotation.set(rx, 0, rz);
+    b.rotation.set(rx, ry, rz);
     g.add(b);
+    return b;
+  };
+  const spike = (r, h, x, y, z, rx, rz) => {
+    const s = new THREE.Mesh(new THREE.ConeGeometry(r, h, 4), m);
+    s.position.set(x, y, z);
+    s.rotation.set(rx, 0, rz);
+    g.add(s);
   };
   if (style === 4) {
     // mohawk: shaved sides, one tall strip
@@ -323,17 +374,29 @@ function buildHair(style, m) {
     add(0.14, 0.18, 0.18, 0, 0.3, -0.3);
     return g;
   }
+  if (style === 6) {
+    // buzz cut: a thin layer only
+    add(0.52, 0.08, 0.52, 0, 0.27, 0);
+    add(0.52, 0.34, 0.05, 0, 0.08, -0.24);
+    add(0.05, 0.2, 0.36, 0.25, 0.14, -0.06);
+    add(0.05, 0.2, 0.36, -0.25, 0.14, -0.06);
+    return g;
+  }
+  if (style === 10) {
+    // undercut: thin sides, a long top swept to one side
+    add(0.52, 0.3, 0.05, 0, 0.1, -0.24);
+    add(0.05, 0.18, 0.4, 0.25, 0.14, -0.04);
+    add(0.05, 0.18, 0.4, -0.25, 0.14, -0.04);
+    add(0.5, 0.16, 0.58, 0.02, 0.32, 0, 0.12, -0.12);
+    add(0.3, 0.12, 0.16, 0.12, 0.3, 0.26, 0.5, -0.35);
+    return g;
+  }
   add(0.56, 0.2, 0.56, 0, 0.28, -0.02); // top
   if (style === 0) {
     add(0.56, 0.4, 0.16, 0, 0.05, -0.24);
   } else if (style === 1) {
     add(0.56, 0.34, 0.16, 0, 0.1, -0.24);
-    for (let i = 0; i < 5; i++) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.32, 4), m);
-      spike.position.set(-0.2 + i * 0.1, 0.48, -0.05 + (i % 2) * 0.12);
-      spike.rotation.z = (i - 2) * -0.25;
-      g.add(spike);
-    }
+    for (let i = 0; i < 5; i++) spike(0.1, 0.32, -0.2 + i * 0.1, 0.48, -0.05 + (i % 2) * 0.12, 0, (i - 2) * -0.25);
   } else if (style === 2) {
     add(0.58, 0.9, 0.18, 0, -0.18, -0.24);
     add(0.1, 0.62, 0.42, 0.29, -0.04, -0.04);
@@ -342,6 +405,32 @@ function buildHair(style, m) {
     add(0.56, 0.36, 0.16, 0, 0.08, -0.24);
     add(0.14, 0.14, 0.14, 0, 0.12, -0.36);
     add(0.13, 0.6, 0.13, 0, -0.2, -0.42, 0.25);
+  } else if (style === 7) {
+    // bun on top of the head
+    add(0.56, 0.36, 0.14, 0, 0.08, -0.24);
+    add(0.24, 0.2, 0.24, 0, 0.44, -0.12, 0.3);
+    add(0.16, 0.08, 0.16, 0, 0.56, -0.1, 0.3);
+  } else if (style === 8) {
+    // one long braid down the back
+    add(0.56, 0.38, 0.14, 0, 0.07, -0.24);
+    for (let i = 0; i < 5; i++) {
+      const s = 0.15 - i * 0.015;
+      add(s, 0.15, s, 0, -0.1 - i * 0.14, -0.33 - i * 0.02, 0.15, i % 2 ? 0.2 : -0.2);
+    }
+  } else if (style === 9) {
+    // wild: big, untamed spikes in every direction
+    add(0.6, 0.42, 0.18, 0, 0.06, -0.25);
+    const tips = [[-0.24, 0.42, 0.05, 0.6], [-0.1, 0.5, -0.05, 0.2], [0.06, 0.52, 0.06, -0.2], [0.2, 0.46, -0.06, -0.55],
+      [0.32, 0.2, -0.05, -1.3], [-0.32, 0.2, -0.05, 1.3], [0, 0.36, -0.36, 0], [0.18, 0.3, 0.24, -0.5]];
+    tips.forEach(([x, y, z, rz], i) => spike(0.11, 0.38, x, y, z, i === 6 ? -1.2 : i === 7 ? 0.9 : 0, rz));
+  } else if (style === 11) {
+    // two tails at the sides
+    add(0.56, 0.36, 0.16, 0, 0.08, -0.24);
+    for (const s of [1, -1]) {
+      add(0.12, 0.12, 0.12, s * 0.3, 0.16, -0.12);
+      add(0.15, 0.62, 0.15, s * 0.4, -0.18, -0.14, 0, s * 0.22);
+      add(0.11, 0.2, 0.11, s * 0.47, -0.54, -0.14, 0, s * 0.3);
+    }
   } else {
     // swept fringe over one eye
     add(0.56, 0.4, 0.16, 0, 0.05, -0.24);
@@ -351,50 +440,230 @@ function buildHair(style, m) {
   return g;
 }
 
-function dispose(group) {
-  group.traverse((o) => {
-    if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
-  });
+// beard and moustache (head space)
+function buildFacialHair(style, m, stubble) {
+  const g = new THREE.Group();
+  if (style === 1) g.add(mesh(0.44, 0.16, 0.03, stubble, 0, -0.16, 0.245));
+  if (style === 2) {
+    g.add(mesh(0.14, 0.14, 0.08, m, 0, -0.26, 0.22));
+    g.add(mesh(0.2, 0.04, 0.04, m, 0, -0.1, 0.262));
+  }
+  if (style === 3) {
+    g.add(mesh(0.54, 0.2, 0.12, m, 0, -0.2, 0.2));
+    g.add(mesh(0.34, 0.14, 0.12, m, 0, -0.34, 0.19));
+    g.add(mesh(0.06, 0.3, 0.32, m, 0.27, -0.06, 0.06));
+    g.add(mesh(0.06, 0.3, 0.32, m, -0.27, -0.06, 0.06));
+    g.add(mesh(0.24, 0.05, 0.04, m, 0, -0.1, 0.27));
+  }
+  if (style === 4) {
+    g.add(mesh(0.26, 0.05, 0.05, m, 0, -0.1, 0.265));
+    g.add(mesh(0.05, 0.1, 0.04, m, 0.13, -0.15, 0.262));
+    g.add(mesh(0.05, 0.1, 0.04, m, -0.13, -0.15, 0.262));
+  }
+  return g;
 }
 
-const shade = (hex, k) => new THREE.Color(hex).multiplyScalar(k).getHex();
+// eyes, brows and mouth (head space); the eyes glow in their colour
+function buildFace(g, shape, M) {
+  const eye = (x, w, h, rz = 0) => {
+    const e = mesh(w, h, 0.04, M.eyes, x, 0.02, 0.26);
+    e.rotation.z = rz;
+    g.add(e);
+  };
+  let brow = 0;
+  if (shape === 4) {
+    // visor: one glowing band
+    g.add(mesh(0.4, 0.06, 0.04, M.eyes, 0, 0.02, 0.26));
+    g.add(mesh(0.44, 0.03, 0.03, M.dark, 0, 0.065, 0.262));
+  } else {
+    for (const s of [1, -1]) {
+      if (shape === 1) { eye(s * 0.12, 0.12, 0.045, s * 0.22); brow = 0.28; }
+      else if (shape === 2) eye(s * 0.12, 0.11, 0.11);
+      else eye(s * 0.12, 0.1, shape === 3 ? 0.08 : 0.07);
+      if (shape === 2) g.add(mesh(0.04, 0.06, 0.02, M.dark, s * 0.13, 0.01, 0.282));
+      if (shape === 3) g.add(mesh(0.025, 0.08, 0.02, M.dark, s * 0.12, 0.02, 0.282));
+    }
+  }
+  if (shape !== 4) {
+    for (const s of [1, -1]) {
+      const b = mesh(0.13, 0.03, 0.03, M.hair, s * 0.12, shape === 2 ? 0.11 : 0.09, 0.26);
+      b.rotation.z = -s * brow;
+      g.add(b);
+    }
+  }
+  g.add(mesh(0.12, 0.025, 0.03, M.dark, 0, -0.14, 0.255)); // mouth
+  g.add(mesh(0.06, 0.09, 0.05, M.skin, 0, -0.05, 0.27)); // nose
+  g.add(mesh(0.05, 0.12, 0.09, M.skin, 0.27, 0, 0)); // ears
+  g.add(mesh(0.05, 0.12, 0.09, M.skin, -0.27, 0, 0));
+}
+
+// scars, paint and the like (head space)
+function buildMark(g, mark, M) {
+  if (mark === 1) {
+    const s = mesh(0.035, 0.34, 0.02, M.scar, -0.12, 0.03, 0.258);
+    s.rotation.z = 0.35;
+    g.add(s);
+  } else if (mark === 2) {
+    for (const s of [1, -1]) {
+      g.add(mesh(0.12, 0.028, 0.02, M.accent, s * 0.15, -0.07, 0.258));
+      g.add(mesh(0.12, 0.028, 0.02, M.accent, s * 0.15, -0.115, 0.258));
+    }
+  } else if (mark === 3) {
+    const d = mesh(0.07, 0.07, 0.02, M.glow, 0, 0.17, 0.258);
+    d.rotation.z = Math.PI / 4;
+    g.add(d);
+    for (const s of [1, -1]) {
+      g.add(mesh(0.025, 0.1, 0.02, M.glow, s * 0.12, -0.08, 0.258));
+      g.add(mesh(0.025, 0.05, 0.02, M.glow, s * 0.17, -0.06, 0.258));
+    }
+  } else if (mark === 4) {
+    [[0.07, -0.05], [0.12, -0.08], [0.17, -0.05], [0.1, -0.11]].forEach(([x, y]) => {
+      g.add(mesh(0.025, 0.025, 0.02, M.scar, x, y, 0.258));
+      g.add(mesh(0.025, 0.025, 0.02, M.scar, -x, y, 0.258));
+    });
+  } else if (mark === 5) {
+    g.add(mesh(0.15, 0.13, 0.03, M.dark, 0.12, 0.02, 0.27));
+    const strap = mesh(0.54, 0.03, 0.54, M.dark, 0, 0.08, 0);
+    strap.rotation.z = -0.3;
+    g.add(strap);
+  }
+}
+
+// things worn on the head; 'top' ones are hidden under a helmet
+function buildAccessory(kind, M) {
+  const g = new THREE.Group();
+  if (kind === 1) {
+    g.add(mesh(0.04, 0.08, 0.04, M.gold, 0.28, -0.1, 0));
+    g.add(mesh(0.04, 0.08, 0.04, M.gold, -0.28, -0.1, 0));
+  } else if (kind === 2) {
+    g.add(mesh(0.6, 0.08, 0.6, M.accent, 0, 0.14, 0));
+    for (const s of [1, -1]) {
+      const t = mesh(0.07, 0.32, 0.03, M.accent, s * 0.06, -0.02, -0.32);
+      t.rotation.set(0.3, 0, s * 0.25);
+      g.add(t);
+    }
+  } else if (kind === 3) {
+    for (const s of [1, -1]) {
+      cone(g, M.horn, 0.075, 0.24, s * 0.22, 0.38, 0.02, -0.3, -s * 0.5, 6);
+      cone(g, M.horn, 0.05, 0.2, s * 0.3, 0.55, -0.06, -0.6, -s * 0.15, 6);
+    }
+  } else if (kind === 5) {
+    g.add(mesh(0.54, 0.22, 0.06, M.leather, 0, -0.15, 0.25));
+    g.add(mesh(0.4, 0.03, 0.03, M.accent, 0, -0.06, 0.282));
+  } else if (kind === 6) {
+    g.add(mesh(0.56, 0.06, 0.56, M.gold, 0, 0.17, 0));
+    for (let i = -1; i <= 1; i++) cone(g, M.gold, 0.05, i ? 0.12 : 0.18, i * 0.14, 0.27 + (i ? 0 : 0.03), 0.27, 0, 0, 4);
+    g.add(mesh(0.06, 0.06, 0.03, M.glow, 0, 0.17, 0.285));
+  }
+  return g;
+}
 
 export function createPlayerModel(appearance) {
+  const A = normLook(appearance);
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
+  const SX = [0.88, 1, 1.13][A.build], SY = [0.93, 1, 1.07][A.height];
+  body.scale.set(SX, SY, SX);
 
+  const glowMat = () => new THREE.MeshBasicMaterial({ color: A.aura });
   const mats = {
-    skin: mat(appearance.skin),
-    hair: mat(appearance.hair),
-    clothes: mat(appearance.clothes),
-    pants: mat(shade(appearance.clothes, 0.62)),
-    cape: mat(appearance.capeColor),
-    eyes: new THREE.MeshBasicMaterial({ color: appearance.eyes }),
-    boots: mat(0x18161f),
+    skin: mat(A.skin),
+    hair: mat(A.hair),
+    clothes: mat(A.clothes),
+    accent: mat(A.accent),
+    pants: mat(A.pants),
+    leather: mat(A.leather),
+    sole: mat(shade(A.leather, 0.6)),
+    cape: mat(A.capeColor),
+    lining: mat(shade(A.capeColor, 0.55)),
+    eyes: new THREE.MeshBasicMaterial({ color: A.eyes }),
     dark: mat(0x16121c),
-    buckle: mat(0xc9a24a),
+    gold: mat(0xc9a24a),
+    scar: mat(shade(A.skin, 0.62)),
+    stubble: mat(mix(A.skin, A.hair, 0.5)),
+    horn: mat(0x2a2230),
+    glow: glowMat(),
   };
+  const add = (w, h, d, m, x, y, z, rx = 0, ry = 0, rz = 0) => box(body, m, w, h, d, x, y, z, rx, ry, rz);
+  const O = A.outfit;
 
-  // torso: tunic, belt with a buckle, the hem of the tunic below it
-  body.add(mesh(0.72, 0.8, 0.42, mats.clothes, 0, 1.2, 0));
-  body.add(mesh(0.76, 0.14, 0.46, mats.boots, 0, 0.84, 0)); // belt
-  body.add(mesh(0.14, 0.1, 0.04, mats.buckle, 0, 0.84, 0.24));
-  body.add(mesh(0.74, 0.14, 0.44, mats.clothes, 0, 0.72, 0));
-  body.add(mesh(0.3, 0.1, 0.44, mats.pants, 0, 1.56, 0)); // collar
-  body.add(mesh(0.2, 0.12, 0.2, mats.skin, 0, 1.63, 0)); // neck
+  // ---- torso: shirt or coat, belt with a buckle, collar, neck
+  add(0.72, 0.8, 0.42, mats.clothes, 0, 1.2, 0);
+  add(0.76, 0.14, 0.46, O === 4 ? mats.accent : mats.leather, 0, 0.84, 0); // belt (a sash on the robe)
+  add(0.14, 0.1, 0.04, mats.gold, 0, 0.84, 0.24);
+  add(0.2, 0.12, 0.2, mats.skin, 0, 1.63, 0); // neck
+  if (O === 0) {
+    // tunic: short hem, collar
+    add(0.74, 0.14, 0.44, mats.clothes, 0, 0.72, 0);
+    add(0.3, 0.1, 0.44, mats.accent, 0, 1.56, 0);
+  } else if (O === 1) {
+    // long coat: open front, high collar, tails at the back
+    add(0.14, 0.66, 0.02, mats.accent, 0, 1.24, 0.215);
+    add(0.06, 0.06, 0.02, mats.gold, 0.1, 1.36, 0.225);
+    add(0.06, 0.06, 0.02, mats.gold, 0.1, 1.14, 0.225);
+    add(0.62, 0.22, 0.1, mats.clothes, 0, 1.66, -0.18);
+    add(0.08, 0.3, 0.03, mats.accent, 0.13, 1.44, 0.22, 0, 0, 0.35);
+    add(0.08, 0.3, 0.03, mats.accent, -0.13, 1.44, 0.22, 0, 0, -0.35);
+    add(0.74, 0.62, 0.06, mats.clothes, 0, 0.48, -0.2, -0.12);
+    add(0.06, 0.5, 0.36, mats.clothes, 0.36, 0.56, -0.04, 0, 0, 0.08);
+    add(0.06, 0.5, 0.36, mats.clothes, -0.36, 0.56, -0.04, 0, 0, -0.08);
+    add(0.26, 0.2, 0.05, mats.clothes, 0.22, 0.68, 0.2);
+    add(0.26, 0.2, 0.05, mats.clothes, -0.22, 0.68, 0.2);
+  } else if (O === 2) {
+    // hoodie: the hood lies on the back, strings and a pocket at the front
+    add(0.74, 0.14, 0.44, mats.clothes, 0, 0.72, 0);
+    add(0.52, 0.3, 0.2, mats.clothes, 0, 1.62, -0.3, 0.25);
+    add(0.4, 0.12, 0.06, mats.accent, 0, 1.62, -0.38, 0.25);
+    add(0.03, 0.2, 0.03, mats.accent, 0.08, 1.44, 0.22);
+    add(0.03, 0.2, 0.03, mats.accent, -0.08, 1.44, 0.22);
+    add(0.42, 0.18, 0.03, mats.accent, 0, 1.0, 0.215);
+  } else if (O === 3) {
+    // vest without sleeves, a shirt under it, a pad on one shoulder
+    add(0.74, 0.14, 0.44, mats.clothes, 0, 0.72, 0);
+    add(0.2, 0.7, 0.02, mats.accent, 0, 1.2, 0.215);
+    add(0.3, 0.1, 0.44, mats.accent, 0, 1.56, 0);
+    add(0.32, 0.14, 0.36, mats.leather, 0.46, 1.62, 0, 0, 0, -0.25);
+    add(0.34, 0.04, 0.38, mats.gold, 0.46, 1.56, 0, 0, 0, -0.25);
+  } else if (O === 4) {
+    // robe: long skirt, the ends of the sash hang down at the front
+    add(0.82, 0.5, 0.5, mats.clothes, 0, 0.54, 0);
+    add(0.86, 0.06, 0.54, mats.accent, 0, 0.32, 0);
+    add(0.1, 0.36, 0.03, mats.accent, 0.12, 0.62, 0.27, 0, 0, 0.08);
+    add(0.1, 0.3, 0.03, mats.accent, 0.24, 0.64, 0.27, 0, 0, -0.1);
+    add(0.5, 0.12, 0.46, mats.accent, 0, 1.58, 0);
+    add(0.16, 0.6, 0.02, mats.accent, 0, 1.22, 0.215);
+  } else {
+    // jacket with straps, a plate on one shoulder and a high collar
+    add(0.74, 0.14, 0.44, mats.clothes, 0, 0.72, 0);
+    add(0.1, 0.84, 0.04, mats.leather, 0.04, 1.22, 0.22, 0, 0, 0.62);
+    add(0.1, 0.84, 0.04, mats.leather, -0.04, 1.22, -0.22, 0, 0, -0.62);
+    add(0.08, 0.08, 0.03, mats.gold, 0.04, 1.22, 0.245);
+    add(0.38, 0.16, 0.42, mats.accent, -0.46, 1.64, 0, 0, 0, 0.3);
+    add(0.32, 0.08, 0.38, mats.accent, -0.5, 1.52, 0, 0, 0, 0.35);
+    add(0.52, 0.16, 0.48, mats.accent, 0, 1.62, -0.02);
+  }
 
   const head = new THREE.Group();
   head.position.set(0, 1.88, 0);
+  head.scale.set(1 / SX, 1 / SY, 1 / SX); // the head keeps its size on every build
   head.add(mesh(0.5, 0.5, 0.5, mats.skin, 0, 0, 0));
-  const hair = buildHair(appearance.hairStyle || 0, mats.hair);
+  const hair = buildHair(A.hairStyle, mats.hair);
   head.add(hair);
-  // face: glowing eyes, brows in the hair colour, a small mouth
-  head.add(mesh(0.1, 0.07, 0.04, mats.eyes, 0.12, 0.02, 0.26));
-  head.add(mesh(0.1, 0.07, 0.04, mats.eyes, -0.12, 0.02, 0.26));
-  head.add(mesh(0.13, 0.03, 0.03, mats.hair, 0.12, 0.09, 0.26));
-  head.add(mesh(0.13, 0.03, 0.03, mats.hair, -0.12, 0.09, 0.26));
-  head.add(mesh(0.12, 0.025, 0.03, mats.dark, 0, -0.14, 0.255));
+  buildFace(head, A.eyeShape, mats);
+  buildMark(head, A.mark, mats);
+  head.add(buildFacialHair(A.facialHair, mats.hair, mats.stubble));
+  // a halo floats above the head, everything else is worn on it
+  const worn = A.accessory === 4 ? new THREE.Group() : buildAccessory(A.accessory, mats);
+  head.add(worn);
+  let halo = null;
+  if (A.accessory === 4) {
+    halo = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.025, 6, 28),
+      new THREE.MeshBasicMaterial({ color: A.aura, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    halo.rotation.x = Math.PI / 2 - 0.25;
+    halo.position.set(0, 0.5, -0.04);
+    head.add(halo);
+  }
   body.add(head);
 
   function limb(x, y) {
@@ -403,37 +672,109 @@ export function createPlayerModel(appearance) {
     body.add(pivot);
     return pivot;
   }
-  // arms: sleeve and hand
+  // arms: sleeve (bare on the vest) and hand
   const armL = limb(0.48, 1.56), armR = limb(-0.48, 1.56);
   for (const arm of [armL, armR]) {
-    arm.add(mesh(0.2, 0.6, 0.22, mats.clothes, 0, -0.3, 0));
-    arm.add(mesh(0.22, 0.06, 0.24, mats.pants, 0, -0.58, 0));
+    if (O === 3) {
+      arm.add(mesh(0.18, 0.4, 0.2, mats.skin, 0, -0.2, 0));
+      arm.add(mesh(0.2, 0.22, 0.22, mats.leather, 0, -0.48, 0)); // bracer
+      arm.add(mesh(0.21, 0.04, 0.23, mats.gold, 0, -0.4, 0));
+    } else {
+      arm.add(mesh(0.2, 0.6, 0.22, mats.clothes, 0, -0.3, 0));
+      arm.add(mesh(0.22, 0.06, 0.24, mats.accent, 0, -0.58, 0));
+    }
     arm.add(mesh(0.17, 0.14, 0.19, mats.skin, 0, -0.67, 0));
   }
+  if (O === 4) for (const arm of [armL, armR]) arm.add(mesh(0.26, 0.2, 0.28, mats.clothes, 0, -0.5, 0)); // wide sleeves
   // legs: trousers and boots
   const legL = limb(0.19, 0.8), legR = limb(-0.19, 0.8);
   for (const leg of [legL, legR]) {
     leg.add(mesh(0.26, 0.5, 0.28, mats.pants, 0, -0.25, 0));
-    leg.add(mesh(0.28, 0.32, 0.32, mats.boots, 0, -0.64, 0.02));
+    leg.add(mesh(0.28, 0.32, 0.32, mats.leather, 0, -0.64, 0.02));
+    leg.add(mesh(0.3, 0.05, 0.34, mats.sole, 0, -0.78, 0.02));
+    leg.add(mesh(0.3, 0.05, 0.34, mats.sole, 0, -0.5, 0.02)); // top of the boot
   }
 
+  // ---- cape, scarf or mantle (swings on the back)
   const cape = new THREE.Group();
   cape.position.set(0, 1.58, -0.24);
-  cape.add(mesh(0.7, 1.15, 0.05, mats.cape, 0, -0.57, 0));
-  cape.add(mesh(0.76, 0.1, 0.1, mats.cape, 0, -0.02, 0.02)); // where it sits on the shoulders
-  cape.visible = appearance.cape;
+  const C = A.capeStyle;
+  const cadd = (w, h, d, m, x, y, z, rz = 0) => box(cape, m, w, h, d, x, y, z, 0, 0, rz);
+  if (C === 1) {
+    cadd(0.7, 1.15, 0.05, mats.cape, 0, -0.57, 0);
+    cadd(0.76, 0.1, 0.1, mats.cape, 0, -0.02, 0.02);
+  } else if (C === 2) {
+    // long, wide, lined in a darker shade, with a gold clasp bar
+    cadd(0.86, 1.5, 0.05, mats.cape, 0, -0.74, 0);
+    cadd(0.8, 1.44, 0.02, mats.lining, 0, -0.73, 0.035);
+    cadd(0.92, 0.14, 0.14, mats.cape, 0, -0.02, 0.03);
+    cadd(0.94, 0.04, 0.16, mats.gold, 0, 0.04, 0.03);
+  } else if (C === 3) {
+    // torn: strips of different length at the bottom
+    cadd(0.72, 0.8, 0.05, mats.cape, 0, -0.4, 0);
+    cadd(0.78, 0.1, 0.1, mats.cape, 0, -0.02, 0.02);
+    [0.42, 0.24, 0.5, 0.3, 0.46].forEach((l, i) => cadd(0.13, l, 0.04, mats.cape, -0.28 + i * 0.14, -0.8 - l / 2 + 0.02, 0, (i - 2) * 0.04));
+  } else if (C === 4) {
+    // scarf: wrapped around the neck, two tails flow behind
+    add(0.36, 0.13, 0.34, mats.cape, 0, 1.64, 0);
+    add(0.38, 0.06, 0.36, mats.lining, 0, 1.57, 0);
+    cadd(0.16, 0.75, 0.04, mats.cape, 0.1, -0.36, 0, 0.08);
+    cadd(0.14, 0.5, 0.04, mats.cape, -0.06, -0.24, 0.01, -0.12);
+  } else if (C === 5) {
+    // mantle over one shoulder
+    cadd(0.44, 0.95, 0.05, mats.cape, 0.18, -0.48, 0);
+    add(0.38, 0.16, 0.48, mats.cape, 0.4, 1.62, -0.02, 0, 0, -0.22);
+    add(0.1, 0.1, 0.04, mats.gold, 0.22, 1.56, 0.24);
+  }
+  cape.visible = C > 0;
   body.add(cape);
 
-  // faint aura on the ground in the aura colour
-  const auraGeo = new THREE.RingGeometry(0.55, 0.85, 24);
-  auraGeo.rotateX(-Math.PI / 2);
-  const aura = new THREE.Mesh(
-    auraGeo,
-    new THREE.MeshBasicMaterial({ color: appearance.aura, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }),
-  );
-  aura.position.y = 0.06;
-  aura.renderOrder = 2;
+  // ---- aura on the ground in the aura colour (plus extras by style)
+  const glowOf = (o = 0.45) => new THREE.MeshBasicMaterial({ color: A.aura, transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const flat = (geo, m, y) => {
+    geo.rotateX(-Math.PI / 2);
+    const o = new THREE.Mesh(geo, m);
+    o.position.y = y;
+    o.renderOrder = 2;
+    return o;
+  };
+  const aura = flat(new THREE.RingGeometry(0.55, 0.85, 24), glowOf(), 0.06);
   root.add(aura);
+  const auraFx = new THREE.Group(); // spins
+  root.add(auraFx);
+  const fxMat = glowOf(0.6);
+  const flames = [], orbs = [];
+  const S = A.auraStyle;
+  if (S === 1) {
+    auraFx.add(flat(new THREE.RingGeometry(0.3, 0.36, 24), fxMat, 0.065));
+    for (let i = 0; i < 6; i++) auraFx.add(flat(new THREE.RingGeometry(0.95, 1.02, 6, 1, (i / 6) * Math.PI * 2, 0.7), fxMat, 0.065));
+  } else if (S === 2) {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = flat(new THREE.PlaneGeometry(0.12, 0.12), fxMat, 0.065);
+      r.position.set(Math.cos(a) * 1.0, 0.065, Math.sin(a) * 1.0);
+      r.rotation.y = a + Math.PI / 4;
+      auraFx.add(r);
+    }
+    auraFx.add(flat(new THREE.RingGeometry(1.08, 1.11, 32), fxMat, 0.065));
+  } else if (S === 3) {
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.4, 4), fxMat);
+      f.position.set(Math.cos(a) * 0.72, 0.2, Math.sin(a) * 0.72);
+      f.renderOrder = 2;
+      flames.push(f);
+      auraFx.add(f);
+    }
+  } else if (S === 4) {
+    for (let i = 0; i < 3; i++) {
+      const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.08, 0), glowOf(0.9));
+      o.renderOrder = 2;
+      orbs.push(o);
+      auraFx.add(o);
+    }
+  }
+  let time = Math.random() * 10;
 
   // ---- equipment: rebuilt whenever it changes ---------------------------------
   let gear = []; // { group, parent }
@@ -477,6 +818,7 @@ export function createPlayerModel(appearance) {
     }
 
     hair.visible = !equip.helmet;
+    worn.visible = !equip.helmet;
     if (equip.helmet) attach(head, armorPiece('helmet', equip.helmet));
     if (equip.chest) attach(body, armorPiece('chest', equip.chest));
     if (equip.gloves) for (const arm of [armL, armR]) attach(arm, armorPiece('gloves', equip.gloves));
@@ -579,6 +921,20 @@ export function createPlayerModel(appearance) {
         body.rotation.y *= 0.6;
       }
       aura.material.opacity = st.dead ? 0 : 0.35 + Math.sin(walk * 0.3 + fall) * 0.1;
+      time += dt;
+      auraFx.visible = !st.dead;
+      auraFx.rotation.y = time * (S === 1 ? 0.6 : 0.35);
+      flames.forEach((f, i) => {
+        const k = 0.7 + 0.45 * Math.abs(Math.sin(time * 5 + i * 1.7));
+        f.scale.set(1, k, 1);
+        f.position.y = 0.2 * k;
+      });
+      orbs.forEach((o, i) => {
+        const a = -time * 1.6 + (i / 3) * Math.PI * 2;
+        o.position.set(Math.cos(a) * 0.8, 1.05 + Math.sin(time * 2 + i * 2) * 0.15, Math.sin(a) * 0.8);
+        o.rotation.y = time * 3;
+      });
+      if (halo) halo.position.y = 0.5 + Math.sin(time * 2) * 0.03;
       const flutter = st.moving ? 0.55 + Math.sin(walk * 0.7) * 0.12 : 0.1;
       cape.rotation.x += (flutter - cape.rotation.x) * 0.2;
     },

@@ -2942,3 +2942,81 @@ input.shake {
 .set-claim input[type='text'] {
   width: calc(var(--u) * 47);
 }
+
+/* ---- skin editor: tabs and own colours ---------------------------------------- */
+.ed-tabs {
+  flex: none;
+  display: flex;
+  gap: calc(var(--u) * 1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: calc(var(--u) * 1);
+  border-bottom: 1px solid var(--line);
+}
+.ed-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ed-tabs .seg {
+  flex: 1 0 auto;
+  min-height: calc(var(--u) * 8);
+  padding: 0 calc(var(--u) * 2.2);
+  white-space: nowrap;
+}
+.ed-opts {
+  animation: tab-in 0.18s ease-out;
+}
+.ed-opts > .ed-name,
+.ed-opts > .ed-diff,
+.ed-opts > .ed-tut {
+  flex: none;
+}
+.ed-row > b {
+  color: var(--gold-hi);
+  font-size: calc(var(--u) * 2.7);
+  letter-spacing: 0.04em;
+}
+.segs.wrap .seg {
+  min-height: calc(var(--u) * 7.5);
+  padding: 0 calc(var(--u) * 2);
+}
+/* own colour: a rainbow ring around the current colour, the picker lies on top */
+.sw.pick {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background:
+    radial-gradient(circle, var(--c) 0 52%, transparent 54%),
+    conic-gradient(#ff4d4d, #ffd24a, #50ff90, #30e8ff, #6b5bff, #ff60d0, #ff4d4d);
+  cursor: pointer;
+}
+.sw.pick::after {
+  content: '+';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: calc(var(--u) * 3.4);
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+.sw.pick.on::after {
+  content: '';
+}
+.sw.pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .ed-tabs .seg {
+    padding: 0 calc(var(--u) * 1.3);
+    font-size: calc(var(--u) * 2.4);
+  }
+}

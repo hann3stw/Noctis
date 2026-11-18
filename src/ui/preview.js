@@ -73,6 +73,8 @@ export class Preview {
     this.camera.position.set(0, 2.3, 8.2);
     this.camera.lookAt(0, 1.2, 0);
 
+    this.focus = 0; // 0 = whole body, 1 = close on the head
+    this.zoom = 0;
     this.model = null;
     this.yaw = 0.6;
     this.spin = SPIN; // current turning speed
@@ -173,6 +175,10 @@ export class Preview {
       const b = this.anchor.getBoundingClientRect();
       if (b.width > 0) cx = b.left + b.width / 2;
     }
+    this.zoom += (this.focus - this.zoom) * Math.min(1, dt * 6);
+    const z = this.zoom;
+    this.camera.position.set(0, 2.3 - z * 0.05, 8.2 - z * 3.7);
+    this.camera.lookAt(0, 1.2 + z * 0.8, 0);
     this.camera.aspect = w / h;
     this.camera.setViewOffset(w, h, w / 2 - cx, 0, w, h);
     this.camera.updateProjectionMatrix();
