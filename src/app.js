@@ -9,6 +9,8 @@ import { initKeyboard, setEscapeHandler } from './input/keyboard.js';
 import { sizeRenderer } from './render/renderer.js';
 import { randomSeed } from './core/rng.js';
 import { t } from './strings.js';
+import { CloudSync } from './net/cloudSync.js';
+import { ensureSession, flushScore } from './net/online.js';
 
 export class App {
   constructor(debug) {
@@ -17,6 +19,7 @@ export class App {
     this.slots = [null, null, null];
     this.uiRoot = document.getElementById('ui');
     this.screens = new Screens(this);
+    this.cloud = new CloudSync();
   }
 
   async init(params) {
@@ -36,6 +39,8 @@ export class App {
 
     keepStorage();
     this.slots = await listSlots();
+    // online in the background: sign in, send a waiting leaderboard entry
+    ensureSession().then(() => flushScore());
     // ?seed=123 starts a test world straight away (never saved); &tutorial=1 with the tutorial
     if (params.has('seed')) {
       this.launch({ slot: -1, name: 'Test', seed: Number(params.get('seed')) >>> 0, tutorial: params.has('tutorial') });
@@ -55,6 +60,8 @@ export class App {
 
   store(slot, data) {
     this.slots[slot] = data;
+    // the cloud copy follows; at once when the game goes to the background
+    this.cloud.queue(slot, data, document.hidden);
     return saveSlot(slot, data);
   }
 
@@ -151,6 +158,7 @@ export class App {
     const game = this.game;
     if (!game) return;
     await game.save();
+    if (game.slot >= 0) this.cloud.queue(game.slot, this.slots[game.slot], true);
     game.destroy();
     this.game = null;
     if (this.debug) window.__noctis = null;

@@ -13,6 +13,8 @@ export const settings = {
   swap: false, // movement on the right, buttons on the left
   showFps: false,
   lastSlot: -1, // slot of the world played last ("Continue")
+  hunterName: '', // name on the Abyss leaderboard
+  cloudSave: true, // copy of every save slot online
 };
 
 // Values of the current graphics preset, read by the game every frame.

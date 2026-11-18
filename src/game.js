@@ -31,7 +31,8 @@ import { Tutorial } from './ui/tutorial.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
-import { reportFps } from './core/settings.js';
+import { reportFps, settings } from './core/settings.js';
+import { submitScore } from './net/online.js';
 
 const _v = new THREE.Vector3();
 const _col = new THREE.Color();
@@ -148,6 +149,17 @@ export class Game {
 
     this.world.update(this.player.x, this.player.z, true);
     this.cam.snap(this.player.x, this.player.z);
+    this.submitAbyss(); // a record from before the leaderboard existed
+  }
+
+  // Sends the Abyss record to the leaderboard (waits offline or without a hunter name).
+  submitAbyss() {
+    if (this.slot < 0 || !this.abyss.best) return;
+    const P = this.player;
+    submitScore({
+      floor: this.abyss.best, level: P.level, mastery: P.mastery.lv,
+      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty,
+    }, settings.hunterName);
   }
 
   resize() {

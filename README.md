@@ -277,6 +277,28 @@ HTTPS (or localhost) for offline mode and installing.
 - In the skin editor the character can be turned by dragging and is drawn at
   the full resolution of the screen.
 
+## Online (Supabase)
+
+- Every device signs in anonymously in the background (no e-mail, no
+  password). Without internet everything still works offline.
+- Abyss leaderboard: tab "Leaderboard" in the Abyss panel. The deepest floor
+  of every hunter (top 50 and the own place), with level, rank, mastery and
+  difficulty. A new record is sent at once; offline it waits and is sent
+  later. The hunter name is chosen there or in the settings (2 to 20
+  characters, everyone sees it).
+- Cloud save (settings, on by default): every save slot is uploaded, at most
+  every 90 seconds while playing and at once when the game is left or sent
+  to the background. The local save always stays the main copy. Load Game
+  shows "Load cloud copy" when the cloud copy is newer and "Restore from
+  cloud" for an empty slot; nothing is replaced without asking.
+- Transfer code (settings): 12 characters. On a new device "Use a code" takes
+  over the worlds in the cloud and the leaderboard entry.
+- Database rules (row level security): everyone reads the leaderboard, only
+  the owner reads and writes their saves. A record cannot go down, cannot
+  jump more than 200 floors at once and cannot be sent more often than every
+  5 seconds. The schema is in `supabase/schema.sql`; the client is
+  `src/net/online.js` (plain fetch, no extra library).
+
 ## Where to change things
 
 - `src/config.js` – all balancing values (health, damage, speeds, cooldowns,

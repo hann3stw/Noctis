@@ -8,6 +8,8 @@ import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
+import { readSaveText } from '../core/storage.js';
+import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore } from '../net/online.js';
 
 import { RANKS } from '../core/levels.js';
 const HAIR_KEYS = ['short', 'spiky', 'long', 'ponytail', 'mohawk', 'swept'];
@@ -62,6 +64,12 @@ export class Screens {
     this.el.addEventListener('input', (e) => this.onInput(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.msg = ''; // note on the Load Game screen (import result)
+    this.cloud = null; // cloud copies by slot: { slot: { saved_at, summary } }
+    this.code = ''; // transfer code once shown
+    this.setMsg = ''; // note in the online part of the settings
+    this.busy = false;
+    // typing a name or a code must not reach the game keys
+    this.el.addEventListener('keydown', (e) => { if (e.target.tagName === 'INPUT') e.stopPropagation(); });
     // the character in the skin editor is turned by dragging over it
     let drag = -1, lastX = 0, lastT = 0;
     this.el.addEventListener('pointerdown', (e) => {
@@ -96,6 +104,8 @@ export class Screens {
     document.body.classList.toggle('editing', name === 'editor');
     this.el.className = 'on scr-' + name;
     if (name === 'editor') this.openEditor(params);
+    if (name === 'load') this.fetchCloud();
+    if (name === 'settings') { this.code = ''; this.setMsg = ''; }
     this.render();
     flashClass(this.el, 'enter');
   }
@@ -147,6 +157,15 @@ export class Screens {
           this.render();
         });
         break;
+      case 'cloudLoad': {
+        const c = this.cloud && this.cloud[slot];
+        if (!c) break;
+        const local = app.slots[slot];
+        if (local) {
+          this.confirm(t('confirm.cloud', { name: local.name, date: formatDate(c.saved_at) }), t('confirm.cloudYes'), () => this.loadCloud(slot));
+        } else this.loadCloud(slot);
+        break;
+      }
       case 'delete':
         this.confirm(t('confirm.delete', { name: app.slots[slot].name }), t('confirm.deleteYes'), () => app.removeSlot(slot));
         break;
@@ -184,6 +203,19 @@ export class Screens {
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
+      case 'cloud': setSetting('cloudSave', !settings.cloudSave); this.render(); break;
+      case 'hunterSave': {
+        const inp = this.el.querySelector('.set-hunter input');
+        const name = cleanName(inp ? inp.value : '');
+        if (name.length < 2) { if (inp) flashClass(inp, 'shake'); break; }
+        setSetting('hunterName', name);
+        if (app.game) app.game.submitAbyss(); else flushScore();
+        this.setMsg = '';
+        this.render();
+        break;
+      }
+      case 'codeShow': this.showCode(); break;
+      case 'claim': this.claim(); break;
       case 'setBack':
         if (this.params.back === 'pause') this.show('pause');
         else this.show('title');
@@ -206,6 +238,56 @@ export class Screens {
     } else if (e.target.dataset.act === 'name' && this.ed) {
       this.ed.name = e.target.value;
     }
+  }
+
+  // ---- cloud ---------------------------------------------------------------------
+  async fetchCloud() {
+    try {
+      const list = await cloudList();
+      this.cloud = {};
+      for (const c of list) this.cloud[c.slot] = { saved_at: Date.parse(c.saved_at), summary: c.summary || {} };
+    } catch (_) {
+      this.cloud = null;
+    }
+    if (this.current === 'load') this.render();
+  }
+
+  async loadCloud(slot) {
+    if (this.busy) return;
+    this.busy = true;
+    let save = null;
+    try { save = readSaveText(JSON.stringify(await cloudGet(slot))); } catch (_) { /* offline */ }
+    this.busy = false;
+    if (save) await this.app.store(slot, save);
+    this.msg = t(save ? 'slot.cloudDone' : 'slot.cloudFailed', { n: slot + 1 });
+    if (this.current === 'load') this.render();
+  }
+
+  async showCode() {
+    if (this.busy) return;
+    this.busy = true;
+    this.code = t('set.codeLoading');
+    this.render();
+    try { this.code = formatCode(await transferCode()); this.setMsg = ''; } catch (_) { this.code = ''; this.setMsg = t('set.offline'); }
+    this.busy = false;
+    if (this.current === 'settings') this.render();
+  }
+
+  async claim() {
+    const inp = this.el.querySelector('.set-claim input');
+    const code = inp ? inp.value.replace(/[^a-z0-9]/gi, '') : '';
+    if (code.length !== 12) { if (inp) flashClass(inp, 'shake'); return; }
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const n = await claimCode(code);
+      this.setMsg = t('set.claimOk', { n });
+      this.code = '';
+    } catch (e) {
+      this.setMsg = e.message === 'invalid code' ? t('set.claimBad') : t('set.offline');
+    }
+    this.busy = false;
+    if (this.current === 'settings') this.render();
   }
 
   // ---- rendering --------------------------------------------------------------
@@ -233,17 +315,36 @@ export class Screens {
     return `<div class="scr-head"><button class="sbtn ghost" data-act="${back}">${t('menu.back')}</button><h2>${title}</h2></div>`;
   }
 
+  // the cloud copy of a slot on the Load Game screen: offered when it is newer
+  cloudPart(i) {
+    if (this.current !== 'load' || !this.cloud) return '';
+    const c = this.cloud[i], s = this.app.slots[i];
+    if (!c) return '';
+    if (!s) {
+      const m = c.summary || {};
+      return `<div class="slot-cloud"><small>${t('slot.cloud', { date: formatDate(c.saved_at) })}</small>
+        <small>${esc(m.name || '')} · ${t('slot.rankLevel', { rank: RANKS[m.rankIndex || 0], level: m.level || 1 })}</small>
+        <button class="sbtn small" data-act="cloudLoad" data-slot="${i}">${t('slot.cloudRestore')}</button></div>`;
+    }
+    if (c.saved_at > (s.updated || 0) + 5000) {
+      return `<div class="slot-cloud newer"><small>${t('slot.cloudNewer', { date: formatDate(c.saved_at) })}</small>
+        <button class="sbtn small" data-act="cloudLoad" data-slot="${i}">${t('slot.cloudLoad')}</button></div>`;
+    }
+    return `<div class="slot-cloud ok"><small>☁ ${t('slot.cloud', { date: formatDate(c.saved_at) })}</small></div>`;
+  }
+
   slotCard(i, buttons) {
     const s = this.app.slots[i];
     if (!s) {
-      return `<div class="slot empty"><b>${t('slot.title', { n: i + 1 })}</b><span>${t('slot.empty')}</span>${buttons}</div>`;
+      const cloud = this.cloudPart(i);
+      return `<div class="slot empty${cloud ? ' has-cloud' : ''}"><b>${t('slot.title', { n: i + 1 })}</b><span>${t('slot.empty')}</span>${cloud}${buttons}</div>`;
     }
     const level = (s.player && s.player.level) || 1;
     const dk = CONFIG.difficulty.levels[s.difficulty] ? s.difficulty : CONFIG.difficulty.oldSaves;
     return `<div class="slot"><b>${esc(s.name)}</b>
       <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })} · <em class="dif-${dk}">${t('diff.' + dk)}</em></span>
       <small>${t('slot.playTime', { time: formatPlayTime(s.playTime || 0) })}</small>
-      <small>${formatDate(s.updated)}</small>${buttons}</div>`;
+      <small>${formatDate(s.updated)}</small>${this.cloudPart(i)}${buttons}</div>`;
   }
 
   title() {
@@ -299,6 +400,17 @@ export class Screens {
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>
+        <h3 class="set-sec">${t('set.online')}</h3>
+        ${this.setMsg ? `<p class="set-msg">${esc(this.setMsg)}</p>` : ''}
+        <div class="set-row set-hunter"><div><b>${t('set.hunter')}</b><small>${t('set.hunterHint')}</small></div>
+          <div class="segs"><input type="text" maxlength="20" value="${esc(settings.hunterName)}" placeholder="${t('lb.namePh')}" autocomplete="off" aria-label="${t('set.hunter')}">
+          <button class="seg" data-act="hunterSave">${t('lb.save')}</button></div></div>
+        <div class="set-row"><div><b>${t('set.cloud')}</b><small>${t('set.cloudHint')}</small></div><div class="segs">${toggle('cloud', settings.cloudSave)}</div></div>
+        <div class="set-row"><div><b>${t('set.code')}</b><small>${t('set.codeHint')}</small></div>
+          <div class="segs">${this.code ? `<span class="set-code">${esc(this.code)}</span>` : `<button class="seg wide" data-act="codeShow">${t('set.codeShow')}</button>`}</div></div>
+        <div class="set-row set-claim"><div><b>${t('set.claim')}</b><small>${t('set.claimHint')}</small></div>
+          <div class="segs"><input type="text" maxlength="16" placeholder="${t('set.claimPh')}" autocomplete="off" autocapitalize="characters" aria-label="${t('set.claim')}">
+          <button class="seg" data-act="claim">${t('set.claimGo')}</button></div></div>
       </div></div>`;
   }
 
