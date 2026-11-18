@@ -22,7 +22,7 @@ export class AbyssPanel {
     this.start = 1; // chosen start floor
     this.isOpen = false;
     this.tab = 'run'; // 'run' (start floor and modifiers) or 'board' (leaderboard)
-    this.board = new Board(() => { if (this.isOpen && this.tab === 'board') this.render(); }, () => game.submitAbyss());
+    this.board = new Board(() => { if (this.isOpen && this.tab === 'board') this.render(); }, () => game.submitRecords(), 'abyss');
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.el.addEventListener('keydown', (e) => {
@@ -36,6 +36,8 @@ export class AbyssPanel {
     this.mode = mode;
     this.tab = 'run';
     this.board.naming = false;
+    this.board.kind = 'abyss';
+    this.board.data = this.board.all.abyss || null;
     const starts = this.game.abyss.starts();
     this.start = starts[starts.length - 1]; // the deepest start point
     this.isOpen = true;
@@ -63,7 +65,7 @@ export class AbyssPanel {
       game.gates.enter(game.gates.abyssIndex, this.start);
       return;
     }
-    if (this.board.handle(act, this.el)) return;
+    if (this.board.handle(act, this.el, b.dataset.v)) return;
     if (act === 'tab') {
       this.tab = b.dataset.v;
       if (this.tab === 'board') { this.board.fetch(); return; }
@@ -110,7 +112,7 @@ export class AbyssPanel {
     }
     const keep = this.el.querySelector('[data-scroll="lb"]');
     const top = keep ? keep.scrollTop : 0;
-    const body = board ? this.board.html(A.best > 0)
+    const body = board ? this.board.html(this.board.kind === 'level' || A.best > 0)
       : `${side}<div class="ab-mods"><h4>${t('mods.title')} <em>${count}</em></h4><div class="ab-grid">${mlist}</div></div>`;
     this.el.innerHTML = `<div class="ab-box ${this.mode}${board ? ' board' : ''}">
       <div class="ab-head">${head}</div>

@@ -156,3 +156,13 @@ grant select on public.abyss_scores to anon, authenticated;
 grant insert (name, floor, level, mastery, rank, difficulty) on public.abyss_scores to authenticated;
 grant update (name, floor, level, mastery, rank, difficulty) on public.abyss_scores to authenticated;
 grant select, insert, update, delete on public.cloud_saves to authenticated;
+
+-- ---- level leaderboard (third migration) ---------------------------------------
+-- Every hunter with a name is on the level board, also before the Abyss:
+-- floor 0 = no Abyss record yet (the Abyss board only lists floor > 0).
+-- Floor and level are separate records; each only goes up (trigger), and a
+-- transfer code merge keeps the better of each. See the migrations
+-- "level_leaderboard" and "claim_merges_level" in the Supabase project.
+alter table public.abyss_scores drop constraint if exists abyss_scores_floor_check;
+alter table public.abyss_scores add constraint abyss_scores_floor_check check (floor between 0 and 100000);
+create index if not exists abyss_scores_level_idx on public.abyss_scores (level desc, mastery desc, updated_at asc);

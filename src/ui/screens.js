@@ -9,7 +9,7 @@ import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 import { readSaveText } from '../core/storage.js';
-import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore, net } from '../net/online.js';
+import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore, submitScore, net } from '../net/online.js';
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
 import { UI_ICONS } from './icons.js';
@@ -84,7 +84,7 @@ export class Screens {
     this.busy = false;
     this.stages = new WorldStages(); // 3D hunters on the world cards
     this.stageKey = '';
-    this.board = new Board(() => { if (this.current === 'board') this.render(); }, () => flushScore());
+    this.board = new Board(() => { if (this.current === 'board') this.render(); }, () => this.submitSlots());
     // typing a name or a code must not reach the game keys
     this.el.addEventListener('keydown', (e) => {
       if (e.target.tagName !== 'INPUT') return;
@@ -128,7 +128,8 @@ export class Screens {
     if (name !== 'load') { this.stages.stop(); this.stageKey = ''; }
     if (name === 'load') this.fetchCloud();
     if (name === 'online') { this.code = ''; this.setMsg = ''; }
-    if (name === 'board') { this.board.naming = false; this.board.fetch(); }
+    // outside the Abyss the level board comes first
+    if (name === 'board') { this.board.naming = false; this.submitSlots(); this.board.show('level'); }
     this.render();
     flashClass(this.el, 'enter');
   }
@@ -165,7 +166,7 @@ export class Screens {
       else this.render();
       return;
     }
-    if (this.board.handle(act, this.el)) return;
+    if (this.board.handle(act, this.el, v)) return;
     switch (act) {
       // title
       case 'worlds': this.show('load'); break;
@@ -251,7 +252,7 @@ export class Screens {
         const name = cleanName(inp ? inp.value : '');
         if (name.length < 2) { if (inp) flashClass(inp, 'shake'); break; }
         setSetting('hunterName', name);
-        if (app.game) app.game.submitAbyss(); else flushScore();
+        if (app.game) app.game.submitRecords(); else this.submitSlots();
         this.setMsg = '';
         this.render();
         break;
@@ -463,9 +464,20 @@ export class Screens {
     return `<div class="scr-page">${this.header(t('title.worlds'), 'toTitle')}<p class="scr-hint">${this.msg || t('worlds.hint')}</p><div class="wcards">${cards}</div></div>`;
   }
 
+  // the records of every world on this device (the server keeps the best ones)
+  submitSlots() {
+    for (const x of this.app.slots) {
+      if (!x || !x.player) continue;
+      submitScore({
+        floor: (x.abyss && x.abyss.best) || 0, level: x.player.level || 1, mastery: (x.player.mastery && x.player.mastery.lv) || 0,
+        rank: RANKS[x.rankIndex || 0] || 'E', difficulty: x.difficulty || 'normal',
+      }, settings.hunterName);
+    }
+  }
+
   // the leaderboard from the main menu
   boardPage() {
-    const anyBest = this.app.slots.some((x) => x && x.abyss && x.abyss.best > 0);
+    const anyBest = this.board.kind === 'level' ? this.app.slots.some(Boolean) : this.app.slots.some((x) => x && x.abyss && x.abyss.best > 0);
     return `<div class="scr-page">${this.header(t('board.title'), 'toTitle')}
       <div class="board-box">${this.board.html(anyBest)}</div>
       <div class="scr-row end"><button class="sbtn" data-act="lbRefresh"${this.board.canRefresh() ? '' : ' disabled'}>${t('lb.refresh')}</button></div></div>`;

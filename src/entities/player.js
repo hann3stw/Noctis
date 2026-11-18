@@ -305,6 +305,7 @@ export class Player {
     this.game.effects.ring(this.x, this.z, 0.5, 5, 0x7df0ff, 0.6);
     play('levelup');
     this.game.hud.toast(t('mastery.up', { n: m.lv }));
+    this.game.submitRecords();
   }
 
   spendMastery(key) {
@@ -342,6 +343,7 @@ export class Player {
     this.game.effects.ring(this.x, this.z, 0.5, 5, 0xffd24a, 0.6);
     this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
     play('levelup');
+    this.game.submitRecords();
     this.game.hud.toast(gained ? t('toast.levelUp', { level: this.level, points: gained }) : t('toast.levelUpNoPts', { level: this.level }));
     this.game.checkRank();
   }

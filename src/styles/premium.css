@@ -3020,3 +3020,19 @@ input.shake {
     font-size: calc(var(--u) * 2.4);
   }
 }
+
+/* leaderboards: Level / Abyss switch */
+.lb-kinds {
+  flex: none;
+  display: flex;
+  gap: calc(var(--u) * 1);
+  margin-bottom: calc(var(--u) * 1.2);
+}
+.lb-kinds .seg {
+  flex: 1;
+  min-height: calc(var(--u) * 7.5);
+}
+.ab-box.board .ab-body {
+  flex-direction: column;
+  gap: 0;
+}

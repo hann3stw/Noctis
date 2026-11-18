@@ -149,15 +149,16 @@ export class Game {
 
     this.world.update(this.player.x, this.player.z, true);
     this.cam.snap(this.player.x, this.player.z);
-    this.submitAbyss(); // a record from before the leaderboard existed
+    this.submitRecords(); // records from before the leaderboards existed
   }
 
-  // Sends the Abyss record to the leaderboard (waits offline or without a hunter name).
-  submitAbyss() {
-    if (this.slot < 0 || !this.abyss.best) return;
+  // Sends level and Abyss record to the leaderboards (waits offline or without
+  // a hunter name). Floor 0 = not in the Abyss yet: on the level board only.
+  submitRecords() {
+    if (this.slot < 0) return;
     const P = this.player;
     submitScore({
-      floor: this.abyss.best, level: P.level, mastery: P.mastery.lv,
+      floor: this.abyss.best || 0, level: P.level, mastery: P.mastery.lv,
       rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty,
     }, settings.hunterName);
   }

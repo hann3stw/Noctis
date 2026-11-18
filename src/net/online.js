@@ -93,12 +93,20 @@ export function cleanName(s) {
 
 // ---- leaderboard -------------------------------------------------------------------
 // Remembers the entry (the better one wins) and sends it when possible.
+// floor and level are separate records: each keeps the better one
 export function submitScore(entry, name) {
   const old = lsGet(LS_SCORE);
-  const e = old && old.floor > entry.floor ? old : entry;
-  lsSet(LS_SCORE, { ...e, name });
+  const e = { ...entry, name };
+  if (old) {
+    if ((old.floor || 0) > (e.floor || 0)) { e.floor = old.floor; e.difficulty = old.difficulty; }
+    if (old.level > e.level || (old.level === e.level && old.mastery > e.mastery)) {
+      e.level = old.level; e.mastery = old.mastery; e.rank = old.rank;
+    }
+  }
+  lsSet(LS_SCORE, e);
   flushScore();
 }
+const sameScore = (a, b) => a && b && a.floor === b.floor && a.level === b.level && a.mastery === b.mastery && a.name === b.name;
 
 let flushT = 0;
 let flushing = false;
@@ -115,7 +123,8 @@ export async function flushScore() {
     const up = await rest('abyss_scores?user_id=eq.' + s.id, { method: 'PATCH', body: row, prefer: 'return=representation' });
     if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: row, prefer: 'return=minimal' });
     const now = lsGet(LS_SCORE);
-    if (now && now.floor === e.floor && now.name === e.name) lsSet(LS_SCORE, null);
+    if (sameScore(now, e)) lsSet(LS_SCORE, null);
+    else if (now) flushT = setTimeout(flushScore, 6000); // changed meanwhile (the server takes one every 5 s)
   } catch (err) {
     // "too fast" or offline: try again a little later
     flushT = setTimeout(flushScore, err.status === 400 ? 7000 : 60000);
@@ -124,10 +133,13 @@ export async function flushScore() {
   }
 }
 
-// Top 50 and the own place. { rows, me: { place, row } | null }
-export async function loadBoard() {
+// Top 50 and the own place of the 'abyss' board (deepest floor) or the
+// 'level' board (highest level, then mastery). { rows, me: { place, row } | null }
+export async function loadBoard(kind = 'abyss') {
   const sel = 'user_id,name,floor,level,mastery,rank,difficulty';
-  const top = await rest(`abyss_scores?select=${sel}&order=floor.desc,updated_at.asc&limit=50`, { auth: false });
+  const lv = kind === 'level';
+  const order = lv ? 'level.desc,mastery.desc,updated_at.asc' : 'floor.desc,updated_at.asc';
+  const top = await rest(`abyss_scores?select=${sel}${lv ? '' : '&floor=gt.0'}&order=${order}&limit=50`, { auth: false });
   const rows = top.data || [];
   const id = myId();
   let me = null;
@@ -137,8 +149,9 @@ export async function loadBoard() {
     else {
       const mine = await rest(`abyss_scores?select=${sel}&user_id=eq.${id}`, { auth: false });
       const row = mine.data && mine.data[0];
-      if (row) {
-        const c = await rest(`abyss_scores?select=user_id&floor=gt.${row.floor}`, { auth: false, prefer: 'count=exact', method: 'HEAD' });
+      if (row && (lv || row.floor > 0)) {
+        const better = lv ? `or=(level.gt.${row.level},and(level.eq.${row.level},mastery.gt.${row.mastery}))` : `floor=gt.${row.floor}`;
+        const c = await rest(`abyss_scores?select=user_id&${better}`, { auth: false, prefer: 'count=exact', method: 'HEAD' });
         const n = Number(String(c.range || '').split('/')[1]) || 0;
         me = { place: n + 1, row };
       }

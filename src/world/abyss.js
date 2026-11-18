@@ -166,7 +166,7 @@ export class Abyss {
     this.cleared = true;
     this.timeLeft = 0;
     const record = this.floor > this.best;
-    if (record) { this.best = this.floor; game.submitAbyss(); }
+    if (record) { this.best = this.floor; game.submitRecords(); }
     for (let k = 0; k < A.clearItems; k++) this.dropLoot(c.x + k * 2, c.z, false);
     // one chance per floor for a unique item (more on boss floors)
     if (Math.random() < this.uniqueChance(this.isBoss(this.floor))) {
