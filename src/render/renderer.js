@@ -11,6 +11,7 @@ export function getRenderer() {
       canvas: document.getElementById('game'),
       antialias: true,
       powerPreference: 'high-performance',
+      stencil: true, // the hunter's silhouette behind trees (render/xray.js)
     });
   }
   return renderer;

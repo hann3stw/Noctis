@@ -8,6 +8,7 @@ import { initTouch } from './input/touch.js';
 import { FollowCamera } from './render/camera.js';
 import { Effects } from './render/effects.js';
 import { AimIndicator } from './render/aim.js';
+import { Xray } from './render/xray.js';
 import { World } from './world/world.js';
 import { Player } from './entities/player.js';
 import { Enemies } from './entities/enemies.js';
@@ -80,6 +81,7 @@ export class Game {
     this.ariseTries = 3;
 
     this.renderer = getRenderer();
+    this.xray = new Xray(this.renderer);
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0d0a16);
     this.hemi = new THREE.HemisphereLight(0xb9c4ff, 0x2a2238, 1.5);
@@ -313,6 +315,7 @@ export class Game {
     }
     this.update(dt);
     this.renderer.render(this.scene, this.cam.camera);
+    this.xray.render(this.player.model.root, this.scene, this.cam.camera);
   }
 
   update(dt) {

@@ -183,9 +183,12 @@ export class Effects {
       const el = document.createElement('div');
       el.className = 'dmg';
       layer.appendChild(el);
-      this.numbers.push({ el, life: 0, x: 0, y: 0, z: 0 });
+      this.numbers.push({ el, life: 0, x: 0, y: 0, z: 0, sx: 0, sy: 0, vx: 0, big: 1 });
     }
     this.numNext = 0;
+    // numbers that appear close together stack upwards instead of covering each other
+    this.numStack = 0;
+    this.numStackT = 0;
   }
 
   resize(w, h) {
@@ -326,10 +329,20 @@ export class Effects {
   number(x, y, z, text, cls) {
     const n = this.numbers[this.numNext];
     this.numNext = (this.numNext + 1) % MAX_NUMBERS;
-    n.x = x + (Math.random() - 0.5) * 0.8;
+    // alternating left / right, so a burst of hits never lands in one spot
+    const side = (this.numStack % 2 ? 1 : -1) * (0.15 + Math.random() * 0.35);
+    n.x = x;
     n.y = y;
     n.z = z;
-    n.life = 0.7;
+    // screen pixels: fanned out sideways, stacked upwards, drifting apart
+    const u = this.viewH / 100;
+    n.sx = side * u * 16;
+    n.sy = -(this.numStack % 5) * u * 5;
+    n.vx = side * u * 40;
+    this.numStack++;
+    this.numStackT = 0.22;
+    n.big = cls === 'crit' ? 1.6 : 1;
+    n.life = cls === 'crit' ? 0.95 : 0.8;
     n.el.textContent = text;
     n.el.className = cls ? 'dmg ' + cls : 'dmg';
     n.el.style.opacity = '1';
@@ -427,14 +440,23 @@ export class Effects {
     this.barFill.instanceColor.needsUpdate = true;
 
     // damage numbers
+    if (this.numStackT > 0) { this.numStackT -= dt; if (this.numStackT <= 0) this.numStack = 0; }
     for (let i = 0; i < MAX_NUMBERS; i++) {
       const nm = this.numbers[i];
       if (nm.life <= 0) continue;
       nm.life -= dt;
       if (nm.life <= 0) { nm.el.style.opacity = '0'; continue; }
-      nm.y += dt * 2.2;
+      // fast at first, then it floats: an ease-out rise
+      const age = (nm.big > 1 ? 0.95 : 0.8) - nm.life;
+      const u = this.viewH / 100;
+      nm.sy -= dt * u * (5 + 40 * Math.exp(-age * 7));
+      nm.sx += nm.vx * dt;
+      nm.vx *= 1 - Math.min(1, dt * 3);
       this.project(nm.x, nm.y, nm.z);
-      const pop = nm.life > 0.55 ? 1 + (nm.life - 0.55) * 4 : 1;
+      _v.x += nm.sx;
+      _v.y += nm.sy;
+      // pops in a little too big, crits more
+      const pop = age < 0.12 ? 1 + (0.12 - age) * 4 * nm.big : 1;
       nm.el.style.transform = 'translate3d(' + _v.x.toFixed(1) + 'px,' + _v.y.toFixed(1) + 'px,0) translate(-50%,-50%) scale(' + pop.toFixed(2) + ')';
       if (nm.life < 0.25) nm.el.style.opacity = (nm.life * 4).toFixed(2);
     }

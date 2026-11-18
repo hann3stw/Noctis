@@ -15,8 +15,25 @@
     <meta name="apple-mobile-web-app-title" content="Noctis" />
     <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+    <style>
+      /* boot screen: visible at once while the game loads, removed by main.js */
+      html, body { margin: 0; background: #0b0714; }
+      #boot {
+        position: fixed; inset: 0; z-index: 999; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 22px;
+        background: radial-gradient(ellipse at 50% 30%, #2a1450 0%, #0b0714 65%);
+        transition: opacity 0.45s ease;
+      }
+      #boot.out { opacity: 0; pointer-events: none; }
+      #boot svg { width: 64px; height: 64px; filter: drop-shadow(0 0 18px rgba(160, 110, 255, 0.8)); animation: boot-moon 2.4s ease-in-out infinite alternate; }
+      #boot i { display: block; width: 140px; height: 3px; border-radius: 3px; background: rgba(180, 140, 255, 0.15); overflow: hidden; position: relative; }
+      #boot i::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, transparent, #b48cff, transparent); animation: boot-bar 1.1s ease-in-out infinite; }
+      @keyframes boot-moon { from { opacity: 0.65; transform: translateY(2px); } to { opacity: 1; transform: translateY(-2px); } }
+      @keyframes boot-bar { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+    </style>
   </head>
   <body>
+    <div id="boot"><svg viewBox="0 0 24 24"><path d="M14.5 2.5a9.5 9.5 0 1 0 7 15.9A8 8 0 0 1 14.5 2.5z" fill="#d9c8ff"/></svg><i></i></div>
     <canvas id="game"></canvas>
     <div id="ui"></div>
     <div id="screens"></div>

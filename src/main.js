@@ -26,3 +26,10 @@ rotate.innerHTML = `<div class="phone"></div><b>${t('rotate.title')}</b><small>$
 const app = new App(debug);
 app.init(params);
 if (debug) window.__app = app;
+
+// the boot screen of index.html fades out once the title screen is there
+const boot = document.getElementById('boot');
+if (boot) {
+  requestAnimationFrame(() => boot.classList.add('out'));
+  setTimeout(() => boot.remove(), 600);
+}
