@@ -9,7 +9,7 @@ import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 import { readSaveText } from '../core/storage.js';
-import { cloudList, cloudGet, transferCode, claimCode, formatCode, cleanName, flushScore, submitScore, net } from '../net/online.js';
+import { cloudList, cloudGet, cleanName, flushScore, submitScore, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
 import { UI_ICONS } from './icons.js';
@@ -79,7 +79,7 @@ export class Screens {
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.msg = ''; // note on the Load Game screen (import result)
     this.cloud = null; // cloud copies by slot: { slot: { saved_at, summary } }
-    this.code = ''; // transfer code once shown
+    this.pairCode = null; // pairing code once shown: { code, until }
     this.setMsg = ''; // note in the online part of the settings
     this.busy = false;
     this.stages = new WorldStages(); // 3D hunters on the world cards
@@ -127,7 +127,13 @@ export class Screens {
     if (name === 'editor') this.openEditor(params);
     if (name !== 'load') { this.stages.stop(); this.stageKey = ''; }
     if (name === 'load') this.fetchCloud();
-    if (name === 'online') { this.code = ''; this.setMsg = ''; }
+    if (name === 'online') {
+      this.pairCode = null;
+      this.setMsg = '';
+      refreshLink().then(() => { if (this.current === 'online') this.render(); }).catch(() => {});
+    }
+    // paired devices: take over what was played on the other one
+    if (name === 'title' || name === 'load') this.app.syncWorlds();
     // outside the Abyss the level board comes first
     if (name === 'board') { this.board.naming = false; this.submitSlots(); this.board.show('level'); }
     this.render();
@@ -202,7 +208,7 @@ export class Screens {
         break;
       }
       case 'delete':
-        this.confirm(t('confirm.delete', { name: app.slots[slot].name }), t('confirm.deleteYes'), () => app.removeSlot(slot));
+        this.confirm(t(isLinked() ? 'confirm.deleteLinked' : 'confirm.delete', { name: app.slots[slot].name }), t('confirm.deleteYes'), () => app.removeSlot(slot));
         break;
       // new world
       case 'pickSlot':
@@ -246,7 +252,7 @@ export class Screens {
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
-      case 'cloud': setSetting('cloudSave', !settings.cloudSave); this.render(); break;
+      case 'cloud': if (!isLinked()) { setSetting('cloudSave', !settings.cloudSave); this.render(); } break;
       case 'hunterSave': {
         const inp = this.el.querySelector('.set-hunter input');
         const name = cleanName(inp ? inp.value : '');
@@ -257,8 +263,16 @@ export class Screens {
         this.render();
         break;
       }
-      case 'codeShow': this.showCode(); break;
-      case 'claim': this.claim(); break;
+      case 'pairShow': this.showPairCode(); break;
+      case 'pairGo': {
+        const inp = this.el.querySelector('.set-claim input');
+        const code = inp ? inp.value.replace(/[^a-z0-9]/gi, '').toUpperCase() : '';
+        if (code.length !== 5) { if (inp) flashClass(inp, 'shake'); break; }
+        this.confirm(t('confirm.pair'), t('confirm.pairYes'), () => this.pair(code));
+        break;
+      }
+      case 'unpair': this.confirm(t('confirm.unpair'), t('confirm.unpairYes'), () => this.unpair(false)); break;
+      case 'unpairAll': this.confirm(t('confirm.unpairAll'), t('confirm.unpairYes'), () => this.unpair(true)); break;
       case 'setBack':
         if (this.params.back === 'pause') this.show('pause');
         else this.show('title');
@@ -300,7 +314,7 @@ export class Screens {
     try {
       const list = await cloudList();
       this.cloud = {};
-      for (const c of list) this.cloud[c.slot] = { saved_at: Date.parse(c.saved_at), summary: c.summary || {} };
+      for (const c of list) if (!(c.summary && c.summary.deleted)) this.cloud[c.slot] = { saved_at: Date.parse(c.saved_at), summary: c.summary || {} };
     } catch (_) {
       this.cloud = null;
     }
@@ -318,35 +332,54 @@ export class Screens {
     if (this.current === 'load') this.render();
   }
 
-  async showCode() {
-    if (this.busy) return;
-    this.busy = true;
-    this.code = t('set.codeLoading');
-    this.render();
-    // (the page is 'online')
-    try { this.code = formatCode(await transferCode()); this.setMsg = ''; } catch (_) { this.code = ''; this.setMsg = t('set.offline'); }
-    this.busy = false;
-    if (this.current === 'online') this.render();
+  // the worlds changed in the background (sync with a paired device)
+  slotsChanged() {
+    if (this.current === 'load') this.fetchCloud();
+    if (this.current === 'title' || this.current === 'load' || this.current === 'online') this.render();
   }
 
-  async claim() {
-    const inp = this.el.querySelector('.set-claim input');
-    const code = inp ? inp.value.replace(/[^a-z0-9]/gi, '') : '';
-    if (code.length !== 12) { if (inp) flashClass(inp, 'shake'); return; }
+  // runs a pairing step; the result is shown on the Online page
+  async pairStep(fn) {
     if (this.busy) return;
+    if (this.app.game) { this.setMsg = t('pair.leaveFirst'); this.render(); return; }
     this.busy = true;
+    this.setMsg = t('pair.working');
+    this.render();
     try {
-      const n = await claimCode(code);
-      this.setMsg = t('set.claimOk', { n });
-      this.code = '';
+      this.setMsg = (await fn()) || '';
     } catch (e) {
-      this.setMsg = e.message === 'invalid code' ? t('set.claimBad') : t('set.offline');
+      const k = { invalid: 'pair.bad', 'too many': 'pair.tooMany', busy: 'pair.tooMany', linked: 'pair.linked', 'has devices': 'pair.hasDevices', self: 'pair.self', full: 'pair.full' }[e.message];
+      this.setMsg = k ? t(k, { free: e.free || 0, n: this.app.slots.filter(Boolean).length }) : t('set.offline');
     }
     this.busy = false;
     if (this.current === 'online') this.render();
   }
 
-  // ---- rendering --------------------------------------------------------------
+  showPairCode() {
+    this.pairStep(async () => {
+      const d = await this.app.makePairCode();
+      this.pairCode = { code: d.code, until: Date.parse(d.expires_at) };
+      return '';
+    });
+  }
+
+  pair(code) {
+    this.pairStep(async () => {
+      await this.app.pair(code);
+      this.pairCode = null;
+      return t('pair.done', { n: this.app.slots.filter(Boolean).length });
+    });
+  }
+
+  unpair(all) {
+    this.pairStep(async () => {
+      if (all) await this.app.unpairOthers(); else await this.app.unpair();
+      this.pairCode = null;
+      return t(all ? 'pair.othersGone' : 'pair.gone');
+    });
+  }
+
+    // ---- rendering --------------------------------------------------------------
   render() {
     const views = {
       title: () => this.title(), load: () => this.load(), newSlot: () => this.newSlot(),
@@ -483,27 +516,45 @@ export class Screens {
       <div class="scr-row end"><button class="sbtn" data-act="lbRefresh"${this.board.canRefresh() ? '' : ' disabled'}>${t('lb.refresh')}</button></div></div>`;
   }
 
-  // hunter name, cloud save and the transfer code
+  // hunter name, cloud save and pairing with other devices
   onlinePage() {
-    const toggle = (act, on) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}">${on ? t('set.on') : t('set.off')}</button>`;
+    const toggle = (act, on, off) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}"${off ? ' disabled' : ''}>${on ? t('set.on') : t('set.off')}</button>`;
     const ok = net.status !== 'offline';
+    const L = linkInfo(), linked = L.role !== 'solo', busy = this.busy ? ' disabled' : '';
+    const pc = this.pairCode && this.pairCode.until > Date.now() ? this.pairCode : null;
+    const codeBox = pc
+      ? `<div class="pair-code"><b>${esc(pc.code)}</b><small>${t('pair.codeHint', { time: new Date(pc.until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) })}</small></div>`
+      : `<button class="seg wide" data-act="pairShow"${busy}>${t('pair.show')}</button>`;
+    let devices;
+    if (L.role === 'member') {
+      devices = `<div class="set-row pair-on"><div><b>${t('pair.on')}</b><small>${t('pair.onHint', { n: L.devices })}</small></div>
+          <div class="segs"><button class="seg wide warn" data-act="unpair"${busy}>${t('pair.leave')}</button></div></div>`;
+    } else {
+      const others = L.role === 'owner'
+        ? `<div class="set-row pair-on"><div><b>${t('pair.owner', { n: L.devices - 1 })}</b><small>${t('pair.ownerHint')}</small></div>
+          <div class="segs"><button class="seg wide warn" data-act="unpairAll"${busy}>${t('pair.leaveAll')}</button></div></div>`
+        : '';
+      const join = L.role === 'solo'
+        ? `<div class="set-row set-claim"><div><b>${t('pair.join')}</b><small>${t('pair.joinHint')}</small></div>
+          <div class="segs"><input type="text" maxlength="5" placeholder="${t('pair.ph')}" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="${t('pair.join')}">
+          <button class="seg" data-act="pairGo"${busy}>${t('pair.go')}</button></div></div>`
+        : '';
+      devices = `${others}<div class="set-row"><div><b>${t('pair.title')}</b><small>${t('pair.hint')}</small></div>
+          <div class="segs">${codeBox}</div></div>${join}`;
+    }
     return `<div class="scr-page">${this.header(t('online.title'), 'onlineBack')}
       <p class="scr-hint"><i class="net-dot${ok ? ' ok' : ''}"></i>${ok ? t('online.ok') : t('online.off')}</p>
       <div class="set-list" data-scroll="online">
         ${this.setMsg ? `<p class="set-msg">${esc(this.setMsg)}</p>` : ''}
-        <div class="set-row set-hunter"><div><b>${t('set.hunter')}</b><small>${t('set.hunterHint')}</small></div>
+        <div class="set-row set-hunter"><div><b>${t('set.hunter')}</b><small>${t(linked ? 'set.hunterHintPaired' : 'set.hunterHint')}</small></div>
           <div class="segs"><input type="text" maxlength="20" value="${esc(settings.hunterName)}" placeholder="${t('lb.namePh')}" autocomplete="off" aria-label="${t('set.hunter')}">
           <button class="seg" data-act="hunterSave">${t('lb.save')}</button></div></div>
-        <div class="set-row"><div><b>${t('set.cloud')}</b><small>${t('set.cloudHint')}</small></div><div class="segs">${toggle('cloud', settings.cloudSave)}</div></div>
-        <div class="set-row"><div><b>${t('set.code')}</b><small>${t('set.codeHint')}</small></div>
-          <div class="segs">${this.code ? `<span class="set-code">${esc(this.code)}</span>` : `<button class="seg wide" data-act="codeShow">${t('set.codeShow')}</button>`}</div></div>
-        <div class="set-row set-claim"><div><b>${t('set.claim')}</b><small>${t('set.claimHint')}</small></div>
-          <div class="segs"><input type="text" maxlength="16" placeholder="${t('set.claimPh')}" autocomplete="off" autocapitalize="characters" aria-label="${t('set.claim')}">
-          <button class="seg" data-act="claim">${t('set.claimGo')}</button></div></div>
+        ${devices}
+        <div class="set-row"><div><b>${t('set.cloud')}</b><small>${t(linked ? 'set.cloudPaired' : 'set.cloudHint')}</small></div><div class="segs">${toggle('cloud', settings.cloudSave || linked, linked)}</div></div>
       </div></div>`;
   }
 
-  newSlot() {
+    newSlot() {
     const cards = [0, 1, 2].map((i) => this.slotCard(i,
       `<div class="scr-row"><button class="sbtn${this.app.slots[i] ? ' warn' : ''}" data-act="pickSlot" data-slot="${i}">${this.app.slots[i] ? t('slot.overwrite') : t('slot.choose')}</button></div>`)).join('');
     return `<div class="scr-page">${this.header(t('new.title'), 'toTitle')}<p class="scr-hint">${t('new.hint')}</p><div class="slots">${cards}</div></div>`;

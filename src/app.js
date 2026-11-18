@@ -2,7 +2,7 @@
 // worlds, pause menu and the skin editor in the camp.
 import { Game } from './game.js';
 import { Screens } from './ui/screens.js';
-import { settings, loadSettings, saveSettings, onGraphicsChange } from './core/settings.js';
+import { settings, loadSettings, saveSettings, setSetting, onGraphicsChange } from './core/settings.js';
 import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText } from './core/storage.js';
 import { unlockAudio } from './core/sfx.js';
 import { initKeyboard, setEscapeHandler } from './input/keyboard.js';
@@ -10,7 +10,7 @@ import { sizeRenderer } from './render/renderer.js';
 import { randomSeed } from './core/rng.js';
 import { t } from './strings.js';
 import { CloudSync } from './net/cloudSync.js';
-import { ensureSession, flushScore } from './net/online.js';
+import { ensureSession, flushScore, refreshLink, isLinked, cloudList, cloudGet, cloudDelete, newPairCode, pairWith, unlinkSelf, unlinkOthers, accountName } from './net/online.js';
 
 export class App {
   constructor(debug) {
@@ -20,6 +20,7 @@ export class App {
     this.uiRoot = document.getElementById('ui');
     this.screens = new Screens(this);
     this.cloud = new CloudSync();
+    this.syncing = null; // the running world sync (paired devices)
   }
 
   async init(params) {
@@ -40,7 +41,14 @@ export class App {
     keepStorage();
     this.slots = await listSlots();
     // online in the background: sign in, send a waiting leaderboard entry
-    ensureSession().then(() => flushScore());
+    ensureSession().then(() => {
+      flushScore();
+      // paired with another device: take over what was played there
+      this.syncWorlds();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.syncWorlds();
+    });
     // ?seed=123 starts a test world straight away (never saved); &tutorial=1 with the tutorial
     if (params.has('seed')) {
       this.launch({ slot: -1, name: 'Test', seed: Number(params.get('seed')) >>> 0, tutorial: params.has('tutorial') });
@@ -66,10 +74,148 @@ export class App {
   }
 
   async removeSlot(slot) {
+    const old = this.slots[slot];
+    // paired: the world goes on the other devices too
+    if (isLinked() && old) cloudDelete(slot, old.seed).catch(() => {});
     await deleteSlot(slot);
     this.slots[slot] = null;
     if (settings.lastSlot === slot) { settings.lastSlot = -1; saveSettings(); }
     this.screens.show(this.slots.some(Boolean) ? 'load' : 'title');
+  }
+
+  // ---- paired devices --------------------------------------------------------------
+  // Brings the worlds of this device and the shared account together, slot by
+  // slot: the newer copy of a world wins; a world deleted on another device
+  // goes here too. Two different worlds in one slot: the older one moves to a
+  // free slot (if none is free, nothing happens: no world is ever pushed out).
+  // Only while no world is being played. Resolves to true when slots changed.
+  syncWorlds() {
+    if (this.game) return Promise.resolve(false);
+    // the link is checked first: another device may have joined or left meanwhile
+    if (!this.syncing) {
+      this.syncing = refreshLink().then(() => (isLinked() && !this.game ? this.doSync() : false))
+        .catch(() => false).finally(() => { this.syncing = null; });
+    }
+    return this.syncing;
+  }
+
+  async doSync() {
+    const list = await cloudList();
+    const cloud = {};
+    for (const c of list) if (c.slot >= 0 && c.slot < 3) cloud[c.slot] = { t: Date.parse(c.saved_at) || 0, m: c.summary || {} };
+    let changed = false;
+    const sameWorld = (l, c) => c.m.seed === undefined || l.seed === undefined || c.m.seed === l.seed;
+    const free = () => [0, 1, 2].find((i) => !this.slots[i] && (!cloud[i] || cloud[i].m.deleted));
+    const download = async (slot) => {
+      const d = await cloudGet(slot);
+      const save = d ? readSaveText(JSON.stringify(d)) : null;
+      if (!save || this.game) return;
+      await saveSlot(slot, save);
+      this.slots[slot] = save;
+      changed = true;
+    };
+    for (let i = 0; i < 3; i++) {
+      if (this.game) return changed;
+      const l = this.slots[i], c = cloud[i];
+      if (!c) { if (l) this.cloud.queue(i, l, true); continue; }
+      if (c.m.deleted) {
+        if (!l) continue;
+        if (sameWorld(l, c) && (l.updated || 0) <= c.t) {
+          await deleteSlot(i); // deleted on another device
+          this.slots[i] = null;
+          changed = true;
+        } else this.cloud.queue(i, l, true);
+        continue;
+      }
+      if (!l) { await download(i); continue; }
+      if (sameWorld(l, c)) {
+        if (c.t > (l.updated || 0) + 500) await download(i);
+        else if ((l.updated || 0) > c.t + 500) this.cloud.queue(i, l, true);
+        continue;
+      }
+      // two different worlds in this slot: the older one moves aside
+      const f = free();
+      if (f === undefined) continue;
+      if ((l.updated || 0) < c.t) {
+        await this.store(f, l);
+        await download(i);
+      } else {
+        const d = await cloudGet(i);
+        const other = d ? readSaveText(JSON.stringify(d)) : null;
+        if (!other) continue;
+        await this.store(f, other);
+        this.cloud.queue(i, l, true);
+      }
+      cloud[f] = { t: Date.now(), m: { seed: this.slots[f].seed } };
+      changed = true;
+    }
+    // the hunter name belongs to the shared account
+    const name = await accountName().catch(() => '');
+    if (name && name !== settings.hunterName) { setSetting('hunterName', name); changed = true; }
+    if (changed) this.screens.slotsChanged();
+    return changed;
+  }
+
+  // every world of this device into the cloud of the current account (waits)
+  async uploadAll() {
+    for (let i = 0; i < 3; i++) if (this.slots[i]) await this.cloud.sendNow(i, this.slots[i]);
+  }
+
+  // A code for the other device: first everything of this device goes into
+  // the cloud, so the other one sees which slots are taken. { code, expires_at }
+  async makePairCode() {
+    if (!settings.cloudSave) setSetting('cloudSave', true);
+    await this.uploadAll();
+    return newPairCode();
+  }
+
+  // Joins the account of the code. The worlds of this device move into the
+  // free slots there (the server refuses when there are not enough).
+  async pair(code) {
+    const link = await refreshLink();
+    if (link.role === 'member') throw new Error('linked');
+    if (link.role === 'owner') throw new Error('has devices');
+    const mine = this.slots.filter(Boolean);
+    await this.uploadAll(); // a copy stays in this device's own account
+    await pairWith(code, mine.length);
+    setSetting('cloudSave', true);
+    // put this device's worlds into the free slots of the shared account
+    const list = await cloudList();
+    const taken = new Set(list.filter((c) => !(c.summary && c.summary.deleted)).map((c) => c.slot));
+    const placed = [null, null, null];
+    const rest = [];
+    this.slots.forEach((w, i) => {
+      if (!w) return;
+      if (!taken.has(i)) { placed[i] = w; taken.add(i); } else rest.push(w);
+    });
+    for (const w of rest) {
+      const f = [0, 1, 2].find((i) => !taken.has(i));
+      if (f === undefined) break; // cannot happen: the server checked the free slots
+      placed[f] = w;
+      taken.add(f);
+    }
+    for (let i = 0; i < 3; i++) {
+      if (placed[i]) {
+        await saveSlot(i, placed[i]);
+        await this.cloud.sendNow(i, placed[i]);
+      } else await deleteSlot(i); // a world of the shared account comes here
+      this.slots[i] = placed[i];
+    }
+    settings.lastSlot = -1;
+    saveSettings();
+    await this.syncWorlds();
+    flushScore();
+  }
+
+  // This device leaves the shared account. Its worlds stay on it.
+  async unpair() {
+    try { await this.uploadAll(); } catch (_) { /* offline: the worlds stay here anyway */ }
+    await unlinkSelf();
+  }
+
+  // the owner sends the other devices away
+  async unpairOthers() {
+    await unlinkOthers();
   }
 
   // ---- backup: a world as a file -----------------------------------------------
@@ -140,6 +286,8 @@ export class App {
 
   startNew(slot, name, appearance, difficulty, tutorial) {
     keepStorage();
+    const old = this.slots[slot];
+    if (old && isLinked()) cloudDelete(slot, old.seed).catch(() => {});
     this.launch({ slot, name, seed: randomSeed(), appearance, difficulty, tutorial });
     this.game.save(); // the slot is taken (or overwritten) right away
   }

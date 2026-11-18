@@ -3036,3 +3036,50 @@ input.shake {
   flex-direction: column;
   gap: 0;
 }
+
+/* pairing code: big, easy to read and type */
+.pair-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(var(--u) * 0.6);
+}
+.pair-code b {
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 800;
+  font-size: calc(var(--u) * 6);
+  letter-spacing: 0.22em;
+  color: #ffe08a;
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 2.4);
+  border-radius: calc(var(--u) * 1.6);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px dashed rgba(255, 220, 140, 0.55);
+  user-select: all;
+  -webkit-user-select: all;
+}
+.pair-code small {
+  opacity: 0.75;
+  font-size: calc(var(--u) * 2.3);
+}
+.set-claim input[type='text'] {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 800;
+}
+.pair-on {
+  border-color: rgba(92, 240, 138, 0.45);
+}
+.pair-on b::before {
+  content: '';
+  display: inline-block;
+  width: calc(var(--u) * 1.6);
+  height: calc(var(--u) * 1.6);
+  margin-right: calc(var(--u) * 1.2);
+  border-radius: 50%;
+  background: #5cf08a;
+  box-shadow: 0 0 calc(var(--u) * 1.5) #5cf08a;
+}
+.seg.warn {
+  border-color: rgba(255, 120, 120, 0.55);
+  color: #ffb0b0;
+}

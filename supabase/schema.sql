@@ -166,3 +166,16 @@ grant select, insert, update, delete on public.cloud_saves to authenticated;
 alter table public.abyss_scores drop constraint if exists abyss_scores_floor_check;
 alter table public.abyss_scores add constraint abyss_scores_floor_check check (floor between 0 and 100000);
 create index if not exists abyss_scores_level_idx on public.abyss_scores (level desc, mastery desc, updated_at asc);
+
+-- ---- connected devices (fourth migration) ----------------------------------------
+-- Replaces the 12-character transfer codes. Applied as the migrations
+-- "device_pairing", "pairing_checks_free_slots" and "account_of_only_self":
+-- - account_links (member -> owner): a device that joined another one
+-- - account_of(uid): the shared account of the calling device; the policies of
+--   cloud_saves and abyss_scores use it instead of auth.uid()
+-- - pair_codes: 5 characters, valid 10 minutes, used once
+-- - pair_attempts: wrong codes are limited (5 per device, 300 in total, per 10 min)
+-- - my_account(), create_pair_code(), claim_pair_code(code, need),
+--   unlink_device(), unlink_devices()
+-- A deleted world on a connected device is kept as a marker row
+-- (data = { deleted, seed, updated }) so the other devices remove it too.

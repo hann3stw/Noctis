@@ -1,7 +1,7 @@
 // Uploads save slots to the cloud: at most every 90 seconds per slot while
 // playing, at once when the game is left or put in the background. The
 // local save always stays the main copy; a failed upload is tried again.
-import { cloudPut } from './online.js';
+import { cloudPut, isLinked } from './online.js';
 import { settings } from '../core/settings.js';
 
 const EVERY = 90000;
@@ -15,6 +15,7 @@ export function saveSummary(d) {
     rankIndex: d.rankIndex || 0,
     playTime: d.playTime || 0,
     difficulty: d.difficulty || '',
+    seed: d.seed,
   };
 }
 
@@ -26,11 +27,20 @@ export class CloudSync {
   }
 
   queue(slot, data, now = false) {
-    if (!settings.cloudSave || slot < 0 || !data) return;
+    // paired devices always share their worlds
+    if ((!settings.cloudSave && !isLinked()) || slot < 0 || !data) return;
     this.pending[slot] = data;
     const wait = now ? 0 : Math.max(0, (this.last[slot] || 0) + EVERY - Date.now());
     clearTimeout(this.timers[slot]);
     this.timers[slot] = setTimeout(() => this.send(slot), wait);
+  }
+
+  // uploads at once and waits for it (throws when it fails)
+  async sendNow(slot, data) {
+    clearTimeout(this.timers[slot]);
+    this.pending[slot] = null;
+    this.last[slot] = Date.now();
+    await cloudPut(slot, data, saveSummary(data));
   }
 
   async send(slot) {

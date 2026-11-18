@@ -2,7 +2,9 @@
 // - every device signs in anonymously once (no e-mail, no password)
 // - Abyss leaderboard: the best floor of this player, everyone can read it
 // - cloud saves: a copy of every save slot, only readable by its owner
-// - transfer code: takes the saves and the leaderboard entry to a new device
+// - pairing: a device joins the account of another one (5-character code,
+//   valid 10 minutes) and shares its worlds, hunter name and leaderboard
+//   entry until it disconnects
 // Everything fails quietly: without internet the game simply plays offline.
 // The publishable key below is meant to be public; the database rules
 // (row level security) decide what it may do.
@@ -10,6 +12,7 @@ const URL_BASE = 'https://ywecqnxbqivjnyjleyip.supabase.co';
 const KEY = 'sb_publishable_p1JsJ_l07Lhd3m9FtRPJTA_j3TEUpZL';
 const LS_SESSION = 'noctis.online.session';
 const LS_SCORE = 'noctis.online.score'; // best entry not sent yet
+const LS_LINK = 'noctis.online.link'; // { me, account, role, devices } of the last check
 
 function lsGet(k) {
   try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (_) { return null; }
@@ -19,6 +22,7 @@ function lsSet(k, v) {
 }
 
 let session = lsGet(LS_SESSION);
+let link = lsGet(LS_LINK);
 let signing = null;
 export const net = { status: 'idle' }; // idle | ok | offline
 
@@ -64,8 +68,21 @@ export async function ensureSession() {
   }
 }
 
-export function myId() {
-  return session ? session.id : null;
+// The account whose worlds and leaderboard entry this device uses: its own,
+// or the one of the device it is paired with.
+export function accountId() {
+  if (!session) return null;
+  return link && link.me === session.id && link.account ? link.account : session.id;
+}
+export const myId = accountId;
+
+// { account, role: 'solo' | 'owner' | 'member', devices }
+export function linkInfo() {
+  if (link && session && link.me === session.id) return link;
+  return { account: session ? session.id : null, role: 'solo', devices: 1 };
+}
+export function isLinked() {
+  return linkInfo().role !== 'solo';
 }
 
 // REST call; auth = false reads as the public role
@@ -120,7 +137,7 @@ export async function flushScore() {
     const s = await ensureSession();
     if (!s) return;
     const row = { name: e.name, floor: e.floor, level: e.level, mastery: e.mastery, rank: e.rank, difficulty: e.difficulty };
-    const up = await rest('abyss_scores?user_id=eq.' + s.id, { method: 'PATCH', body: row, prefer: 'return=representation' });
+    const up = await rest('abyss_scores?user_id=eq.' + accountId(), { method: 'PATCH', body: row, prefer: 'return=representation' });
     if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: row, prefer: 'return=minimal' });
     const now = lsGet(LS_SCORE);
     if (sameScore(now, e)) lsSet(LS_SCORE, null);
@@ -168,7 +185,8 @@ export async function cloudList() {
 
 export async function cloudGet(slot) {
   const r = await rest(`cloud_saves?select=data&slot=eq.${slot}`);
-  return r.data && r.data[0] ? r.data[0].data : null;
+  const d = r.data && r.data[0] ? r.data[0].data : null;
+  return d && !d.deleted ? d : null;
 }
 
 export async function cloudPut(slot, data, summary) {
@@ -177,24 +195,58 @@ export async function cloudPut(slot, data, summary) {
   await rest('cloud_saves?on_conflict=user_id,slot', {
     method: 'POST',
     prefer: 'resolution=merge-duplicates,return=minimal',
-    body: { user_id: s.id, slot, data, summary, saved_at: new Date(data.updated || Date.now()).toISOString() },
+    body: { user_id: accountId(), slot, data, summary, saved_at: new Date(data.updated || Date.now()).toISOString() },
   });
 }
 
-// ---- transfer code ------------------------------------------------------------------
-export async function transferCode() {
-  const r = await rest('rpc/get_transfer_code', { method: 'POST', body: {} });
-  return String(r.data || '');
+// A world deleted on a paired device: the other devices remove it too.
+export async function cloudDelete(slot, seed) {
+  const now = Date.now();
+  await cloudPut(slot, { deleted: true, seed, updated: now }, { deleted: true, seed });
 }
 
-// Returns the number of saves taken over; throws on a wrong code.
-export async function claimCode(code) {
-  const r = await rest('rpc/claim_transfer_code', { method: 'POST', body: { p_code: code } });
-  return Number(r.data) || 0;
+// ---- pairing ------------------------------------------------------------------------
+async function rpc(name, body = {}) {
+  const r = await rest('rpc/' + name, { method: 'POST', body });
+  return r.data;
 }
 
-export function formatCode(c) {
-  return String(c || '').replace(/(.{4})(?=.)/g, '$1-');
+export async function refreshLink() {
+  const s = await ensureSession();
+  if (!s) return linkInfo();
+  const d = await rpc('my_account');
+  link = { me: s.id, account: d.account, role: d.role, devices: d.devices };
+  lsSet(LS_LINK, link);
+  return link;
+}
+
+// a new code for this account: { code, expires_at }
+export async function newPairCode() {
+  return rpc('create_pair_code');
+}
+
+// joins the account of the code; need = worlds this device brings along.
+// Throws an error whose message is the reason ('invalid', 'full', ...).
+export async function pairWith(code, need) {
+  const d = await rpc('claim_pair_code', { p_code: code, p_need: need });
+  if (!d || d.error) throw Object.assign(new Error((d && d.error) || 'failed'), { free: d && d.free });
+  return refreshLink();
+}
+
+export async function unlinkSelf() {
+  await rpc('unlink_device');
+  return refreshLink();
+}
+
+export async function unlinkOthers() {
+  await rpc('unlink_devices');
+  return refreshLink();
+}
+
+// the hunter name of the shared account (from its leaderboard entry)
+export async function accountName() {
+  const r = await rest(`abyss_scores?select=name&user_id=eq.${accountId()}`, { auth: false });
+  return r.data && r.data[0] ? r.data[0].name : '';
 }
 
 window.addEventListener('online', () => flushScore());

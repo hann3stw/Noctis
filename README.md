@@ -303,8 +303,16 @@ HTTPS (or localhost) for offline mode and installing.
   to the background. The local save always stays the main copy. Load Game
   shows "Load cloud copy" when the cloud copy is newer and "Restore from
   cloud" for an empty slot; nothing is replaced without asking.
-- Transfer code (settings): 12 characters. On a new device "Use a code" takes
-  over the worlds in the cloud and the leaderboard entry.
+- Connected devices (Online page): one device shows a 5-character code
+  (letters and digits, valid 10 minutes, usable once), the other types it in.
+  From then on both use one shared account: worlds, hunter name and
+  leaderboard entry, until a device disconnects. The worlds of the joining
+  device move into free slots (the server refuses when there are not
+  enough, so no world is pushed out). Whenever a device opens the main menu
+  or comes back to the foreground, the newer copy of every world wins; a
+  world deleted on one device goes on the others too. Disconnecting keeps
+  the worlds on the device, they are just no longer shared. Wrong codes are
+  limited (5 per device and 300 in total per 10 minutes).
 - Database rules (row level security): everyone reads the leaderboard, only
   the owner reads and writes their saves. A record cannot go down, cannot
   jump more than 200 floors at once and cannot be sent more often than every
