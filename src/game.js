@@ -764,8 +764,8 @@ export class Game {
     const A = CONFIG.arise, souls = this.souls, P = this.player;
     if (souls.level[i] < P.level) return 1; // weaker than you: always rises
     const ranks = rankProgress(souls.level[i]) - rankProgress(P.level);
-    const c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + P.stats.int * CONFIG.progression.stats.int.arise
-      + (souls.gate[i] && souls.tier[i] < 3 ? CONFIG.gates.ariseBonus : 0); // gate bosses get no bonus
+    let c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + P.stats.int * CONFIG.progression.stats.int.arise;
+    if (souls.gate[i] && souls.tier[i] === 3) c *= CONFIG.gates.bossAriseFactor; // gate bosses are a bit harder to raise
     return Math.max(A.minChance, Math.min(1, c));
   }
 
