@@ -1,10 +1,12 @@
 // Gates: the zone the player is in has one gate of each difficulty (normal,
 // hard, deadly) open somewhere; the gates of other zones are not there.
 // Entering a gate takes the player (and the deployed shadows) into an
-// enclosed arena far outside the world, where the zone's boss waits. The gate
-// closes behind the player and opens again later at another spot. After the
-// boss the player leaves with the Leave button.
-// The boss brain (attack patterns) lives here too.
+// enclosed arena far outside the world. There the player fights through the
+// stages of the gate (waves of the zone's monsters, holding out, champions;
+// harder gates have more) and then meets the zone's boss. The gate closes
+// behind the player and opens again later at another spot. After the boss
+// the player leaves with the Leave button.
+// The boss brain (attack patterns, phases, exhaustion) lives here too.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { flatMaterial } from '../render/geo.js';
@@ -16,7 +18,7 @@ import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
 export { RANKS } from '../core/levels.js';
-const PAUSE = 0, WINDUP = 1, CHARGE = 2;
+const PAUSE = 0, WINDUP = 1, CHARGE = 2, ROAR = 3;
 
 // arenas lie far outside the world, one per gate
 export function arenaCenter(i) {
@@ -46,7 +48,14 @@ export class Gates {
     this.exitOpen = false;
     this.zoneNow = -1; // zone whose gates are shown
     this.time = 0;
-    this.b = { state: PAUSE, t: 0, pattern: '', last: '', cdx: 0, cdz: 0, bite: 0, hitP: false, hitS: new Set() };
+    this.b = { state: PAUSE, t: 0, pattern: '', last: '', cdx: 0, cdz: 0, bite: 0, hitP: false, hitS: new Set(), phase: 1, tired: 0, combo: false };
+    // stages of the gate the player is in
+    this.stages = [];
+    this.stageI = -1;
+    this.stagePause = 0;
+    this.surviveT = 0;
+    this.spawnT = 0;
+    this.poolLeft = 0; // monsters of the stage still standing
     this.abyssIndex = this.list.findIndex((g) => g.abyss);
     this.runMods = []; // modifiers of the gate the player is in
     this.timeLeft = 0; // Against the Clock in a normal gate
@@ -133,6 +142,19 @@ export class Gates {
     br.bite = 0;
     br.last = '';
     br.pattern = '';
+    br.phase = 1;
+    br.tired = 0;
+    br.combo = false;
+  }
+
+  get stageKind() {
+    return this.stageI >= 0 ? this.stages[this.stageI] : '';
+  }
+
+  // Deadly gates and the Abyss: the boss has a third phase
+  phaseCount(gi) {
+    const g = this.list[gi];
+    return g && (g.abyss || CONFIG.gates.difficulties[g.diff].id === 'deadly') ? 3 : 2;
   }
 
   // ---- arena ---------------------------------------------------------------------
@@ -209,16 +231,19 @@ export class Gates {
     this.exit.rotation.y = Math.PI;
 
     E.calmAll();
-    // Elite Horde: the helpers of a gate are all elites
-    const elites = game.modOn('elites') || CONFIG.gates.difficulties[g.diff].eliteAdds;
-    for (const a of E.arenaAdds[gi]) { E.vanish(a); if (!g.abyss) E.tier[a] = elites ? 1 : 0; }
-    if (!g.abyss) {
-      if (tl) this.timeLeft = tl.gate;
-      const b = E.arenaBoss[gi];
-      E.place(b, c.x, c.z - 3);
-      E.packAggro[E.pack[b]] = 1;
-      E.state[b] = ST_CHASE;
-      E.yaw[b] = 0;
+    this.stages = [];
+    this.stageI = -1;
+    if (g.abyss) {
+      for (const a of E.arenaAdds[gi]) E.vanish(a);
+    } else {
+      // the stages come first, the boss last
+      const D = CONFIG.gates.difficulties[g.diff];
+      E.usePool(gi);
+      E.vanish(E.arenaBoss[gi]);
+      this.stages = [...D.stages, 'boss'];
+      this.stagePause = 2.2;
+      this.surviveT = 0;
+      if (tl) this.timeLeft = tl.gate + (tl.perStage || 0) * D.stages.length;
       this.resetBrain();
     }
 
@@ -234,8 +259,9 @@ export class Gates {
     if (g.abyss) {
       game.abyss.begin(floor);
     } else {
-      game.hud.toast(t('gate.entered', { boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
+      game.hud.toast(t('gate.entered', { n: this.stages.length, boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
       play('arise');
+      if (game.tips) game.tips.show('gateStages');
     }
   }
 
@@ -255,6 +281,9 @@ export class Gates {
     if (this.list[gi].abyss) game.abyss.end();
     this.runMods = [];
     this.timeLeft = 0;
+    this.stages = [];
+    this.stageI = -1;
+    this.surviveT = 0;
     if (!toCamp) {
       // loot that still lies in the arena comes along
       game.loot.moveAll(arenaCenter(gi), CONFIG.gates.arenaRadius + 2, this.returnX, this.returnZ);
@@ -284,7 +313,7 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
-    const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck));
+    const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck) * (1 + 0.3 * D.stages.length));
     P.essence += ess;
     game.hud.toast(t('toast.essence', { n: ess }));
     if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
@@ -294,6 +323,124 @@ export class Gates {
     game.effects.burst(x, 2, z, 60, zone.gateColor, 10, 0.3, 1.2);
     play('levelup');
     game.save();
+  }
+
+  // ---- stages ---------------------------------------------------------------------
+  // somewhere along the arena, not right next to the hunter
+  spot(gi) {
+    const c = arenaCenter(gi), R = CONFIG.gates.arenaRadius, P = this.game.player;
+    let x = c.x, z = c.z;
+    for (let k = 0; k < 12; k++) {
+      const a = Math.random() * Math.PI * 2, r = R * (0.45 + Math.random() * 0.45);
+      x = c.x + Math.cos(a) * r;
+      z = c.z + Math.sin(a) * r;
+      if ((x - P.x) ** 2 + (z - P.z) ** 2 > 100) break;
+    }
+    return { x, z };
+  }
+
+  // one monster of the zone joins the stage (-1: the pool is full)
+  spawnOne(gi, tier, x, z) {
+    const game = this.game, E = game.enemies, g = this.list[gi];
+    const a = E.freeSlot(E.pool);
+    if (a < 0) return -1;
+    const types = CONFIG.world.zones[g.zone].enemyTypes;
+    if (x === undefined) ({ x, z } = this.spot(gi));
+    E.spawnAt(a, types[(Math.random() * types.length) | 0], tier, x, z);
+    game.effects.burst(x, 0.5, z, 12, CONFIG.world.zones[g.zone].gateColor, 4, 0.22, 0.6);
+    game.effects.ring(x, z, 0.3, 2.2, CONFIG.world.zones[g.zone].gateColor, 0.4);
+    return a;
+  }
+
+  eliteRoll(D) {
+    const el = this.game.modOn('elites');
+    return Math.random() < (el ? Math.max(el.chance, D.elite) : D.elite) ? 1 : 0;
+  }
+
+  nextStage() {
+    const game = this.game, E = game.enemies, gi = this.active, g = this.list[gi];
+    const D = CONFIG.gates.difficulties[g.diff], G = CONFIG.gates, zone = CONFIG.world.zones[g.zone];
+    this.stageI++;
+    const kind = this.stageKind, n = this.stageI + 1, max = this.stages.length;
+    if (kind === 'boss') {
+      // the boss steps in, its helpers wait in the pool for its summons
+      const elites = game.modOn('elites') || D.eliteAdds;
+      const addType = E.typeIndex[CONFIG.enemies.types[zone.boss].adds];
+      for (const a of E.pool) if (!E.alive[a]) { E.type[a] = addType; E.tier[a] = elites ? 1 : 0; E.kid[a] = 0; }
+      const c = arenaCenter(gi), b = E.arenaBoss[gi];
+      E.place(b, c.x, c.z - 3);
+      E.packAggro[E.pack[b]] = 1;
+      E.state[b] = ST_CHASE;
+      E.yaw[b] = 0;
+      this.resetBrain();
+      game.effects.burst(c.x, 1, c.z - 3, 60, zone.gateColor, 10, 0.3, 1.2);
+      game.effects.ring(c.x, c.z - 3, 0.5, 8, zone.gateColor, 0.6);
+      game.cam.shake(0.5, 0.5);
+      game.hud.banner(t('gate.stage', { n, max }), t('gate.stage.boss', { boss: t('enemy.' + zone.boss) }));
+      play('roar');
+      return;
+    }
+    game.hud.banner(t('gate.stage', { n, max }), t('gate.stage.' + kind));
+    play('arise');
+    if (kind === 'wave') {
+      for (let k = 0; k < D.wave; k++) this.spawnOne(gi, this.eliteRoll(D));
+    } else if (kind === 'survive') {
+      this.surviveT = D.survive;
+      this.spawnT = 0;
+    } else if (kind === 'guard') {
+      // champions, each with a few guards around it
+      for (let c = 0; c < D.guards; c++) {
+        const at = this.spot(gi);
+        this.spawnOne(gi, 2, at.x, at.z);
+        for (let k = 0; k < G.escorts; k++) {
+          const a = (k / G.escorts) * Math.PI * 2;
+          this.clamp(at.x + Math.cos(a) * 3, at.z + Math.sin(a) * 3, 1);
+          this.spawnOne(gi, this.eliteRoll(D), this.cx, this.cz);
+        }
+      }
+    }
+  }
+
+  stageCleared() {
+    const game = this.game, P = game.player, gi = this.active, g = this.list[gi];
+    const D = CONFIG.gates.difficulties[g.diff];
+    // a little reward for every stage
+    const a = Math.atan2(P.dirX, P.dirZ);
+    this.clamp(P.x + Math.sin(a) * 3, P.z + Math.cos(a) * 3, 1);
+    const modLuck = this.runMods.length * CONFIG.modifiers.luck;
+    game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.drop + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
+    const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck));
+    P.essence += ess;
+    game.hud.toast(t('gate.stageCleared', { n: this.stageI + 1 }) + ' · ' + t('toast.essence', { n: ess }));
+    play('stage');
+    this.stagePause = CONFIG.gates.stagePause;
+  }
+
+  // the stage of the gate the player is in
+  runStages(dt) {
+    const game = this.game, E = game.enemies, gi = this.active, G = CONFIG.gates;
+    const kind = this.stageKind;
+    if (kind === 'boss') return;
+    if (this.stagePause > 0) {
+      this.stagePause -= dt;
+      if (this.stagePause <= 0) this.nextStage();
+      return;
+    }
+    let alive = 0;
+    for (const a of E.pool) if (E.alive[a]) alive++;
+    this.poolLeft = alive;
+    if (kind === 'survive' && this.surviveT > 0) {
+      // they keep coming until the time is up
+      this.surviveT -= dt;
+      this.spawnT -= dt;
+      if (this.spawnT <= 0 && alive < G.surviveAlive) {
+        this.spawnOne(gi, this.eliteRoll(CONFIG.gates.difficulties[this.list[gi].diff]));
+        this.spawnT = G.surviveEvery;
+      }
+      if (this.surviveT <= 0) { this.surviveT = 0; game.hud.toast(t('gate.surviveDone')); }
+      return;
+    }
+    if (alive === 0) this.stageCleared();
   }
 
   // ---- per frame ------------------------------------------------------------------
@@ -332,11 +479,14 @@ export class Gates {
         const dx = this.list[i].x - P.x, dz = this.list[i].z - P.z;
         if (dx * dx + dz * dz < r2) { this.near = i; break; }
       }
+      if (this.near >= 0 && game.tips) game.tips.show('gate');
       const ab = this.list[this.abyssIndex];
       if (this.near < 0 && ab && (ab.x - P.x) ** 2 + (ab.z - P.z) ** 2 < r2 * 2.5) this.near = this.abyssIndex; // a bigger portal
     } else if (this.exitOpen) {
       this.exitPortal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
-    } else if (this.timeLeft > 0 && !P.dead) {
+    } else {
+      if (!this.inAbyss && !P.dead) this.runStages(dt);
+      if (!(this.timeLeft > 0 && !P.dead)) return;
       // Against the Clock: out of the gate when the time is up
       this.timeLeft -= dt;
       if (this.timeLeft <= 0) {
@@ -379,7 +529,29 @@ export class Gates {
     const def = E.types[E.type[i]].def, B = CONFIG.boss, BP = CONFIG.bossPatterns;
     E.mvx = E.mvz = E.mvs = 0;
     if (!targetable) { E.state[i] = ST_IDLE; return; }
-    const enraged = E.hp[i] < E.maxHp[i] * B.enrageAt;
+    // a new phase: the boss roars (a shockwave around it) and gets meaner
+    const gi = E.arena[i] - 1;
+    if (b.phase < this.phaseCount(gi) && E.hp[i] < E.maxHp[i] * B.phases[b.phase - 1] && b.state !== CHARGE && b.state !== ROAR) {
+      this.roar(i, def);
+      return;
+    }
+    if (b.state === ROAR) {
+      b.t -= dt;
+      E.state[i] = ST_WINDUP;
+      if (b.t <= 0) this.endPattern(true);
+      return;
+    }
+    // exhausted after a big attack: stands still and takes more damage
+    if (b.tired > 0) {
+      b.tired -= dt;
+      E.state[i] = ST_IDLE;
+      if (Math.random() < dt * 14) {
+        const a = Math.random() * Math.PI * 2, h = 2.6 * E.scale[i];
+        game.effects.sparks(E.x[i] + Math.cos(a) * 0.9, h, E.z[i] + Math.sin(a) * 0.9, 1, 0xffe070, 1.2, 0.3, 0.5, 0.5);
+      }
+      return;
+    }
+    const enraged = b.phase >= 2;
     const speed = def.speed * (enraged ? B.enrageSpeed : 1);
     if (dist > 0.01 && b.state !== CHARGE) {
       let diff = Math.atan2(dx, dz) - E.yaw[i];
@@ -410,7 +582,7 @@ export class Gates {
       b.t -= dt;
       E.state[i] = ST_WINDUP;
       if (b.t <= 0) this.act(i, def, dx, dz, dist, BP, enraged);
-    } else {
+    } else if (b.state === CHARGE) {
       // charging
       b.t -= dt;
       E.state[i] = ST_CHARGE;
@@ -420,12 +592,33 @@ export class Gates {
     }
   }
 
+  roar(i, def) {
+    const game = this.game, E = game.enemies, b = this.b, R = CONFIG.boss.roar;
+    b.phase++;
+    b.state = ROAR;
+    b.t = R.time;
+    b.bite = 0;
+    b.tired = 0;
+    b.combo = false;
+    E.lunge[i] = 1;
+    const x = E.x[i], z = E.z[i];
+    game.hazards.add(x, z, R.radius + E.radius[i], R.time, E.dmg[i] * R.damage, 0xff2060);
+    game.effects.ring(x, z, 0.5, R.radius + 3, 0xff2060, 0.6);
+    game.effects.flare(x, 2, z, 6, 0xff2060, 0.5, 1.6);
+    game.cam.shake(0.7, 0.6);
+    game.hud.banner(t('boss.phase', { n: b.phase }), t('boss.phase.' + b.phase, { boss: t('enemy.' + E.types[E.type[i]].id) }));
+    play('roar');
+    if (game.tips) game.tips.show('bossPhase');
+  }
+
   startPattern(i, def, dx, dz, dist, BP) {
     const game = this.game, E = game.enemies, b = this.b;
     const gi = E.arena[i] - 1;
     let addsAlive = 0;
     for (const a of E.arenaAdds[gi]) if (E.alive[a]) addsAlive++;
-    const options = def.patterns.filter((p) => p !== b.last && (p !== 'summon' || addsAlive < BP.summon.maxAdds - 1));
+    // phase 2 and 3: the boss knows its extra attacks too
+    const all = b.phase >= 2 && def.patterns2 ? [...def.patterns, ...def.patterns2] : def.patterns;
+    const options = all.filter((p) => p !== b.last && (p !== 'summon' || addsAlive < BP.summon.maxAdds - 1));
     const p = options.length ? options[(Math.random() * options.length) | 0] : 'slam';
     b.pattern = p;
     b.last = p;
@@ -448,6 +641,27 @@ export class Gates {
         }
         this.clamp(x, z, 0);
         game.hazards.add(this.cx, this.cz, ER.radius, b.t + k * 0.12, dmg * ER.damage, 0xff7020);
+      }
+    } else if (p === 'fissure') {
+      // a line of bursts from the boss towards its target
+      const F = BP.fissure, ux = dist > 0.01 ? dx / dist : 0, uz = dist > 0.01 ? dz / dist : 1;
+      for (let k = 0; k < F.count; k++) {
+        const r = E.radius[i] + 1 + k * F.step;
+        this.clamp(bx + ux * r, bz + uz * r, 0);
+        game.hazards.add(this.cx, this.cz, F.radius, b.t + k * F.delay, dmg * F.damage, 0xff5030);
+      }
+    } else if (p === 'meteor') {
+      // a rain of strikes all over the arena, the first one on the hunter
+      const M = BP.meteor, P = game.player, c = arenaCenter(gi);
+      for (let k = 0; k < M.count; k++) {
+        let x = P.x, z = P.z;
+        if (k > 0) {
+          const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * M.spread;
+          x = c.x + Math.cos(a) * r;
+          z = c.z + Math.sin(a) * r;
+        }
+        this.clamp(x, z, 0);
+        game.hazards.add(this.cx, this.cz, M.radius, b.t + k * M.delay, dmg * M.damage, 0xff9040);
       }
     }
   }
@@ -484,24 +698,36 @@ export class Gates {
       const gi = E.arena[i] - 1;
       let n = 0;
       for (const a of E.arenaAdds[gi]) {
-        if (E.alive[a] || n >= BP.summon.count) continue;
+        if (E.alive[a] || E.deathT[a] > 0 || n >= BP.summon.count) continue;
         const ang = Math.random() * Math.PI * 2;
         this.clamp(bx + Math.cos(ang) * 4, bz + Math.sin(ang) * 4, 1);
-        E.place(a, this.cx, this.cz);
-        E.packAggro[E.pack[a]] = 1;
-        E.state[a] = ST_CHASE;
+        E.spawnAt(a, E.types[E.type[a]].id, E.tier[a], this.cx, this.cz);
         game.effects.burst(this.cx, 0.5, this.cz, 14, color, 4, 0.22, 0.6);
         n++;
       }
     }
-    // slam and eruption do their damage through the hazards
+    // slam, eruption, fissure and meteor do their damage through the hazards
     this.endPattern(enraged);
   }
 
+  // after an attack: sometimes a second one right away (phase 2 and 3), after
+  // a heavy one the boss is exhausted for a moment, otherwise a short pause
   endPattern(enraged) {
-    const b = this.b;
+    const b = this.b, B = CONFIG.boss;
     b.state = PAUSE;
-    b.t = CONFIG.boss.pause * (enraged ? 0.65 : 1) + Math.random() * 0.5;
+    if (!b.combo && Math.random() < B.combo[b.phase - 1]) {
+      b.combo = true;
+      b.t = 0.3;
+      return;
+    }
+    b.combo = false;
+    b.t = B.pause * (b.phase >= 3 ? 0.5 : enraged ? 0.65 : 1) + Math.random() * 0.5;
+    if (B.tired.patterns.includes(b.pattern)) {
+      b.tired = B.tired.time * (b.phase >= 3 ? 0.6 : 1);
+      play('tired');
+      if (this.game.tips) this.game.tips.show('bossTired');
+    }
+    b.pattern = '';
   }
 
   chargeHits(i, dmg) {

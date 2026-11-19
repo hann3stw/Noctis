@@ -2,6 +2,8 @@
 // in the real world. Some steps wait for the player to do something (move,
 // attack, raise a shadow ...), the others are read and closed with Next.
 // It is switched on when a world is made; the step is saved with the world.
+// Only the basics are taught here; gates, outposts, zones, gear and stats are
+// explained by tips (ui/tips.js) the moment the player first meets them.
 import { t } from '../strings.js';
 import { input } from '../input/input.js';
 import { rollLoot } from '../core/items.js';
@@ -22,13 +24,11 @@ const STEPS = [
   { id: 'army', hl: '.squad' },
   { id: 'loot', done: (g, c) => g.player.inventory.length > c.inv || g.player.essence > c.essence },
   { id: 'menu', hl: '#btn-menu', done: (g, c) => g.menu.opens > c.opens },
-  { id: 'gear' },
-  { id: 'stats' },
-  { id: 'zones', hl: '.minimap' },
-  { id: 'outposts', hl: '#btn-travel' },
-  { id: 'gates' },
   { id: 'done' },
 ];
+// steps 0..10 are the same as in the old, longer tutorial; a world saved in
+// one of its later steps continues at "done"
+export const OLD_STEP_COUNT = STEPS.length - 1;
 
 export class Tutorial {
   constructor(game, hudRoot, step = 0) {

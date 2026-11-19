@@ -89,7 +89,7 @@ export class Abyss {
       const bossId = this.bosses[hashSeed(game.seed, 4400, this.floor) % this.bosses.length];
       E.type[b] = E.typeIndex[bossId];
       const adds = CONFIG.enemies.types[bossId].adds, el = game.modOn('elites');
-      for (const a of pool) { E.type[a] = E.typeIndex[adds]; E.tier[a] = el ? 1 : 0; }
+      for (const a of pool) { E.type[a] = E.typeIndex[adds]; E.tier[a] = el ? 1 : 0; E.kid[a] = 0; }
       const c = arenaCenter(gi);
       E.place(b, c.x, c.z - 3);
       E.packAggro[E.pack[b]] = 1;
@@ -121,6 +121,7 @@ export class Abyss {
       const a = pool[k];
       E.type[a] = E.typeIndex[k % 2 ? k2 : k1];
       E.tier[a] = Math.random() < eliteChance ? 1 : 0;
+      E.kid[a] = 0;
       // somewhere in the arena, not right next to the hunter
       let x = c.x, z = c.z;
       for (let tries = 0; tries < 10; tries++) {

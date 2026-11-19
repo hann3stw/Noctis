@@ -1515,6 +1515,26 @@ button,
 #hud.arena .tut {
   display: none;
 }
+/* tips: shown only when there is one, also inside gates */
+.tut.tip {
+  display: none;
+  border-color: #9fd0ff;
+}
+.tut.tip.on,
+#hud.arena .tut.tip.on {
+  display: block;
+  animation: tip-in 0.35s ease-out;
+}
+.tut.tip .tut-head small {
+  color: #9fd0ff;
+}
+#hud.arena .tut.tip {
+  top: calc(var(--st) + var(--u) * 26);
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translateX(calc(var(--u) * -4)); }
+  to { opacity: 1; transform: none; }
+}
 /* the button a tutorial step is about */
 .tut-hl {
   animation: tut-hl 0.9s ease-in-out infinite alternate;

@@ -1,5 +1,6 @@
 // Pooled shots of enemies and bosses. They fly straight and hit the player or
 // the first shadow they touch. Dodging (invulnerability) lets them pass.
+// kind 1: a chilling shot (trait "chill") that slows the player down.
 import * as THREE from 'three';
 
 const MAX = 160;
@@ -18,6 +19,7 @@ export class EnemyShots {
     this.dmg = new Float32Array(MAX);
     this.r = new Float32Array(MAX);
     this.color = new Uint32Array(MAX);
+    this.kind = new Uint8Array(MAX);
     this.next = 0;
 
     this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshBasicMaterial(), MAX);
@@ -31,7 +33,7 @@ export class EnemyShots {
     game.scene.add(this.mesh);
   }
 
-  fire(x, z, dx, dz, speed, dmg, color, range, radius) {
+  fire(x, z, dx, dz, speed, dmg, color, range, radius, kind = 0) {
     const i = this.next;
     this.next = (this.next + 1) % MAX;
     this.live[i] = 1;
@@ -44,6 +46,7 @@ export class EnemyShots {
     this.dmg[i] = dmg;
     this.r[i] = radius;
     this.color[i] = color;
+    this.kind[i] = kind;
   }
 
   clear() {
@@ -67,6 +70,7 @@ export class EnemyShots {
         const ddx = P.x - x, ddz = P.z - z, m = r + P.radius;
         if (ddx * ddx + ddz * ddz < m * m && P.invuln <= 0) {
           P.damage(this.dmg[i]);
+          if (this.kind[i] === 1) P.chill();
           this.pop(i);
           continue;
         }

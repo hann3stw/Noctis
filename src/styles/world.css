@@ -144,6 +144,17 @@
 .boss-bar .bar span {
   font-size: calc(var(--u) * 2.7);
 }
+/* where the boss's next phases begin */
+.boss-bar .bar .ph {
+  position: absolute;
+  top: -12%;
+  bottom: -12%;
+  width: 3px;
+  margin-left: -1.5px;
+  background: #ffe7a0;
+  box-shadow: 0 0 calc(var(--u) * 0.8) #ffb040;
+  z-index: 1;
+}
 
 /* ---- banner ----------------------------------------------------------------------- */
 .banner {

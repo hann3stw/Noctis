@@ -58,7 +58,7 @@ export class Hud {
         </div>
         <div class="zone"><b></b><small></small></div>
         <div class="zone-card"><small></small><b></b><i></i></div>
-        <div class="boss-bar"><b></b><div class="bar"><i></i><span></span></div></div>
+        <div class="boss-bar"><b></b><div class="bar"><i></i><em class="ph"></em><em class="ph"></em><span></span></div></div>
         <div class="capture"><b></b><div class="bar"><i></i></div></div>
         <canvas class="minimap"></canvas>
         <div class="gate-panel"><div class="gp-text"><b></b><small></small></div><div id="btn-gate2" class="btn pill"></div><div id="btn-gate" class="btn pill">${t('gate.enter')}</div></div>
@@ -134,6 +134,7 @@ export class Hud {
     this.bossName = $('.boss-bar b');
     this.bossFill = $('.boss-bar i');
     this.bossText = $('.boss-bar span');
+    this.bossMarks = [...this.hud.querySelectorAll('.boss-bar .ph')];
     this.gatePanel = $('.gate-panel');
     this.gateTitle = $('.gate-panel b');
     this.gateInfo = $('.gate-panel small');
@@ -277,7 +278,7 @@ export class Hud {
         const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
         const diff = CONFIG.gates.difficulties[gate.diff];
         this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
-        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
+        this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level, n: diff.stages.length + 1 }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
         this.gatePanel.dataset.d = diff.id;
         this.gateBtn2.style.display = game.modsOpen() ? '' : 'none';
         this.gateBtn2.textContent = t('mods.btn') + (nm ? ' (' + nm + ')' : '');
@@ -289,7 +290,15 @@ export class Hud {
     if (show !== this.vBoss) {
       this.vBoss = show;
       this.bossBar.classList.toggle('on', show >= 0);
-      if (show >= 0) this.bossName.textContent = t('enemy.' + E.types[E.type[show]].id);
+      if (show >= 0) {
+        this.bossName.textContent = t('enemy.' + E.types[E.type[show]].id);
+        // where the next phases begin
+        const n = gates.phaseCount(gates.active);
+        this.bossMarks.forEach((m, k) => {
+          m.style.display = k < n - 1 ? '' : 'none';
+          m.style.left = CONFIG.boss.phases[k] * 100 + '%';
+        });
+      }
       this.vBossHp = -1;
     }
     if (show >= 0) {
@@ -309,7 +318,9 @@ export class Hud {
     const left = A.on ? A.timeLeft : gates.timeLeft;
     let info = '';
     if (A.on) info = A.floor + ':' + A.wave + ':' + A.waves + ':' + Math.ceil(left) + ':' + A.cleared;
-    else if (arena && left > 0) info = 'g:' + Math.ceil(left);
+    else if (arena && !gates.exitOpen && gates.stageI >= 0 && gates.stageKind !== 'boss') {
+      info = 'g:' + gates.stageI + ':' + Math.ceil(gates.surviveT) + ':' + gates.poolLeft + ':' + Math.ceil(left) + ':' + (gates.stagePause > 0);
+    } else if (arena && left > 0) info = 'g:' + Math.ceil(left);
     if (info !== this.vAbyss) {
       this.vAbyss = info;
       this.abyssInfo.classList.toggle('on', info !== '');
@@ -318,6 +329,16 @@ export class Hud {
         this.abyssTitle.textContent = t('abyss.floor', { n: A.floor });
         const parts = [];
         if (!A.cleared && A.waves) parts.push(t('abyss.wave', { n: A.wave, max: A.waves }));
+        if (clock) parts.push('⏱ ' + clock);
+        if (gates.runMods.length) parts.push(t('mods.active', { n: gates.runMods.length }));
+        this.abyssSub.textContent = parts.join(' · ');
+      } else if (gates.stageI >= 0 && !gates.exitOpen && gates.stageKind !== 'boss') {
+        // the stage of the gate: what to do and how far along
+        const kind = gates.stageKind, parts = [];
+        this.abyssTitle.textContent = t('gate.stage', { n: gates.stageI + 1, max: gates.stages.length });
+        if (gates.stagePause > 0) parts.push(t('gate.next'));
+        else if (kind === 'survive' && gates.surviveT > 0) parts.push(t('gate.hold', { s: Math.ceil(gates.surviveT) }));
+        else parts.push(t('gate.left', { n: gates.poolLeft }));
         if (clock) parts.push('⏱ ' + clock);
         if (gates.runMods.length) parts.push(t('mods.active', { n: gates.runMods.length }));
         this.abyssSub.textContent = parts.join(' · ');

@@ -343,6 +343,37 @@ const SOUNDS = {
   chest: () => { hiss(300, 120, 0.25, 0.3, 2); [660, 880, 1100, 1320].forEach((f, i) => tone('triangle', f, f, 0.3, 0.08, 0.1 + i * 0.07, 0.6)); },
   death: () => { warm('sawtooth', 110, 1.4, 0.16, 0, 0.5, 2000, 80); tone('sine', 300, 50, 1.2, 0.16, 0, 0.4); hiss(400, 80, 0.9, 0.25, 1, 0, 0.4); },
   ui: () => tone('sine', 660, 760, 0.06, 0.08),
+  // enemy traits
+  block: () => {
+    tone('square', vary(1900), 1700, 0.06, 0.05);
+    tone('triangle', 2900, 2800, 0.18, 0.05, 0, 0.4);
+    thump(300, 140, 0.06, 0.2);
+  },
+  blink: () => {
+    hiss(400, 5000, 0.18, 0.22, 1.5, 0, 0.4);
+    tone('sine', 900, 180, 0.22, 0.08, 0.05, 0.5);
+  },
+  enemyHeal: () => { [523, 784].forEach((f, i) => tone('sine', f, f * 1.02, 0.35, 0.04, i * 0.08, 0.6)); },
+  rally: () => {
+    warm('sawtooth', 147, 0.45, 0.08, 0, 0.4, 1600, 300);
+    tone('triangle', 294, 440, 0.4, 0.05, 0.05, 0.5);
+  },
+  revive: () => {
+    tone('sine', 98, 196, 0.7, 0.12, 0, 0.6, 0.08);
+    hiss(200, 1200, 0.6, 0.12, 2, 0, 0.6, 'bandpass', 0.2);
+  },
+  // bosses and gates
+  roar: () => {
+    warm('sawtooth', 62, 1.1, 0.2, 0, 0.5, 900, 120, 0.06);
+    warm('sawtooth', 93, 0.9, 0.12, 0.05, 0.5, 1400, 160, 0.06);
+    hiss(800, 160, 1, 0.3, 0.7, 0, 0.5, 'lowpass', 0.05);
+    thump(70, 30, 0.6, 0.6);
+  },
+  tired: () => { [1320, 1100, 1320, 1100].forEach((f, i) => tone('sine', f, f, 0.12, 0.035, i * 0.09, 0.4)); },
+  stage: () => {
+    [392, 523, 659, 784].forEach((f, i) => tone('triangle', f, f, 0.4, 0.08, i * 0.07, 0.6));
+    thump(110, 50, 0.3, 0.3);
+  },
   unique: () => {
     tone('sawtooth', 70, 140, 1.2, 0.16, 0, 0.4);
     [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone('triangle', f, f * 1.01, 0.6, 0.1, 0.25 + i * 0.09, 0.6));
@@ -351,10 +382,10 @@ const SOUNDS = {
 };
 
 // minimum time between two plays of the same sound (seconds)
-const GAP = { hit: 0.045, crit: 0.06, swing: 0.05, pickup: 0.05, hurt: 0.08, kill: 0.05, killBig: 0.1 };
+const GAP = { block: 0.08, enemyHeal: 0.3, rally: 0.3, revive: 0.3, blink: 0.1, hit: 0.045, crit: 0.06, swing: 0.05, pickup: 0.05, hurt: 0.08, kill: 0.05, killBig: 0.1 };
 
 // how each sound feels in the hand (ms, or a pattern)
-const HAPTIC = { crit: 12, kill: 14, killBig: 45, ult: [30, 40, 80], hurt: 30, levelup: [20, 60, 30], death: 160, unique: [40, 60, 40, 60, 90], arise: 40 };
+const HAPTIC = { roar: [60, 40, 90], block: 8, crit: 12, kill: 14, killBig: 45, ult: [30, 40, 80], hurt: 30, levelup: [20, 60, 30], death: 160, unique: [40, 60, 40, 60, 90], arise: 40 };
 
 // arg: the weapon for 'swing', 'hit' and 'crit', the skill id for 'skill' and
 // 'ult' (a sound family per power), the kill streak for 'kill' and 'killBig'

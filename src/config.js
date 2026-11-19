@@ -357,7 +357,7 @@ export const CONFIG = {
     list: {
       explode: { radius: 3, delay: 0.7, damage: 1.2 }, // enemies explode when they die
       noHeal: {}, // no healing at all
-      timeLimit: { gate: 150, floor: 90 }, // seconds for a gate / for an Abyss floor
+      timeLimit: { gate: 150, perStage: 50, floor: 90 }, // seconds for a gate (+ per stage) / for an Abyss floor
       swift: { speed: 1.3 }, // faster enemies
       weakArmy: { damage: 0.5 }, // your shadows deal half damage
       elites: { chance: 0.45 }, // many more elites (gate helpers are all elites)
@@ -431,7 +431,8 @@ export const CONFIG = {
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
-  // charger (telegraphs, then rams in a straight line). shadowRole decides what
+  // charger (telegraphs, then rams in a straight line). trait: an extra
+  // behaviour on top (see traits), one new one in every zone after the first. shadowRole decides what
   // the enemy becomes when it rises as a shadow. Stats are for the meadow and
   // are multiplied by the zone values (hp, dmg, xp) and the tier values.
   enemies: {
@@ -454,55 +455,79 @@ export const CONFIG = {
       thornspitter: { behavior: 'ranged', shadowRole: 'ranged', xp: 10, hp: 32, damage: 5, speed: 3.4, radius: 0.7, scale: 1, aggroRange: 13, attackRange: 10, attackWindup: 0.6, attackCooldown: 2.2, shotSpeed: 14, shotColor: 0x9ad040 },
       tuskboar: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 60, damage: 9, speed: 4.2, radius: 0.85, scale: 1, aggroRange: 12, attackRange: 1.9, attackWindup: 0.75, attackCooldown: 3.2, chargeRange: 12, chargeSpeed: 20, chargeTime: 0.65 },
       // ---- forest
-      mossback: { behavior: 'melee', shadowRole: 'tank', xp: 12, hp: 70, damage: 8, speed: 4.4, radius: 0.95, scale: 1.1, aggroRange: 11, attackRange: 2.1, attackWindup: 0.55, attackCooldown: 1.6 },
+      mossback: { trait: 'shield', behavior: 'melee', shadowRole: 'tank', xp: 12, hp: 70, damage: 8, speed: 4.4, radius: 0.95, scale: 1.1, aggroRange: 11, attackRange: 2.1, attackWindup: 0.55, attackCooldown: 1.6 },
       hollowArcher: { behavior: 'ranged', shadowRole: 'ranged', xp: 11, hp: 36, damage: 7, speed: 4, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.55, attackCooldown: 2, shotSpeed: 20, shotColor: 0xd8f0a0 },
       antlerstag: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 52, damage: 10, speed: 5, radius: 0.85, scale: 1.05, aggroRange: 13, attackRange: 2, attackWindup: 0.7, attackCooldown: 3, chargeRange: 13, chargeSpeed: 22, chargeTime: 0.6 },
       // ---- swamp
       bogshambler: { behavior: 'melee', shadowRole: 'tank', xp: 12, hp: 80, damage: 8, speed: 3.6, radius: 0.95, scale: 1.1, aggroRange: 10, attackRange: 2.1, attackWindup: 0.6, attackCooldown: 1.7 },
-      sporemother: { behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 40, damage: 6, speed: 3, radius: 0.8, scale: 1, aggroRange: 13, attackRange: 11, attackWindup: 0.7, attackCooldown: 2.4, shotSpeed: 12, shotColor: 0xd070ff },
+      sporemother: { trait: 'healer', behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 40, damage: 6, speed: 3, radius: 0.8, scale: 1, aggroRange: 13, attackRange: 11, attackWindup: 0.7, attackCooldown: 2.4, shotSpeed: 12, shotColor: 0xd070ff },
       mirecrawler: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 50, damage: 9, speed: 4.6, radius: 0.8, scale: 1, aggroRange: 12, attackRange: 1.9, attackWindup: 0.65, attackCooldown: 2.8, chargeRange: 11, chargeSpeed: 21, chargeTime: 0.6 },
       // ---- ruins
       sentinel: { behavior: 'melee', shadowRole: 'tank', xp: 13, hp: 85, damage: 9, speed: 3.8, radius: 0.9, scale: 1.1, aggroRange: 10, attackRange: 2.2, attackWindup: 0.6, attackCooldown: 1.7 },
-      acolyte: { behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 38, damage: 7, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2.1, shotSpeed: 15, shotColor: 0xffc030 },
+      acolyte: { trait: 'rally', behavior: 'ranged', shadowRole: 'healer', xp: 12, hp: 38, damage: 7, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2.1, shotSpeed: 15, shotColor: 0xffc030 },
       ruinhound: { behavior: 'charger', shadowRole: 'melee', xp: 12, hp: 50, damage: 10, speed: 5.4, radius: 0.8, scale: 1, aggroRange: 13, attackRange: 1.9, attackWindup: 0.6, attackCooldown: 2.8, chargeRange: 13, chargeSpeed: 24, chargeTime: 0.55 },
       // ---- ice
       frostTroll: { behavior: 'melee', shadowRole: 'tank', xp: 14, hp: 90, damage: 10, speed: 3.8, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.65, attackCooldown: 1.8 },
-      iceWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 12, hp: 34, damage: 8, speed: 4.6, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.5, attackCooldown: 1.9, shotSpeed: 18, shotColor: 0x80e0ff },
+      iceWisp: { trait: 'chill', behavior: 'ranged', shadowRole: 'ranged', xp: 12, hp: 34, damage: 8, speed: 4.6, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.5, attackCooldown: 1.9, shotSpeed: 18, shotColor: 0x80e0ff },
       snowram: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 58, damage: 11, speed: 4.8, radius: 0.85, scale: 1.05, aggroRange: 13, attackRange: 2, attackWindup: 0.7, attackCooldown: 3, chargeRange: 13, chargeSpeed: 23, chargeTime: 0.6 },
       // ---- volcano
       magmaBrute: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 95, damage: 11, speed: 3.9, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
       emberImp: { behavior: 'ranged', shadowRole: 'ranged', xp: 13, hp: 36, damage: 8, speed: 5, radius: 0.55, scale: 1, aggroRange: 15, attackRange: 12, attackWindup: 0.45, attackCooldown: 1.7, shotSpeed: 19, shotColor: 0xff7020 },
-      cinderhound: { behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 52, damage: 12, speed: 5.6, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 25, chargeTime: 0.55 },
+      cinderhound: { trait: 'volatile', behavior: 'charger', shadowRole: 'melee', xp: 13, hp: 52, damage: 12, speed: 5.6, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 25, chargeTime: 0.55 },
       // ---- shattered expanse (SS)
-      shardGolem: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 100, damage: 11, speed: 3.8, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
+      shardGolem: { trait: 'split', behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 100, damage: 11, speed: 3.8, radius: 1, scale: 1.15, aggroRange: 10, attackRange: 2.3, attackWindup: 0.6, attackCooldown: 1.7 },
       prismWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 14, hp: 38, damage: 9, speed: 4.6, radius: 0.6, scale: 1, aggroRange: 15, attackRange: 13, attackWindup: 0.5, attackCooldown: 1.8, shotSpeed: 20, shotColor: 0xd080ff },
       glassStalker: { behavior: 'charger', shadowRole: 'melee', xp: 14, hp: 55, damage: 12, speed: 5.6, radius: 0.8, scale: 1.05, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.6, chargeRange: 14, chargeSpeed: 26, chargeTime: 0.55 },
       // ---- stormspire highlands (SSS)
       stormBrute: { behavior: 'melee', shadowRole: 'tank', xp: 15, hp: 105, damage: 12, speed: 3.9, radius: 1, scale: 1.2, aggroRange: 10, attackRange: 2.4, attackWindup: 0.6, attackCooldown: 1.7 },
-      voltWisp: { behavior: 'ranged', shadowRole: 'ranged', xp: 14, hp: 36, damage: 10, speed: 5, radius: 0.6, scale: 1, aggroRange: 16, attackRange: 13, attackWindup: 0.45, attackCooldown: 1.6, shotSpeed: 24, shotColor: 0x60d0ff },
+      voltWisp: { trait: 'artillery', behavior: 'ranged', shadowRole: 'ranged', xp: 14, hp: 36, damage: 10, speed: 5, radius: 0.6, scale: 1, aggroRange: 16, attackRange: 13, attackWindup: 0.45, attackCooldown: 1.6, shotSpeed: 24, shotColor: 0x60d0ff },
       thunderhorn: { behavior: 'charger', shadowRole: 'melee', xp: 15, hp: 60, damage: 13, speed: 5.4, radius: 0.85, scale: 1.1, aggroRange: 14, attackRange: 2, attackWindup: 0.6, attackCooldown: 2.6, chargeRange: 15, chargeSpeed: 27, chargeTime: 0.55 },
       // ---- titans' graveyard (L)
       boneColossus: { behavior: 'melee', shadowRole: 'tank', xp: 16, hp: 115, damage: 12, speed: 3.6, radius: 1.05, scale: 1.25, aggroRange: 10, attackRange: 2.5, attackWindup: 0.65, attackCooldown: 1.8 },
-      gravePriest: { behavior: 'ranged', shadowRole: 'healer', xp: 15, hp: 42, damage: 10, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2, shotSpeed: 16, shotColor: 0x80ff90 },
+      gravePriest: { trait: 'necro', behavior: 'ranged', shadowRole: 'healer', xp: 15, hp: 42, damage: 10, speed: 4, radius: 0.6, scale: 1, aggroRange: 14, attackRange: 12, attackWindup: 0.6, attackCooldown: 2, shotSpeed: 16, shotColor: 0x80ff90 },
       ribHound: { behavior: 'charger', shadowRole: 'melee', xp: 15, hp: 56, damage: 13, speed: 5.8, radius: 0.8, scale: 1, aggroRange: 14, attackRange: 1.9, attackWindup: 0.55, attackCooldown: 2.5, chargeRange: 14, chargeSpeed: 26, chargeTime: 0.55 },
       // ---- throne of the void (M)
-      voidKnight: { behavior: 'melee', shadowRole: 'melee', xp: 17, hp: 95, damage: 14, speed: 4.4, radius: 0.9, scale: 1.15, aggroRange: 12, attackRange: 2.4, attackWindup: 0.5, attackCooldown: 1.4 },
+      voidKnight: { trait: 'hunter', behavior: 'melee', shadowRole: 'melee', xp: 17, hp: 95, damage: 14, speed: 4.4, radius: 0.9, scale: 1.15, aggroRange: 12, attackRange: 2.4, attackWindup: 0.5, attackCooldown: 1.4 },
       voidEye: { behavior: 'ranged', shadowRole: 'ranged', xp: 16, hp: 40, damage: 11, speed: 4.8, radius: 0.65, scale: 1, aggroRange: 16, attackRange: 14, attackWindup: 0.45, attackCooldown: 1.6, shotSpeed: 22, shotColor: 0xb070ff },
-      nightmare: { behavior: 'charger', shadowRole: 'melee', xp: 16, hp: 60, damage: 14, speed: 6, radius: 0.85, scale: 1.1, aggroRange: 15, attackRange: 2, attackWindup: 0.5, attackCooldown: 2.4, chargeRange: 15, chargeSpeed: 28, chargeTime: 0.55 },
+      nightmare: { trait: 'blink', behavior: 'charger', shadowRole: 'melee', xp: 16, hp: 60, damage: 14, speed: 6, radius: 0.85, scale: 1.1, aggroRange: 15, attackRange: 2, attackWindup: 0.5, attackCooldown: 2.4, chargeRange: 15, chargeSpeed: 28, chargeTime: 0.55 },
 
       // ---- gate bosses (meadow values, multiplied by their zone like everything else)
       // patterns: see bossPatterns. shadowBase = stats of the boss as a shadow.
-      thornmaw: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 900, damage: 12, speed: 4.6, radius: 1.8, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['slam', 'charge', 'summon'], adds: 'gloomfang', shadowBase: { hp: 90, damage: 11 } },
-      barkhide: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1000, damage: 12, speed: 3.6, radius: 2, scale: 2.2, aggroRange: 40, attackRange: 3.6, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['slam', 'eruption', 'summon'], adds: 'mossback', shadowBase: { hp: 130, damage: 13 } },
-      mireMatriarch: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 950, damage: 11, speed: 3, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['nova', 'eruption', 'summon'], adds: 'mirecrawler', shadowBase: { hp: 110, damage: 10 } },
-      hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1000, damage: 13, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
-      rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1100, damage: 13, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
-      pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1200, damage: 14, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
-      crystalTyrant: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1300, damage: 15, speed: 3.8, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'volley', 'summon'], adds: 'shardGolem', shadowBase: { hp: 180, damage: 17 } },
-      stormcaller: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1300, damage: 16, speed: 4.2, radius: 1.9, scale: 2.4, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['volley', 'charge', 'nova', 'summon'], adds: 'voltWisp', shadowBase: { hp: 160, damage: 22 } },
-      titanLich: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 1450, damage: 16, speed: 3.4, radius: 2.1, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.7, attackCooldown: 1.5, patterns: ['eruption', 'slam', 'summon', 'nova'], adds: 'boneColossus', shadowBase: { hp: 190, damage: 15 } },
-      voidSovereign: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1600, damage: 18, speed: 4.4, radius: 2, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.55, attackCooldown: 1.3, patterns: ['eruption', 'nova', 'volley', 'charge', 'summon'], adds: 'voidKnight', shadowBase: { hp: 200, damage: 24 } },
+      thornmaw: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 900, damage: 12, speed: 4.6, radius: 1.8, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['slam', 'charge', 'summon'], patterns2: ['fissure'], adds: 'gloomfang', shadowBase: { hp: 90, damage: 11 } },
+      barkhide: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1000, damage: 12, speed: 3.6, radius: 2, scale: 2.2, aggroRange: 40, attackRange: 3.6, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['slam', 'eruption', 'summon'], patterns2: ['fissure'], adds: 'mossback', shadowBase: { hp: 130, damage: 13 } },
+      mireMatriarch: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 950, damage: 11, speed: 3, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.4, attackWindup: 0.7, attackCooldown: 1.6, patterns: ['nova', 'eruption', 'summon'], patterns2: ['meteor'], adds: 'mirecrawler', shadowBase: { hp: 110, damage: 10 } },
+      hollowKing: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1000, damage: 13, speed: 4.2, radius: 1.8, scale: 2.3, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['charge', 'slam', 'volley'], patterns2: ['fissure'], adds: 'sentinel', shadowBase: { hp: 140, damage: 16 } },
+      rimeclaw: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1100, damage: 13, speed: 4, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'charge'], patterns2: ['meteor'], adds: 'snowram', shadowBase: { hp: 170, damage: 15 } },
+      pyrelord: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1200, damage: 14, speed: 3.8, radius: 1.9, scale: 2.5, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['eruption', 'nova', 'volley', 'summon'], patterns2: ['meteor'], adds: 'emberImp', shadowBase: { hp: 150, damage: 20 } },
+      crystalTyrant: { boss: true, behavior: 'boss', shadowRole: 'tank', xp: 200, hp: 1300, damage: 15, speed: 3.8, radius: 2, scale: 2.4, aggroRange: 40, attackRange: 3.8, attackWindup: 0.65, attackCooldown: 1.5, patterns: ['nova', 'slam', 'volley', 'summon'], patterns2: ['fissure'], adds: 'shardGolem', shadowBase: { hp: 180, damage: 17 } },
+      stormcaller: { boss: true, behavior: 'boss', shadowRole: 'ranged', xp: 200, hp: 1300, damage: 16, speed: 4.2, radius: 1.9, scale: 2.4, aggroRange: 40, attackRange: 3.6, attackWindup: 0.6, attackCooldown: 1.4, patterns: ['volley', 'charge', 'nova', 'summon'], patterns2: ['meteor'], adds: 'voltWisp', shadowBase: { hp: 160, damage: 22 } },
+      titanLich: { boss: true, behavior: 'boss', shadowRole: 'healer', xp: 200, hp: 1450, damage: 16, speed: 3.4, radius: 2.1, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.7, attackCooldown: 1.5, patterns: ['eruption', 'slam', 'summon', 'nova'], patterns2: ['meteor'], adds: 'boneColossus', shadowBase: { hp: 190, damage: 15 } },
+      voidSovereign: { boss: true, behavior: 'boss', shadowRole: 'melee', xp: 200, hp: 1600, damage: 18, speed: 4.4, radius: 2, scale: 2.6, aggroRange: 40, attackRange: 3.8, attackWindup: 0.55, attackCooldown: 1.3, patterns: ['eruption', 'nova', 'volley', 'charge', 'summon'], patterns2: ['fissure', 'meteor'], adds: 'voidKnight', shadowBase: { hp: 200, damage: 24 } },
     },
+  },
+
+  // Extra behaviours of enemy types, one new one per zone (see enemies.types):
+  //   shield     blocks hits from the front (not while it attacks): takes this share
+  //   healer     heals the wounded around it every few seconds
+  //   rally      makes the others around it stronger and faster for a while
+  //   chill      its shots slow you down
+  //   volatile   explodes when it dies (a red circle: step out)
+  //   split      breaks into smaller copies when it dies
+  //   artillery  every second attack is a strike from above where you stand
+  //   necro      raises fallen monsters of its pack again
+  //   blink      teleports behind its target, then strikes
+  //   hunter     goes for your shadows first and hits them harder
+  traits: {
+    shield: { front: 0.35, taken: 0.25 },
+    healer: { every: 5, radius: 8, heal: 0.18 },
+    rally: { every: 7, radius: 8, time: 5, damage: 0.35, speed: 0.3 },
+    chill: { time: 1.6, slow: 0.4 },
+    volatile: { radius: 3.2, delay: 0.85, damage: 1.5 },
+    split: { count: 2, hp: 0.35, scale: 0.62, damage: 0.55, xp: 0.3 },
+    artillery: { every: 2, radius: 2.8, delay: 1.1, damage: 1.6 },
+    necro: { every: 8, radius: 11, hp: 0.5, max: 2, within: 25 },
+    blink: { cooldown: 5, behind: 2.2, minDist: 5 },
+    hunter: { damage: 1.6 },
   },
 
   // Boss attacks. damage = multiple of the boss damage.
@@ -513,6 +538,9 @@ export const CONFIG = {
     volley: { windup: 0.6, shots: 5, spreadDeg: 40, speed: 18, damage: 0.9 },
     eruption: { windup: 1.1, count: 5, radius: 3, spread: 9, damage: 1.3 },
     summon: { count: 3, maxAdds: 6 },
+    // phase-2 attacks (see the bosses' patterns2)
+    fissure: { windup: 0.7, count: 6, radius: 2.2, step: 2.6, delay: 0.12, damage: 1.4 },
+    meteor: { windup: 1.2, count: 10, radius: 2.6, spread: 18, delay: 0.08, damage: 1.3 },
   },
   boss: {
     // Gate bosses have hp x boss.hp x their gate's difficulty. With good gear
@@ -524,9 +552,21 @@ export const CONFIG = {
     enrageSpeed: 1.35,
     stunResist: 0.5, // bosses are stunned for this share of the time
     shotRadius: 0.5,
+    // Phases: at these shares of health the boss roars (a shockwave around it:
+    // step out), learns its patterns2 and attacks in combos. Deadly gates and
+    // the Abyss also have the third phase.
+    phases: [0.5, 0.2],
+    roar: { time: 1.4, radius: 7, damage: 1 },
+    combo: [0, 0.35, 0.7], // chance to chain a second attack, per phase
+    // after a charge or a slam the boss is exhausted for a moment and takes
+    // more damage
+    tired: { time: 1.5, damage: 0.5, patterns: ['charge', 'slam'] },
   },
 
-  // Gates are about loot and strong shadows. Only the zone you are in has
+  // Gates are about loot and strong shadows. A gate has stages before its
+  // boss: wave (monsters of the zone), survive (they keep coming for a while,
+  // then defeat the rest) and guard (champions with escorts). Every cleared
+  // stage drops an item. Only the zone you are in has
   // gates: one of each difficulty. A gate closes once you enter it (win or
   // lose) and opens again later at another spot of the zone, but only while
   // you are in that zone. After the boss you leave with the Leave button.
@@ -541,10 +581,16 @@ export const CONFIG = {
     //   eliteAdds    the boss's helpers are elites (elite shadows)
     difficulties: [
       // minRarity: 2 = rare, 3 = epic (never above what the rank can drop)
-      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 2, luck: 1, eliteAdds: false, color: 0xffffff },
-      { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 1.8, eliteAdds: true, color: 0xffb040 },
-      { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 3, luck: 3, eliteAdds: true, color: 0xff3050 },
+      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 2, luck: 1, eliteAdds: false, color: 0xffffff, stages: ['wave', 'wave'], wave: 7, elite: 0.08, survive: 20, guards: 1 },
+      { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 1.8, eliteAdds: true, color: 0xffb040, stages: ['wave', 'survive', 'guard'], wave: 9, elite: 0.15, survive: 25, guards: 1 },
+      { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 3, luck: 3, eliteAdds: true, color: 0xff3050, stages: ['wave', 'survive', 'wave', 'guard'], wave: 11, elite: 0.25, survive: 30, guards: 2 },
     ],
+    pool: 16, // enemy slots for the stages of the gate the player is in
+    surviveAlive: 7, // monsters at once while you hold out
+    surviveEvery: 0.7, // seconds between two of them
+    escorts: 3, // per champion of a guard stage
+    stagePause: 2.5, // seconds between two stages
+    stageLuck: 0.5, // luck of the item of a stage
     ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
   },
 

@@ -2,7 +2,9 @@
 // near the player are simulated and drawn; one InstancedMesh per enemy type.
 // Every enemy has a tier (0 normal, 1 elite, 2 champion, 3 boss) and the zone
 // it belongs to, which scale its stats. Gate bosses and their summoned helpers
-// use reserved slots that only come alive inside their arena.
+// use reserved slots that only come alive inside their arena; the stages of
+// normal gates share one pool of slots. Enemy types can have a trait (see
+// CONFIG.traits), an extra behaviour on top of melee / ranged / charger.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { enemyPower, levelAt, rankHp } from '../core/levels.js';
@@ -12,6 +14,7 @@ import { flatMaterial } from '../render/geo.js';
 import { buildEnemyGeometry } from '../render/models/enemies.js';
 import { arenaCenter } from '../world/gates.js';
 import { fmt } from '../core/format.js';
+import { play } from '../core/sfx.js';
 
 export const ST_IDLE = 0, ST_CHASE = 1, ST_WINDUP = 2, ST_RETURN = 3, ST_CHARGE = 4;
 const B_MELEE = 0, B_RANGED = 1, B_CHARGER = 2, B_BOSS = 3;
@@ -20,6 +23,7 @@ const MAX_VISIBLE = 128; // per type
 const MAX_MARKERS = 96;
 const DEATH_TIME = 0.28;
 const MARK_COLORS = [0, 0xffc030, 0xff4050, 0xff2060];
+const TR = CONFIG.traits;
 const BAR_WIDTH = [1.5, 2.1, 2.7, 0];
 const _c = new THREE.Color();
 
@@ -62,6 +66,15 @@ export class Enemies {
     this.retT = new Float32Array(N); // time until the target is re-evaluated
     this.stun = new Float32Array(N); // seconds the enemy cannot act
     this.vuln = new Float32Array(N); // seconds the enemy takes more damage (Hunter's Mark)
+    // traits
+    this.kid = new Uint8Array(N); // a smaller copy left by a splitting enemy
+    this.kidOf = new Int32Array(N).fill(-1); // world enemies that split: their first copy slot
+    this.buff = new Float32Array(N); // seconds of rally (stronger and faster)
+    this.tt = new Float32Array(N); // trait timer (heal, rally, raise, blink)
+    this.atkN = new Uint8Array(N); // attacks so far (artillery: every second one)
+    this.diedAt = new Float32Array(N); // clock at death (necro)
+    this.revived = new Uint8Array(N); // raised again by a necro (only once)
+    this.clock = 0;
 
     this.active = new Uint16Array(N);
     this.activeCount = 0;
@@ -93,7 +106,7 @@ export class Enemies {
       for (let i = 0; i < MAX_VISIBLE; i++) a[i * 16 + 15] = 1;
       game.scene.add(mesh);
       this.typeIndex[id] = this.types.length;
-      this.types.push({ id, def, mesh, n: 0, beh: BEHAVIOR[def.behavior] || 0 });
+      this.types.push({ id, def, mesh, n: 0, beh: BEHAVIOR[def.behavior] || 0, trait: def.trait || '', tipped: false });
     }
 
     // coloured rings under elites, champions and bosses
@@ -138,6 +151,23 @@ export class Enemies {
     return i;
   }
 
+  // the copies a splitting enemy leaves (asleep until it dies; no rng, so the
+  // packs of a world stay where they always were)
+  newKids(i) {
+    const T = TR.split, first = this.count;
+    for (let k = 0; k < T.count && this.count < CONFIG.sim.maxEnemies; k++) {
+      const j = this.count++;
+      this.type[j] = this.type[i];
+      this.pack[j] = this.pack[i];
+      this.zone[j] = this.zone[i];
+      this.phase[j] = Math.random() * 6.28;
+      this.kid[j] = 1;
+      this.alive[j] = 0;
+      this.respawnT[j] = Infinity;
+    }
+    if (this.count > first) this.kidOf[i] = first;
+  }
+
   spawnWorld() {
     const E = CONFIG.enemies, world = this.game.world;
     const rng = mulberry32(hashSeed(this.game.seed, 101, 202));
@@ -161,18 +191,19 @@ export class Enemies {
         if (!ok) continue;
         const p = this.newPack(px, pz);
         const typeId = zone.enemyTypes[(rng() * zone.enemyTypes.length) | 0];
+        const split = E.types[typeId].trait === 'split';
         if (placed < zone.champions) {
           // a champion with two escorts
           for (let k = 0; k < 3; k++) {
             const i = this.newEnemy(typeId, p, k === 0 ? 2 : 0, zi, rng);
-            if (i >= 0) this.place(i);
+            if (i >= 0) { this.place(i); if (split) this.newKids(i); }
           }
         } else {
           const size = E.packSize[0] + ((rng() * (E.packSize[1] - E.packSize[0] + 1)) | 0);
           const elite = rng() < E.eliteChance;
           for (let k = 0; k < size; k++) {
             const i = this.newEnemy(typeId, p, elite && k === 0 ? 1 : 0, zi, rng);
-            if (i >= 0) this.place(i);
+            if (i >= 0) { this.place(i); if (split) this.newKids(i); }
           }
         }
         placed++;
@@ -193,29 +224,68 @@ export class Enemies {
       }
     });
 
-    // reserved slots for the gate bosses and their helpers (asleep until used)
+    // Reserved slots for the gate bosses (asleep until used). The stages and
+    // the boss helpers of all normal gates share one pool (only one gate is
+    // entered at a time, see usePool); the Abyss keeps its own.
+    const sleep = (i, gi) => { this.arena[i] = gi + 1; this.alive[i] = 0; this.respawnT[i] = Infinity; };
+    this.pool = null;
+    this.poolPack = -1;
     world.gates.forEach((g, gi) => {
-      const maxAdds = g.abyss ? CONFIG.abyss.pool : CONFIG.bossPatterns.summon.maxAdds;
       const zone = CONFIG.world.zones[g.zone];
       const c = arenaCenter(gi);
       const p = this.newPack(c.x, c.z);
       const b = this.newEnemy(zone.boss, p, 3, g.zone, rng);
-      this.arena[b] = gi + 1;
-      this.alive[b] = 0;
-      this.respawnT[b] = Infinity;
+      sleep(b, gi);
       this.arenaBoss.push(b);
-      const adds = [];
       const addType = CONFIG.enemies.types[zone.boss].adds;
-      for (let k = 0; k < maxAdds; k++) {
-        const i = this.newEnemy(addType, p, CONFIG.gates.difficulties[g.diff].eliteAdds ? 1 : 0, g.zone, rng);
-        if (i < 0) break;
-        this.arena[i] = gi + 1;
-        this.alive[i] = 0;
-        this.respawnT[i] = Infinity;
-        adds.push(i);
+      if (g.abyss) {
+        const adds = [];
+        for (let k = 0; k < CONFIG.abyss.pool; k++) {
+          const i = this.newEnemy(addType, p, 0, g.zone, rng);
+          if (i < 0) break;
+          sleep(i, gi);
+          adds.push(i);
+        }
+        this.arenaAdds.push(adds);
+        return;
       }
-      this.arenaAdds.push(adds);
+      if (!this.pool) {
+        this.pool = [];
+        this.poolPack = this.newPack(c.x, c.z);
+        for (let k = 0; k < CONFIG.gates.pool; k++) {
+          const i = this.newEnemy(addType, this.poolPack, 0, g.zone, rng);
+          if (i < 0) break;
+          sleep(i, gi);
+          this.pool.push(i);
+        }
+      }
+      this.arenaAdds.push(this.pool);
     });
+  }
+
+  // the shared pool now belongs to gate gi (all asleep)
+  usePool(gi) {
+    if (!this.pool) return;
+    const c = arenaCenter(gi);
+    this.packX[this.poolPack] = c.x;
+    this.packZ[this.poolPack] = c.z;
+    for (const a of this.pool) { this.vanish(a); this.arena[a] = gi + 1; this.zone[a] = this.game.world.gates[gi].zone; }
+  }
+
+  // a sleeping arena slot joins the fight at (x, z) as typeId
+  spawnAt(a, typeId, tier, x, z) {
+    this.type[a] = this.typeIndex[typeId];
+    this.tier[a] = tier;
+    this.kid[a] = 0;
+    this.place(a, x, z);
+    this.packAggro[this.pack[a]] = 1;
+    this.state[a] = ST_CHASE;
+  }
+
+  // a free slot of an arena pool (not alive, done dying), -1 if none
+  freeSlot(pool) {
+    for (const a of pool) if (!this.alive[a] && this.deathT[a] <= 0) return a;
+    return -1;
   }
 
   // (re)spawns enemy i near its pack centre, or at (x, z) when given
@@ -266,6 +336,14 @@ export class Enemies {
     this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;
     this.xpv[i] = Math.round(def.xp * pw * T.xp * Math.sqrt(rk) * xpM);
     this.scale[i] = def.scale * T.scale;
+    if (this.kid[i]) {
+      const S = TR.split;
+      this.maxHp[i] = Math.max(1, Math.round(this.maxHp[i] * S.hp));
+      this.hp[i] = this.maxHp[i];
+      this.dmg[i] *= S.damage;
+      this.xpv[i] = Math.max(1, Math.round(this.xpv[i] * S.xp));
+      this.scale[i] *= S.scale;
+    }
     this.radius[i] = def.radius * this.scale[i];
     this.state[i] = ST_IDLE;
     this.timer[i] = Math.random() * 3;
@@ -276,6 +354,11 @@ export class Enemies {
     this.tgt[i] = -1;
     this.stun[i] = 0;
     this.vuln[i] = 0;
+    this.buff[i] = 0;
+    this.atkN[i] = 0;
+    this.revived[i] = 0;
+    const tr = def.trait && TR[def.trait];
+    this.tt[i] = tr ? (tr.every || tr.cooldown || 0) * (0.3 + Math.random() * 0.7) : 0;
     this.retT[i] = Math.random() * 0.5;
     this.alive[i] = 1;
   }
@@ -403,6 +486,23 @@ export class Enemies {
     if (!this.alive[i]) return;
     const fx = this.game.effects;
     if (this.vuln[i] > 0) amount = Math.round(amount * (1 + CONFIG.skills.huntersMark.vuln));
+    // shield: hits from the front are blocked, unless it is attacking right now
+    let blocked = false;
+    const st = this.state[i];
+    if (this.types[this.type[i]].trait === 'shield' && st !== ST_WINDUP && st !== ST_CHARGE && this.stun[i] <= 0) {
+      const kl = Math.hypot(kx, kz);
+      if (kl > 0.01 && -(Math.sin(this.yaw[i]) * kx + Math.cos(this.yaw[i]) * kz) / kl > TR.shield.front) {
+        amount = Math.max(1, Math.round(amount * TR.shield.taken));
+        blocked = true;
+        fx.sparks(this.x[i] - kx / kl * this.radius[i], 1.2 * this.scale[i], this.z[i] - kz / kl * this.radius[i], 6, 0xcfe8ff, 4, 0.25, 0.3, 1);
+        if (src < 0) play('block');
+      }
+    }
+    // an exhausted boss takes more damage
+    if (this.tier[i] === 3 && this.arena[i] && this.game.gates.b.tired > 0) {
+      amount = Math.round(amount * (1 + CONFIG.boss.tired.damage));
+      crit = true;
+    }
     this.hp[i] -= amount;
     this.flash[i] = 0.12;
     this.packAggro[this.pack[i]] = 1;
@@ -412,7 +512,7 @@ export class Enemies {
     this.x[i] += kx * kb;
     this.z[i] += kz * kb;
     if (src < 0) {
-      fx.number(this.x[i], 2.2 * this.scale[i], this.z[i], fmt(amount), crit ? 'crit' : undefined);
+      fx.number(this.x[i], 2.2 * this.scale[i], this.z[i], fmt(amount), blocked ? 'block' : crit ? 'crit' : undefined);
       fx.burst(this.x[i], 1, this.z[i], 4, 0xe8dcff, 5, 0.14, 0.3);
     } else {
       fx.burst(this.x[i], 1, this.z[i], 2, 0xb48cff, 4, 0.12, 0.25);
@@ -423,8 +523,10 @@ export class Enemies {
   kill(i, src = -1) {
     this.alive[i] = 0;
     this.deathT[i] = DEATH_TIME;
-    this.respawnT[i] = this.arena[i] ? Infinity : CONFIG.sim.respawnTime;
+    this.respawnT[i] = this.arena[i] || this.kid[i] ? Infinity : CONFIG.sim.respawnTime;
+    this.diedAt[i] = this.clock;
     const fx = this.game.effects, x = this.x[i], z = this.z[i], t = this.tier[i];
+    if (this.types[this.type[i]].trait === 'split' && !this.kid[i] && t < 3) this.split(i);
     fx.burst(x, 0.9, z, 14 + t * 10, 0x6a4dbf, 5, 0.24, 0.6);
     fx.flare(x, 1, z, 2.4 + t * 1.4, 0xb48cff, 0.34, 1.8);
     fx.flare(x, 1, z, 1.2 + t * 0.6, 0xffffff, 0.16, 1.5);
@@ -432,6 +534,122 @@ export class Enemies {
     fx.ring(x, z, 0.3, 2 + t * 1.2, 0x8a4dff, 0.35);
     if (t >= 1 || src < 0) fx.light(x, 1.6, z, 0x9a6bff, 30 + t * 40, 7 + t * 3, 0.35 + t * 0.1);
     this.game.onEnemyKilled(i, src);
+  }
+
+  // split: smaller copies jump out of the dying enemy
+  split(i) {
+    const S = TR.split, kids = [];
+    if (this.arena[i]) {
+      const pool = this.arenaAdds[this.arena[i] - 1];
+      for (const a of pool) if (a !== i && !this.alive[a] && this.deathT[a] <= 0 && kids.length < S.count) kids.push(a);
+    } else if (this.kidOf[i] >= 0) {
+      for (let k = 0; k < S.count; k++) if (!this.alive[this.kidOf[i] + k]) kids.push(this.kidOf[i] + k);
+    }
+    kids.forEach((k, n) => {
+      const a = (n / kids.length) * Math.PI * 2 + Math.random();
+      this.type[k] = this.type[i];
+      this.zone[k] = this.zone[i];
+      this.tier[k] = 0;
+      this.kid[k] = 1;
+      this.place(k, this.x[i] + Math.cos(a) * 1.3, this.z[i] + Math.sin(a) * 1.3);
+      this.packAggro[this.pack[k]] = 1;
+      this.state[k] = ST_CHASE;
+      this.atkCd[k] = 0.8;
+      this.game.effects.sparks(this.x[k], 1, this.z[k], 8, 0xd080ff, 5, 0.3, 0.5, 2);
+    });
+  }
+
+  // attack damage: rally makes it stronger, hunters hit shadows harder
+  atk(i, tg) {
+    let d = this.dmg[i];
+    if (this.buff[i] > 0) d *= 1 + TR.rally.damage;
+    if (tg >= 0 && this.types[this.type[i]].trait === 'hunter') d *= TR.hunter.damage;
+    return d;
+  }
+
+  // ---- traits that act on their own (while the enemy fights) ----------------
+  // healer, rally and necro work on a timer; blink and the tips live in update
+  traitTick(i, trait, dt) {
+    this.tt[i] -= dt;
+    if (this.tt[i] > 0) return;
+    const game = this.game, fx = game.effects, x = this.x[i], z = this.z[i];
+    const P = game.player, near = (P.x - x) ** 2 + (P.z - z) ** 2 < 400;
+    if (trait === 'healer') {
+      const H = TR.healer, r2 = H.radius * H.radius;
+      let n = 0;
+      for (let k = 0; k < this.activeCount; k++) {
+        const j = this.active[k];
+        if (!this.alive[j] || this.tier[j] === 3 || this.hp[j] >= this.maxHp[j]) continue;
+        if ((this.x[j] - x) ** 2 + (this.z[j] - z) ** 2 > r2) continue;
+        this.hp[j] = Math.min(this.maxHp[j], this.hp[j] + this.maxHp[j] * H.heal);
+        fx.burst(this.x[j], 1.2, this.z[j], 5, 0x70ff90, 3, 0.18, 0.5);
+        n++;
+      }
+      this.tt[i] = n ? H.every : 1;
+      if (n) {
+        fx.ring(x, z, 0.5, H.radius, 0x70ff90, 0.5);
+        if (near) play('enemyHeal');
+      }
+    } else if (trait === 'rally') {
+      const R = TR.rally, r2 = R.radius * R.radius;
+      this.tt[i] = R.every;
+      for (let k = 0; k < this.activeCount; k++) {
+        const j = this.active[k];
+        if (j === i || !this.alive[j] || this.tier[j] === 3) continue;
+        if ((this.x[j] - x) ** 2 + (this.z[j] - z) ** 2 > r2) continue;
+        this.buff[j] = R.time;
+        fx.burst(this.x[j], 1.4, this.z[j], 4, 0xffc030, 3, 0.18, 0.4);
+      }
+      fx.ring(x, z, 0.5, R.radius, 0xffc030, 0.5);
+      if (near) play('rally');
+    } else if (trait === 'necro') {
+      const N = TR.necro, r2 = N.radius * N.radius;
+      this.tt[i] = N.every;
+      let n = 0;
+      for (let j = 0; j < this.count && n < N.max; j++) {
+        if (this.alive[j] || this.deathT[j] > 0 || this.pack[j] !== this.pack[i] || this.revived[j] || this.tier[j] === 3) continue;
+        if (this.arena[j] !== this.arena[i] || this.clock - this.diedAt[j] > N.within || this.diedAt[j] <= 0) continue;
+        if ((this.x[j] - x) ** 2 + (this.z[j] - z) ** 2 > r2) continue;
+        this.place(j, this.x[j], this.z[j]);
+        this.hp[j] = Math.round(this.maxHp[j] * N.hp);
+        this.revived[j] = 1;
+        this.packAggro[this.pack[j]] = 1;
+        this.state[j] = ST_CHASE;
+        fx.burst(this.x[j], 0.4, this.z[j], 14, 0x80ff90, 4, 0.22, 0.7);
+        fx.ring(this.x[j], this.z[j], 0.3, 2.4, 0x80ff90, 0.5);
+        n++;
+      }
+      if (n) {
+        fx.flare(x, 1.6, z, 3, 0x80ff90, 0.4, 1.6);
+        if (near) play('revive');
+      } else this.tt[i] = 1.5;
+    }
+  }
+
+  // blink: appear behind the target and strike. True when it blinked.
+  blink(i, tg, dx, dz, dist) {
+    const B = TR.blink, game = this.game;
+    if (this.tt[i] > 0 || dist < B.minDist) return false;
+    let bx, bz;
+    if (tg < 0) {
+      const P = game.player;
+      bx = P.x - P.dirX * B.behind;
+      bz = P.z - P.dirZ * B.behind;
+    } else {
+      const u = game.army.units[tg];
+      bx = u.x + (dx / dist) * B.behind;
+      bz = u.z + (dz / dist) * B.behind;
+    }
+    const fx = game.effects;
+    fx.burst(this.x[i], 1, this.z[i], 14, 0xb070ff, 5, 0.24, 0.5);
+    fx.flare(this.x[i], 1, this.z[i], 2.4, 0xb070ff, 0.25, 1.8);
+    this.x[i] = bx;
+    this.z[i] = bz;
+    fx.burst(bx, 1, bz, 14, 0xb070ff, 5, 0.24, 0.5);
+    fx.ring(bx, bz, 2.4, 0.3, 0xb070ff, 0.3);
+    this.tt[i] = B.cooldown;
+    play('blink');
+    return true;
   }
 
   // hits whatever the enemy is attacking (tg = shadow slot or -1 = player)
@@ -452,6 +670,7 @@ export class Enemies {
     const leash2 = E.leash * E.leash;
     const respawnD2 = S.respawnMinPlayerDist * S.respawnMinPlayerDist;
     let nAct = 0;
+    this.clock += dt;
     for (let t = 0; t < this.types.length; t++) this.types[t].n = 0;
     this.nMarks = 0;
 
@@ -481,7 +700,9 @@ export class Enemies {
       if (this.atkCd[i] > 0) this.atkCd[i] -= dt;
       if (this.flash[i] > 0) this.flash[i] -= dt;
       if (this.lunge[i] > 0) this.lunge[i] -= dt * 5;
+      if (this.buff[i] > 0) this.buff[i] -= dt;
       let st = this.state[i];
+      const trait = ty.trait;
       let mvx = 0, mvz = 0, speed = 0;
 
       // ---- target: the player or the most threatening shadow nearby
@@ -491,10 +712,12 @@ export class Enemies {
       if (this.retT[i] <= 0 && st !== ST_WINDUP && st !== ST_CHARGE) {
         this.retT[i] = 0.35 + Math.random() * 0.25;
         const s = army.pickTarget(this.x[i], this.z[i], E.targetRange);
-        tg = s >= 0 && (!playerOk || army.pickW < pd2) ? s : -1;
+        // hunters always go for a shadow when one is near
+        tg = s >= 0 && (trait === 'hunter' || !playerOk || army.pickW < pd2) ? s : -1;
       }
       this.tgt[i] = tg;
       let dx = pdx, dz = pdz, tr = P.radius, targetable = playerOk;
+      // (dx, dz may change below when a blink moves the enemy)
       if (tg >= 0) {
         const u = army.units[tg];
         dx = u.x - this.x[i];
@@ -539,6 +762,21 @@ export class Enemies {
             speed = mvx * mvx + mvz * mvz > 0.3 ? def.speed * 0.35 : 0;
           }
         }
+        if (trait && st === ST_CHASE && targetable) {
+          if (trait === 'healer' || trait === 'rally' || trait === 'necro') this.traitTick(i, trait, dt);
+          else if (trait === 'blink') {
+            if (this.tt[i] > 0) this.tt[i] -= dt;
+            else if (dist < def.chargeRange * 1.6 && this.blink(i, tg, dx, dz, dist)) {
+              st = ST_WINDUP;
+              this.timer[i] = def.attackWindup + 0.15;
+              dx = (tg < 0 ? px : army.units[tg].x) - this.x[i];
+              dz = (tg < 0 ? pz : army.units[tg].z) - this.z[i];
+              this.yaw[i] = Math.atan2(dx, dz);
+            }
+          }
+          // the first time you meet a trait: a short tip
+          if (!ty.tipped && pd2 < 400 && game.tips) { ty.tipped = true; game.tips.show('trait.' + trait); }
+        }
         if (st === ST_CHASE) {
           const ax = this.x[i] - this.packX[p], az = this.z[i] - this.packZ[p];
           if (!targetable || ax * ax + az * az > leash2) this.packAggro[p] = 0;
@@ -576,9 +814,16 @@ export class Enemies {
             const reach = def.attackRange + tr;
             this.lunge[i] = 1;
             this.atkCd[i] = def.attackCooldown * (0.85 + Math.random() * 0.3);
+            this.atkN[i]++;
             if (ty.beh === B_RANGED) {
-              if (targetable && dist > 0.01) {
-                game.shots.fire(this.x[i], this.z[i], dx / dist, dz / dist, def.shotSpeed, this.dmg[i], def.shotColor, def.attackRange * 1.5, 0.35);
+              if (trait === 'artillery' && this.atkN[i] % TR.artillery.every === 0 && targetable) {
+                // a strike from above where the target stands
+                const A = TR.artillery, tx = this.x[i] + dx, tz = this.z[i] + dz;
+                if (this.arena[i]) { gates.clamp(tx, tz, 0); game.hazards.add(gates.cx, gates.cz, A.radius, A.delay, this.atk(i, tg) * A.damage, def.shotColor); }
+                else game.hazards.add(tx, tz, A.radius, A.delay, this.atk(i, tg) * A.damage, def.shotColor);
+                game.effects.flare(this.x[i], 2, this.z[i], 2.2, def.shotColor, 0.3, 1.8);
+              } else if (targetable && dist > 0.01) {
+                game.shots.fire(this.x[i], this.z[i], dx / dist, dz / dist, def.shotSpeed, this.atk(i, tg), def.shotColor, def.attackRange * 1.5, 0.35, trait === 'chill' ? 1 : 0);
               }
               st = ST_CHASE;
             } else if (ty.beh === B_CHARGER && dist > reach + 0.5 && dist > 0.01) {
@@ -588,7 +833,7 @@ export class Enemies {
               this.timer[i] = def.chargeTime;
               this.hitDone[i] = 0;
             } else {
-              if (targetable && dist <= reach + 0.9) this.hitTarget(tg, this.dmg[i]);
+              if (targetable && dist <= reach + 0.9) this.hitTarget(tg, this.atk(i, tg));
               st = ST_CHASE;
             }
           }
@@ -597,7 +842,7 @@ export class Enemies {
           mvx = this.cdx[i]; mvz = this.cdz[i]; speed = def.chargeSpeed;
           if (!this.hitDone[i] && targetable && dist < this.radius[i] + tr + 0.4) {
             this.hitDone[i] = 1;
-            this.hitTarget(tg, this.dmg[i] * 1.4);
+            this.hitTarget(tg, this.atk(i, tg) * 1.4);
             this.timer[i] = Math.min(this.timer[i], 0.08);
           }
           if (this.timer[i] <= 0) st = ST_CHASE;
@@ -611,6 +856,7 @@ export class Enemies {
         }
       }
       this.state[i] = st;
+      if (this.buff[i] > 0) speed *= 1 + TR.rally.speed;
       // Swift: faster enemies in gates and the Abyss
       if (speed > 0 && this.arena[i]) {
         const sw = game.modOn('swift');
@@ -669,7 +915,8 @@ export class Enemies {
       if (dx * dx + dz * dz < renderR2 || this.tier[i] === 3) {
         const st = this.state[i];
         const tier = this.tier[i];
-        this.draw(i, 1, this.flash[i] > 0 ? 1 : st === ST_WINDUP ? 2 : st === ST_CHARGE ? 4 : 0);
+        const tired = tier === 3 && gates.b.tired > 0;
+        this.draw(i, 1, this.flash[i] > 0 ? 1 : st === ST_WINDUP ? 2 : st === ST_CHARGE ? 4 : tired ? 6 : this.buff[i] > 0 ? 5 : 0);
         game.effects.blob(x, z, this.radius[i] * 1.1);
         if (tier > 0) this.mark(i);
         if (tier < 3 && this.hp[i] < this.maxHp[i]) {
@@ -704,7 +951,8 @@ export class Enemies {
     c[n * 3] = _c.r; c[n * 3 + 1] = _c.g; c[n * 3 + 2] = _c.b;
   }
 
-  // tint: 0 normal, 1 hit flash, 2 attack telegraph, 3 dying, 4 charging
+  // tint: 0 normal, 1 hit flash, 2 attack telegraph, 3 dying, 4 charging,
+  // 5 rallied, 6 exhausted boss
   draw(i, scale, tint) {
     const ty = this.types[this.type[i]];
     if (ty.n >= MAX_VISIBLE) return;
@@ -729,6 +977,8 @@ export class Enemies {
     if (tint === 1) { c[k] = 3; c[k + 1] = 3; c[k + 2] = 3; }
     else if (tint === 2 || tint === 4) { c[k] = 2.4; c[k + 1] = 0.7; c[k + 2] = 0.7; }
     else if (tint === 3) { c[k] = 0.5; c[k + 1] = 0.3; c[k + 2] = 1.2; }
+    else if (tint === 5) { c[k] = 1.7; c[k + 1] = 1.35; c[k + 2] = 0.55; }
+    else if (tint === 6) { c[k] = 0.75; c[k + 1] = 0.95; c[k + 2] = 1.9; }
     else if (tier === 1) { c[k] = 1.3; c[k + 1] = 1.15; c[k + 2] = 0.8; }
     else if (tier === 2) { c[k] = 1.35; c[k + 1] = 0.85; c[k + 2] = 0.85; }
     else { c[k] = 1; c[k + 1] = 1; c[k + 2] = 1; }

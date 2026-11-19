@@ -85,6 +85,7 @@ export class Player {
     this.bastionCd = 0; // Bastion of Night: time until the next shield
     this.eclipseT = 0;
     this.rageT = 0; // Blood Rage
+    this.chillT = 0; // slowed by a chilling shot
     this.counts = { attack: 0, dodge: 0, cast: 0 }; // for the tutorial
 
     this.dodgeT = 0;
@@ -483,6 +484,13 @@ export class Player {
     this.hp = Math.min(this.maxHp, this.hp + amount);
   }
 
+  // a chilling shot: slower for a moment
+  chill() {
+    if (this.dead) return;
+    if (this.chillT <= 0) this.game.effects.ring(this.x, this.z, 0.4, 1.8, 0x9fe8ff, 0.3);
+    this.chillT = CONFIG.traits.chill.time;
+  }
+
   damage(amount) {
     if (this.dead || this.invuln > 0) return;
     const fx = this.game.effects;
@@ -564,6 +572,10 @@ export class Player {
     if (this.cds[1] > 0) this.cds[1] -= dt;
     if (this.eclipseT > 0) this.eclipseT -= dt;
     if (this.rageT > 0) this.rageT -= dt;
+    if (this.chillT > 0) {
+      this.chillT -= dt;
+      if (Math.random() < dt * 12) game.effects.burst(this.x, 0.6 + Math.random(), this.z, 1, 0x9fe8ff, 1.2, 0.16, 0.5);
+    }
     if (this.ultLockT > 0) this.ultLockT -= dt;
     if (this.bastionCd > 0) this.bastionCd -= dt;
     if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.frenzy = 0; }
@@ -606,7 +618,7 @@ export class Player {
       this.dodgeT -= dt;
       this.moving = true;
     } else if (this.moving) {
-      const sp = this.speed * (this.rageT > 0 ? 1 + CONFIG.skills.bloodRage.speed : 1);
+      const sp = this.speed * (this.rageT > 0 ? 1 + CONFIG.skills.bloodRage.speed : 1) * (this.chillT > 0 ? 1 - CONFIG.traits.chill.slow : 1);
       nx += mx * sp * dt;
       nz += mz * sp * dt;
     }

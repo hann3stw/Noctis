@@ -29,7 +29,8 @@ import { AbyssPanel } from './ui/abyssPanel.js';
 import { skillDef } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
-import { Tutorial } from './ui/tutorial.js';
+import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
+import { Tips, BASIC_TIPS } from './ui/tips.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
@@ -135,8 +136,15 @@ export class Game {
     this.hud.syncSkills();
     this.hud.setFps(opts.showFps);
     // the tutorial of a new world, or the step a saved world stopped at
-    const tut = save ? (typeof save.tutorial === 'number' ? save.tutorial : -1) : opts.tutorial ? 0 : -1;
+    let tut = save ? (typeof save.tutorial === 'number' ? save.tutorial : -1) : opts.tutorial ? 0 : -1;
+    // worlds from before the shorter tutorial: the steps that became tips end it
+    if (save && tut >= 0 && save.tutorialV !== 2 && tut >= OLD_STEP_COUNT) tut = OLD_STEP_COUNT;
     this.tutorial = tut >= 0 ? new Tutorial(this, this.hud.hud, tut) : null;
+    // tips: things are explained the first time you meet them. Worlds that
+    // already know the basics (older worlds, or no tutorial) skip those.
+    let seen = save && save.tips;
+    if (!seen) seen = tut >= 0 ? [] : [...BASIC_TIPS];
+    this.tips = new Tips(this, this.hud.hud, seen);
 
     this.applyShadows();
 
@@ -195,6 +203,8 @@ export class Game {
       abyss: this.abyss.serialize(),
       mods: [...this.mods],
       tutorial: this.tutorial ? this.tutorial.step : -1,
+      tutorialV: 2,
+      tips: this.tips.serialize(),
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
@@ -393,6 +403,7 @@ export class Game {
     this.effects.update(dt);
     this.hud.update(dt);
     if (this.tutorial) this.tutorial.update(dt);
+    this.tips.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point
@@ -747,6 +758,11 @@ export class Game {
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');
     if (ex && E.arena[i] && tier < 3) this.hazards.add(E.x[i], E.z[i], ex.radius, ex.delay, E.dmg[i] * ex.damage, 0xff6030);
+    // trait "volatile": this kind of monster always explodes
+    else if (tier < 3 && E.types[E.type[i]].trait === 'volatile') {
+      const V = CONFIG.traits.volatile;
+      this.hazards.add(E.x[i], E.z[i], V.radius * (E.kid[i] ? 0.7 : 1) * (1 + tier * 0.2), V.delay, E.dmg[i] * V.damage, 0xff6030);
+    }
     const gate = E.arena[i] ? this.gates.list[E.arena[i] - 1] : null;
     if (gate && gate.abyss) this.abyss.onKill(i, tier);
     else if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);

@@ -33,6 +33,11 @@
   font-size: calc(var(--u) * 6.4);
   text-shadow: 0 0 0.5em #ff7a2a, 0 0.08em 0 #000;
 }
+.dmg.block {
+  color: #bcd8ff;
+  font-size: calc(var(--u) * 3.4);
+  text-shadow: 0 0 0.4em #4a7bff, 0 0.08em 0 #000;
+}
 .dmg.hurt {
   color: #ff6070;
   text-shadow: 0 0.08em 0 #000;

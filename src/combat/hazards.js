@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { sectorGeometry } from '../render/geo.js';
 import { EXPAND } from '../render/effects.js';
 
-const MAX = 24;
+const MAX = 48;
 
 export class Hazards {
   constructor(game) {
