@@ -49,6 +49,7 @@ export class Player {
     this.reloadTime = 1;
     this.crit = 0;
     this.drop = 0;
+    this.luck = 0;
     this.damageMult = 1;
     this.defense = 0;
     this.taken = 1;
@@ -226,7 +227,10 @@ export class Player {
     this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit);
     this.critDmg = G.critDamage + st.per * S.per.critDamage + (this.uq.insight ? this.uq.insight.critDamage : 0);
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
-    this.drop = st.per * S.per.drop + (this.game.diff ? this.game.diff().luck : 0) + M.loot * ms.loot;
+    // drop = extra drop chance, luck = better rarities (Perception's part capped)
+    const diffLuck = this.game.diff ? this.game.diff().luck : 0;
+    this.drop = st.per * S.per.drop + diffLuck + M.loot * ms.loot;
+    this.luck = Math.min(G.perLuckCap, st.per * S.per.drop) + diffLuck + M.loot * ms.loot;
     this.damageMult = this.levelMult * (1 + S.str.damage * st.str) * (1 + b.damage) * (1 + M.damage * ms.damage);
     this.defense = def;
     this.takenBonus = 1 + b.damageTaken;
@@ -263,6 +267,11 @@ export class Player {
   // damage of one basic attack before variance and crit
   power() {
     return weaponDamage(this.equip.weapon) * this.damageMult * this.tempMult();
+  }
+
+  // the power the shadows draw from: the hunter's skill base without buffs
+  monarchPower() {
+    return skillDamage(this.equip.weapon) * this.damageMult;
   }
 
   // damage of a skill with power 1: the same with every weapon type

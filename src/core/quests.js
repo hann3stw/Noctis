@@ -119,7 +119,7 @@ export class Quests {
 
   give(minRarity) {
     const P = this.game.player;
-    const item = rollLoot(P.level, P.drop + 0.6, P.known, minRarity, true);
+    const item = rollLoot(P.level, P.luck + 0.6, P.known, minRarity, true);
     if (!P.addItem(item)) this.game.loot.drop(P.x, P.z, item); // full bag: at your feet
   }
 

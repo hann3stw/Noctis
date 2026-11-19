@@ -240,6 +240,12 @@ export const CONFIG = {
     baseCrit: 0.05,
     critMax: 0.6, // crit chance never goes above 60 %
     critDamage: 1.8,
+    // Perception's luck (better rarities) counts only up to this; its extra
+    // drop chance keeps growing
+    perLuckCap: 1,
+    // Enemies above your level give more XP, but less than their power: one
+    // rank above (x10 power) gives x10^xpAbove = about x4 XP.
+    xpAbove: 0.6,
     defenseK: 90, // damage taken = K / (K + defence); K grows with the zone level like armour does
     ultCharge: { perHit: 3, max: 100 }, // every enemy hit charges the ultimate
     dismissXpShare: 0.5, // share of a dismissed shadow's XP that goes to the player
@@ -288,7 +294,11 @@ export const CONFIG = {
     ],
     // luck (elites, chests, gates, Perception) multiplies the weight of
     // rarity r by (1 + luck) ^ (r * luckStep)
-    luckStep: 0.6,
+    luckStep: 0.4,
+    // The best rarity a rank can drop is rarer than its weight says, except
+    // from gate bosses: you work towards it over the whole rank.
+    topChance: 0.2,
+    bossTopChance: 0.7,
     // Rarity counts more than the item level: a rarer item is nearly always
     // better than a more common one from the next zone.
     // index 7 = unique: never rolled by chance, only from the Abyss (see abyss.unique)
@@ -339,7 +349,7 @@ export const CONFIG = {
     unlockLevel: 1000,
     pos: { x: 11.5, z: 11.5 }, // the portal in the camp
     pool: 24, // enemy slots kept for the Abyss (waves and boss helpers)
-    floorPower: 1.1,
+    floorPower: 1.07,
     bossEvery: 5,
     waves: 2,
     waveSize: [8, 18], // enemies per wave on floor 1; +1 every third floor up to the second number
@@ -561,6 +571,10 @@ export const CONFIG = {
     // a boss of your level takes about 1-1.5 min alone with ordinary gear,
     // 10-30 s with the best legendary gear; the army helps.
     hp: 8,
+    // Gate bosses get this share (as a power) of the extra health normal
+    // enemies have in later ranks (levels.enemyHpRank): x2.1 instead of x4.4
+    // in the last ranks, so late bosses stay a real fight. Not in the Abyss.
+    rankHp: 0.5,
     pause: 1.4, // seconds between two attacks
     enrageAt: 0.5, // below this share of health the boss gets faster
     enrageSpeed: 1.35,
@@ -703,7 +717,15 @@ export const CONFIG = {
     xpBase: 40,
     xpGrowth: 1.12,
     maxLevel: 40,
-    levelGrowth: 1.06, // health and damage per shadow level (x10 at level 40)
+    levelGrowth: 1.06, // health per shadow level (x10 at level 40)
+    // Shadows draw their damage from the hunter (the Shadow Monarch): his
+    // weapon, level, Strength and damage bonuses, times share and the
+    // shadow's own role, tier, evolution, rank and level. So better gear makes
+    // the army stronger too, and a full army deals about as much as the hunter
+    // himself. Shadows raised from enemies far below your level get weaker
+    // (fresh: (their power / power at your level) ^ freshPower, within
+    // freshMin ... freshMax); officers follow your level.
+    monarch: { share: 0.07, levelBonus: 0.025, freshPower: 0.25, freshMin: 0.3, freshMax: 1.25 },
     evolveLevels: [5, 12, 22], // shadows evolve at these levels
     evolveScale: 0.18, // size gain per evolution
     evolveBonus: 0.25, // stat gain per evolution

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { setMood, duckMusic, sting } from './core/music.js';
 import { CONFIG } from './config.js';
-import { rankOf, rankProgress, tierLevels, levelAt } from './core/levels.js';
+import { rankOf, rankProgress, tierLevels, levelAt, enemyPower } from './core/levels.js';
 import { input, resetInput, clearEvents } from './input/input.js';
 import { initTouch } from './input/touch.js';
 import { FollowCamera } from './render/camera.js';
@@ -483,7 +483,7 @@ export class Game {
     // the chest opens
     for (let k = 0; k < C.chestItems; k++) {
       const a = (k / C.chestItems) * Math.PI * 2;
-      this.loot.drop(s.x + 0.5 + Math.cos(a) * 1.8, s.z - 3 + Math.sin(a) * 1.8, rollLoot(levelAt(Math.hypot(s.x, s.z)), P.drop + 0.8, P.known, C.chestMinRarity));
+      this.loot.drop(s.x + 0.5 + Math.cos(a) * 1.8, s.z - 3 + Math.sin(a) * 1.8, rollLoot(levelAt(Math.hypot(s.x, s.z)), P.luck + 0.8, P.known, C.chestMinRarity));
     }
     this.effects.burst(s.x, 1, s.z, 50, 0x8a4dff, 8, 0.26, 0.9);
     this.hud.banner(t('toast.outpostCaptured'), this.safeName(si));
@@ -783,8 +783,11 @@ export class Game {
       if (st) this.hud.toast(t('streak.milestone', { n: st[0], pct: Math.round(st[1] * 100) }));
       play(tier >= 2 ? 'killBig' : 'kill', this.streak);
     }
+    // enemies above your level: more XP, but less than their power (progression.xpAbove)
+    const over = enemyPower(E.lvl[i]) / enemyPower(this.player.level);
+    const hxp = over > 1 ? xp * Math.pow(over, CONFIG.progression.xpAbove - 1) : xp;
     // kills of the army count only partly for the hunter
-    this.player.addXp(src < 0 ? xp * (1 + bonus) : xp * CONFIG.progression.armyKillXp);
+    this.player.addXp(src < 0 ? hxp * (1 + bonus) : hxp * CONFIG.progression.armyKillXp);
     if (src < 0) this.player.onKill();
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');

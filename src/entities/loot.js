@@ -111,7 +111,7 @@ export class Loot {
     if (Math.random() > CONFIG.loot.dropChance[tier] * (1 + P.drop)) return;
     const n = tier === 2 ? 2 : 1;
     for (let k = 0; k < n; k++) {
-      this.drop(x + k * 1.5, z, rollLoot(level, P.drop + tier * 0.6, P.known, tier > 0 ? 1 : 0));
+      this.drop(x + k * 1.5, z, rollLoot(level, P.luck + tier * 0.6, P.known, tier > 0 ? 1 : 0, false, tier === 3 ? CONFIG.items.bossTopChance : CONFIG.items.topChance));
     }
   }
 
@@ -123,7 +123,7 @@ export class Loot {
     const n = C.items[0] + ((Math.random() * (C.items[1] - C.items[0] + 1)) | 0);
     for (let k = 0; k < n; k++) {
       const a = Math.random() * 6.28;
-      this.drop(this.cx[i] + Math.cos(a) * 1.6, this.cz[i] + Math.sin(a) * 1.6, rollLoot(this.cLevel[i], P.drop + 0.4, P.known));
+      this.drop(this.cx[i] + Math.cos(a) * 1.6, this.cz[i] + Math.sin(a) * 1.6, rollLoot(this.cLevel[i], P.luck + 0.4, P.known));
     }
     this.game.effects.burst(this.cx[i], 0.8, this.cz[i], 24, 0xffd24a, 6, 0.2, 0.7);
     play('chest');

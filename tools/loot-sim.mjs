@@ -11,21 +11,21 @@ const L = CONFIG.levels, I = CONFIG.items, G = CONFIG.progression;
 const NAMES = ['common', 'uncommon', 'rare', 'epic', 'legend', 'mythic', 'exotic'];
 
 // ---- assumptions -------------------------------------------------------------
-const KILLS_PER_LEVEL = 3.3;
+const KILLS_PER_LEVEL = +(process.argv.find((a) => a.startsWith('--kpl='))?.slice(6) ?? 6); // 3.3 before the Nov 2026 rebalance
 const ELITE_SHARE = 0.03; // share of kills that are elites (14 % of packs have one)
 const PER_SHARE = 0.2; // real saves spend about a fifth of their points on Perception
 const DIFF_LUCK = CONFIG.difficulty.levels.normal.luck;
-const GATES = (levels) => (levels >= 100 ? 6 : 3); // one of each difficulty, twice in long ranks
-const CHESTS = (levels) => (levels >= 100 ? 15 : 8);
+const GATES = (levels) => (levels >= 100 ? 12 : 6); // with the slower levelling about twice as many as before // one of each difficulty, twice in long ranks
+const CHESTS = (levels) => (levels >= 100 ? 30 : 16);
 const OUTPOSTS = 4;
 
 // probability of every rarity for one roll (same maths as rollRarity)
-function dist(level, luck, min = 0) {
+function dist(level, luck, min = 0, topChance = I.topChance) {
   const base = I.rarityWeights[Math.min(I.rarityWeights.length - 1, rankOf(level))];
   const k = 1 + Math.max(0, luck);
-  const w = base.map((v, r) => v * Math.pow(k, r * I.luckStep));
   let top = 0;
   base.forEach((v, r) => { if (v > 0) top = r; });
+  const w = base.map((v, r) => v * Math.pow(k, r * I.luckStep) * (r === top ? topChance : 1));
   const sum = w.reduce((a, b) => a + b, 0);
   const p = w.map((v) => v / sum);
   const m = Math.min(min, top);
@@ -38,21 +38,22 @@ function add(acc, d, n) { d.p.forEach((v, r) => { acc[r] += v * n; }); }
 export function rankLoot(r) {
   const a = L.rankLevels[r], b = (L.rankLevels[r + 1] || L.maxLevel + 1) - 1, levels = b - a + 1;
   const mid = Math.round((a + b) / 2);
-  const drop = Math.floor(points(mid) * PER_SHARE) * G.stats.per.drop + DIFF_LUCK;
+  const perPart = Math.floor(points(mid) * PER_SHARE) * G.stats.per.drop;
+  const chance = perPart + DIFF_LUCK, drop = Math.min(G.perLuckCap, perPart) + DIFF_LUCK; // drop = rarity luck
   const kills = levels * KILLS_PER_LEVEL;
   const acc = [0, 0, 0, 0, 0, 0, 0];
   const src = {};
   const gearShare = 0.85; // the rest are skill drops
   // normal enemies and elites
-  const nNormal = kills * (1 - ELITE_SHARE) * CONFIG.loot.dropChance[0] * (1 + drop) * gearShare;
+  const nNormal = kills * (1 - ELITE_SHARE) * CONFIG.loot.dropChance[0] * (1 + chance) * gearShare;
   add(acc, dist(mid, drop), nNormal); src.monsters = nNormal;
-  const nElite = kills * ELITE_SHARE * Math.min(1, CONFIG.loot.dropChance[1] * (1 + drop)) * gearShare;
+  const nElite = kills * ELITE_SHARE * Math.min(1, CONFIG.loot.dropChance[1] * (1 + chance)) * gearShare;
   add(acc, dist(mid, drop + 0.6, 1), nElite); src.elites = nElite;
   // gates: boss items + one item per stage
   let nGate = 0;
   for (let g = 0; g < GATES(levels); g++) {
     const D = CONFIG.gates.difficulties[g % 3];
-    add(acc, dist(mid, drop + D.luck, D.minRarity), D.items); nGate += D.items;
+    add(acc, dist(mid, drop + D.luck, D.minRarity, I.bossTopChance), D.items); nGate += D.items;
     add(acc, dist(mid, drop + D.luck * CONFIG.gates.stageLuck, 1), D.stages.length); nGate += D.stages.length;
   }
   src.gates = nGate;
@@ -61,7 +62,7 @@ export function rankLoot(r) {
   const nOut = OUTPOSTS * CONFIG.outposts.chestItems * gearShare;
   add(acc, dist(mid, drop + 0.8, CONFIG.outposts.chestMinRarity), nOut); src.outposts = nOut;
   const total = acc.reduce((x, y) => x + y, 0);
-  const top = dist(mid, 0).top;
+  const top = dist(mid, 0, 0, 1).top;
   return { rank: L.rankNames[r], levels, kills: Math.round(kills), drop, total, acc, top, src };
 }
 
@@ -77,6 +78,6 @@ if ((process.argv[1] || '').replace(/\\/g, '/').endsWith('tools/loot-sim.mjs')) 
     const per = Math.floor(points(lv) * PER_SHARE) * G.stats.per.drop;
     const D = CONFIG.gates.difficulties[2];
     const t = dist(lv, 0).top;
-    console.log(`L${lv} deadly gate item: top rarity ${NAMES[t]} ${(dist(lv, D.luck, D.minRarity).p[t] * 100).toFixed(0)} % without Perception, ${(dist(lv, D.luck + per, D.minRarity).p[t] * 100).toFixed(0)} % with ${Math.round(per / G.stats.per.drop)} Perception (luck +${per.toFixed(1)})`);
+    console.log(`L${lv} deadly gate item: top rarity ${NAMES[t]} ${(dist(lv, D.luck, D.minRarity, I.bossTopChance).p[t] * 100).toFixed(0)} % without Perception, ${(dist(lv, D.luck + Math.min(G.perLuckCap, per), D.minRarity, I.bossTopChance).p[t] * 100).toFixed(0)} % with ${Math.round(per / G.stats.per.drop)} Perception (luck +${per.toFixed(1)})`);
   }
 }

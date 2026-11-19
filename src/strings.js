@@ -203,7 +203,7 @@ const STRINGS = {
     'army.rename': 'Save',
     'army.officerHint': 'Officers (General and above) carry a name, have no level cap and level up like you.',
     'army.overview': 'Ranks',
-    'army.overviewHint': 'Tap a shadow to give it a rank, rename or dismiss it. Every rank above Normal is limited; Normal takes a rank away again.',
+    'army.overviewHint': 'Your shadows draw their damage from you: a better weapon, more levels and Strength make the whole army stronger. Shadows raised from enemies far below your level grow weak. Tap a shadow to give it a rank, rename or dismiss it. Every rank above Normal is limited; Normal takes a rank away again.',
     'army.noCap': 'no cap',
     'army.mult': 'x{v} health and damage',
     'army.promoted': '{name} is now {rank}!',

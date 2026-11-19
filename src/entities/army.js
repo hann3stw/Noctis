@@ -4,7 +4,7 @@
 // either attacks on its own or protects the player.
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
-import { enemyPower, rankHp, hunterXpNeed } from '../core/levels.js';
+import { enemyPower, hunterXpNeed } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildShadowGeometry } from '../render/models/enemies.js';
@@ -257,8 +257,11 @@ export class Army {
     const baseHp = (def.boss ? def.shadowBase.hp : def.hp) * pw;
     const baseDmg = (def.boss ? def.shadowBase.damage : def.damage) * pw;
     const lv = Math.pow(S.levelGrowth, u.level - 1);
-    u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + this.game.player.armyHp));
-    u.dmg = baseDmg * S.damageFactor * role.damage * tier * lv * Math.sqrt(rankHp(plv));
+    const P = this.game.player, Mo = S.monarch;
+    u.maxHp = Math.round(baseHp * S.hpFactor * role.hp * tier * lv * (1 + P.armyHp));
+    // damage: from the hunter (see CONFIG.shadows.monarch)
+    const fresh = Math.min(Mo.freshMax, Math.max(Mo.freshMin, Math.pow(pw / enemyPower(P.level), Mo.freshPower)));
+    u.dmg = P.monarchPower() * Mo.share * role.damage * tier * (1 + Mo.levelBonus * (u.level - 1)) * fresh;
     u.scale = (def.boss ? def.scale * 0.55 : def.scale) * S.scale * (1 + u.stage * S.evolveScale) * (1 + u.tier * 0.15);
     u.radius = def.radius * u.scale;
     u.speed = def.speed * S.combatSpeedFactor;

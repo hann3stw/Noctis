@@ -306,9 +306,10 @@ export class Enemies {
     this.yaw[i] = Math.random() * 6.28;
     const D = this.game.diff();
     // inside a gate: the gate's level and difficulty, bosses much tougher
-    let lv, hpM = 1, dmgM = 1, xpM = 1;
+    let lv, hpM = 1, dmgM = 1, xpM = 1, abyss = false;
     if (this.arena[i]) {
       const game = this.game, gate = game.world.gates[this.arena[i] - 1];
+      abyss = !!gate.abyss;
       if (gate.abyss) {
         // the Abyss: enemies of the last level, stronger on every floor
         const A = CONFIG.abyss, pw = game.abyss.power();
@@ -330,7 +331,8 @@ export class Enemies {
     }
     this.lvl[i] = lv;
     const pw = enemyPower(lv);
-    const rk = def.boss ? 1 : rankHp(lv); // later ranks: tougher normal enemies
+    // later ranks: tougher normal enemies, gate bosses a share of it
+    const rk = def.boss ? (abyss ? 1 : Math.pow(rankHp(lv), CONFIG.boss.rankHp)) : rankHp(lv);
     this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM * rk);
     this.hp[i] = this.maxHp[i];
     this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;

@@ -196,7 +196,7 @@ export class Abyss {
   }
 
   luck() {
-    return this.game.player.drop + CONFIG.abyss.luckPerFloor * this.floor + this.game.gates.runMods.length * CONFIG.modifiers.luck;
+    return this.game.player.luck + CONFIG.abyss.luckPerFloor * this.floor + this.game.gates.runMods.length * CONFIG.modifiers.luck;
   }
 
   uniqueChance(boss) {
@@ -207,7 +207,7 @@ export class Abyss {
 
   dropLoot(x, z, boss) {
     const game = this.game, P = game.player;
-    game.loot.drop(x, z, rollLoot(this.itemLevel(), this.luck(), P.known, boss ? 3 : 1, !boss));
+    game.loot.drop(x, z, rollLoot(this.itemLevel(), this.luck(), P.known, boss ? 3 : 1, !boss, 1));
   }
 
   onKill(i, tier) {

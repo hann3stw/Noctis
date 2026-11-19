@@ -303,7 +303,7 @@ export class Gates {
     this.timeLeft = 0;
     for (let k = 0; k < D.items; k++) {
       const a = (k / D.items) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.drop + D.luck + modLuck, P.known, D.minRarity, k < D.items - 1));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.luck + D.luck + modLuck, P.known, D.minRarity, k < D.items - 1, CONFIG.items.bossTopChance));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -409,7 +409,7 @@ export class Gates {
     const a = Math.atan2(P.dirX, P.dirZ);
     this.clamp(P.x + Math.sin(a) * 3, P.z + Math.cos(a) * 3, 1);
     const modLuck = this.runMods.length * CONFIG.modifiers.luck;
-    game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.drop + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
+    game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.luck + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
     const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck));
     P.essence += ess;
     game.hud.toast(t('gate.stageCleared', { n: this.stageI + 1 }) + ' · ' + t('toast.essence', { n: ess }));

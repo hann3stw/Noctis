@@ -24,8 +24,10 @@ const PROFILES = {
 };
 const WEAPON = 'sword';
 const SKILLS = ['shadowWave', 'phantomStrike'];
-// army: shadows of your level, shadow level 15 (evolved twice), a few knights
-const ARMY = { level: 15, stage: 2, rankMult: 1.15, roleDmg: 0.87, interval: 1.5 };
+// army: shadows of your level; they level and evolve over the ranks, a few
+// elites and knights. Damage comes from the hunter (CONFIG.shadows.monarch).
+const ARMY = { tier: 1.5, rankMult: 1.15, roleDmg: 0.87, interval: 1.5 };
+const armyLevel = (rank) => Math.min(CONFIG.shadows.maxLevel, 4 + rank * 4);
 // how fights go out in the world
 const PACK = { normal: 4.5, elite: CONFIG.enemies.eliteChance }; // enemies per pack
 const AOE = 1.6; // a basic attack or skill hits this many enemies of a pack on average
@@ -80,7 +82,8 @@ export function hunter(level, profName = 'typical') {
   const skillDps = skillHit * powPerSec * Math.min(1, regen / manaPerSec);
   const maxHp = CONFIG.player.baseHp * playerHpPower(level) * (1 + S.vit.hp * st.vit) * (1 + b.hp);
   const slots = Math.min(CONFIG.shadows.maxSlots, CONFIG.shadows.baseSlots + Math.floor(st.int * S.int.slots));
-  return { level, pts, st, rarity, up: prof.up, hit, basicDps, skillDps, dps: basicDps + skillDps, maxHp, def, slots };
+  const monarch = CONFIG.skillBase * factor * damageMult;
+  return { level, pts, st, rarity, up: prof.up, hit, basicDps, skillDps, dps: basicDps + skillDps, maxHp, def, slots, monarch };
 }
 
 // ---- enemies of a level (average of the zone's three kinds) -----------------
@@ -102,28 +105,26 @@ export function enemy(level) {
   };
 }
 
-function armyDps(level, slots) {
-  const zi = zoneOf(level), z = ZONES[zi], Sh = CONFIG.shadows;
-  const defs = z.enemyTypes.map((t) => CONFIG.enemies.types[t]);
-  const baseDmg = defs.reduce((a, d) => a + d.damage, 0) / defs.length * enemyPower(level);
-  const tier = Sh.tierFactor[0] * (1 + ARMY.stage * Sh.evolveBonus) * ARMY.rankMult;
-  const lv = Math.pow(Sh.levelGrowth, ARMY.level - 1);
-  const one = baseDmg * Sh.damageFactor * ARMY.roleDmg * tier * lv * Math.sqrt(rankHp(level));
-  return (slots * one) / ARMY.interval;
+function armyDps(level, h) {
+  const Sh = CONFIG.shadows, Mo = Sh.monarch, lvl = armyLevel(rankOf(level));
+  const stage = Sh.evolveLevels.filter((x) => lvl >= x).length;
+  const tier = ARMY.tier * (1 + stage * Sh.evolveBonus) * ARMY.rankMult;
+  const one = h.monarch * Mo.share * ARMY.roleDmg * tier * (1 + Mo.levelBonus * (lvl - 1));
+  return (h.slots * one) / ARMY.interval;
 }
 
 function boss(level, diff = 0) {
   const zi = zoneOf(level), z = ZONES[zi];
   const def = CONFIG.enemies.types[z.boss], gd = CONFIG.gates.difficulties[diff];
   const lv = gateLevel(zi, diff);
-  return { level: lv, hp: def.hp * enemyPower(lv) * CONFIG.boss.hp * gd.hp * D.enemyHp, dmg: def.damage * enemyPower(lv) * gd.damage * D.enemyDamage };
+  return { level: lv, hp: def.hp * enemyPower(lv) * CONFIG.boss.hp * gd.hp * D.enemyHp * Math.pow(rankHp(lv), CONFIG.boss.rankHp), dmg: def.damage * enemyPower(lv) * gd.damage * D.enemyDamage };
 }
 
 export function row(level, prof = 'typical') {
   const h = hunter(level, prof), e = enemy(level), zi = e.zi;
   const K = G.defenseK * Math.pow(L.itemRank, zi);
   const taken = K / (K + h.def);
-  const army = armyDps(level, h.slots);
+  const army = armyDps(level, h);
   const bs = boss(level, 0), bsD = boss(level, 2);
   const hitTaken = e.dmg * taken;
   // a pack out in the world
@@ -193,7 +194,7 @@ if (!MAIN) {
       const cells = [0, 1, 2].map((d) => {
         const lv = gateLevel(zi, d), h = hunter(lv, prof), b = boss(lv, d), e = enemy(lv);
         const K = G.defenseK * Math.pow(L.itemRank, zi), taken = K / (K + h.def);
-        const army = armyDps(lv, h.slots);
+        const army = armyDps(lv, h);
         return `${CONFIG.gates.difficulties[d].id} L${lv}: ${f(b.hp / h.dps)} / ${f(b.hp / (h.dps + army))} / ${f(h.maxHp / (b.dmg * taken))}`;
       });
       console.log(`  ${L.rankNames[zi].padEnd(3)} ${cells.join('   ')}`);

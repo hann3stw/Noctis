@@ -41,13 +41,15 @@ function weighted(weights) {
 // The rank of the item level decides which rarities can drop; luck (0..)
 // shifts the roll towards the better ones. min never goes above the best
 // rarity of the rank.
-export function rollRarity(luck = 0, min = 0, level = 1) {
+// topChance: weight factor of the rank's best rarity (CONFIG.items.topChance,
+// bossTopChance for gate bosses, 1 in the Abyss).
+export function rollRarity(luck = 0, min = 0, level = 1, topChance = CONFIG.items.topChance) {
   const I = CONFIG.items;
   const base = I.rarityWeights[Math.min(I.rarityWeights.length - 1, rankOf(level))];
   const k = 1 + Math.max(0, luck);
-  const w = base.map((v, r) => v * Math.pow(k, r * I.luckStep));
   let top = 0;
   for (let r = 0; r < base.length; r++) if (base[r] > 0) top = r;
+  const w = base.map((v, r) => v * Math.pow(k, r * I.luckStep) * (r === top ? topChance : 1));
   const r = weighted(w);
   return Math.max(r, Math.min(min, top));
 }
@@ -99,7 +101,7 @@ export function uniqueDef(id) {
 }
 
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
-export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false) {
+export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, topChance = CONFIG.items.topChance) {
   const W = CONFIG.loot.weights;
   const kind = weighted([W.weapon, W.armor, gearOnly ? 0 : W.skill]);
   if (kind === 2) {
@@ -108,7 +110,7 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false) {
     for (const id in CONFIG.ultimates) if (!known.includes(id)) open.push(id);
     if (open.length) return { kind: 'skill', type: pick(open), rarity: 3 };
   }
-  const rarity = rollRarity(luck, minRarity, level);
+  const rarity = rollRarity(luck, minRarity, level, topChance);
   if (kind === 0) return makeWeapon(pick(Object.keys(CONFIG.weapons)), rarity, level);
   return makeArmor(pick(ARMOR_SLOTS), pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), rarity, level);
 }
