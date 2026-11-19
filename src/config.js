@@ -369,6 +369,10 @@ export const CONFIG = {
   // Unique items: one fixed special effect each. A weapon gets one of the
   // weapon effects, a piece of armour the effect of its slot.
   uniques: {
+    // Attune (in the camp): a unique item is raised to the item level of the
+    // deepest Abyss floor cleared. Essence: this x the sum of the floors gained
+    // (from floor 40 to 45: 3 x (41 + ... + 45) = 645). Upgrades are kept.
+    attune: 3,
     weapon: {
       echo: { every: 5, power: 1.5, range: 9, arcDeg: 80 }, // every 5th attack also sends a shadow wave (x skill damage)
       storm: { chance: 0.25, jumps: 2, damage: 0.4, range: 6 }, // a hit may zap 2 enemies nearby for 40 %

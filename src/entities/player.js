@@ -7,7 +7,7 @@ import { input } from '../input/input.js';
 import { createPlayerModel } from '../render/models/player.js';
 import { fireWeapon, echoWave } from '../combat/weapons.js';
 import { castSkill, skillDef } from '../combat/skills.js';
-import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower, uniqueDef } from '../core/items.js';
+import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower, uniqueDef, attuneLevel, attuneCost } from '../core/items.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
@@ -433,6 +433,16 @@ export class Player {
     if (item.up >= CONFIG.items.maxUpgrade || this.essence < cost) return false;
     this.essence -= cost;
     item.up++;
+    this.recalc();
+    return true;
+  }
+
+  // a unique item up to the deepest Abyss floor cleared (best)
+  attuneItem(item, best) {
+    const lvl = attuneLevel(item, best), cost = attuneCost(item, best);
+    if (!lvl || this.essence < cost) return false;
+    this.essence -= cost;
+    item.level = lvl;
     this.recalc();
     return true;
   }

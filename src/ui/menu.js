@@ -8,6 +8,7 @@ import { ArmyPanel } from './armyPanel.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 import { msToMidnight } from '../core/quests.js';
+import { play } from '../core/sfx.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
@@ -15,7 +16,7 @@ import { RANKS } from '../world/gates.js';
 import { skillDef } from '../combat/skills.js';
 import {
   EQUIP_SLOTS, RARITY_CSS, itemName, weaponDamage, weaponDps, armorDefense, armorBonus, bonusText,
-  upgradeCost, dismantleValue, itemPower, slotOf,
+  upgradeCost, dismantleValue, itemPower, slotOf, attuneLevel, attuneCost,
 } from '../core/items.js';
 
 const TABS = ['gear', 'stats', 'skills', 'army', 'quests', 'bestiary', 'look'];
@@ -170,6 +171,12 @@ export class Menu {
       P.autoSalvage = Number(target.dataset.r);
     } else if (act === 'equip' && item && !this.locked) {
       P.equipItem(item);
+    } else if (act === 'attune' && item && !this.locked) {
+      if (P.attuneItem(item, this.game.abyss.best)) {
+        play('stage');
+        this.game.hud.toast(t('uq.attunedNow', { level: item.level }));
+        this.game.save();
+      }
     } else if (act === 'upgrade' && item) {
       P.upgradeItem(item);
     } else if (act === 'dismantle' && item) {
@@ -246,6 +253,11 @@ export class Menu {
     return item.kind === 'weapon' ? Math.round(weaponDps(item)) : armorDefense(item);
   }
 
+  // main value the item would have at another item level
+  mainStatAt(item, level) {
+    return this.mainStat({ ...item, level });
+  }
+
   mainLabel(item) {
     return t(item.kind === 'weapon' ? 'item.dps' : 'item.defense');
   }
@@ -298,7 +310,21 @@ export class Menu {
       const label = this.confirmId === item.id ? t('gear.confirm') : t('gear.dismantle', { n: dismantleValue(item) });
       buttons.push(`<button class="ap-btn danger" data-act="dismantle">${label}</button>`);
     }
-    if (item.uq) rows.unshift(`<p class="uq-box"><b>${t('item.unique')}</b>${t('uqd.' + item.uq)}</p>`);
+    if (item.uq) {
+      // attune: raise it to the deepest Abyss floor cleared (camp only)
+      const best = this.game.abyss.best, lvl = attuneLevel(item, best);
+      let att = '';
+      if (lvl) {
+        const cost = attuneCost(item, best), floor = best;
+        const gain = Math.round((this.mainStatAt(item, lvl) / this.mainStat(item) - 1) * 100);
+        att = `<div class="uq-att"><span>${t('uq.attuneText', { floor, level: lvl, pct: gain })}</span>
+          <button class="ap-btn" data-act="attune"${this.locked || P.essence < cost ? ' disabled' : ''}>${t('uq.attune', { cost: fmt(cost) })}</button>
+          ${this.locked ? `<small>${t('menu.campOnly')}</small>` : ''}</div>`;
+      } else {
+        att = `<div class="uq-att done"><span>${t('uq.attuned', { floor: best })}</span></div>`;
+      }
+      rows.unshift(`<p class="uq-box"><b>${t('item.unique')}</b>${t('uqd.' + item.uq)}</p>` + att);
+    }
     return `<h3 style="color:${color}">${itemName(item)}</h3>
       <small class="sub">${t('rarity.' + item.rarity)} · ${t('item.level', { level: item.level })}${equipped ? ' · ' + t('item.equipped') : ''}</small>
       <div class="d-rows" data-scroll="detail">${rows.join('')}</div><div class="d-btns">${buttons.join('')}</div>`;

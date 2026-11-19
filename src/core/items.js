@@ -75,6 +75,21 @@ export function makeUnique(level) {
   return it;
 }
 
+// Attuning a unique item to the deepest Abyss floor cleared (best): the item
+// level it would get (0 when it is not a unique or already there) and the cost.
+const floorOf = (level) => Math.max(0, Math.floor((level - CONFIG.abyss.unlockLevel) / CONFIG.abyss.itemLevelPerFloor));
+export function attuneLevel(item, best) {
+  if (!item || !item.uq) return 0;
+  const lvl = CONFIG.abyss.unlockLevel + best * CONFIG.abyss.itemLevelPerFloor;
+  return lvl > item.level ? lvl : 0;
+}
+export function attuneCost(item, best) {
+  const from = floorOf(item.level);
+  let sum = 0;
+  for (let f = from + 1; f <= best; f++) sum += f;
+  return Math.round(CONFIG.uniques.attune * sum);
+}
+
 // values of a unique effect (or null)
 export function uniqueDef(id) {
   const U = CONFIG.uniques;
