@@ -3490,9 +3490,15 @@ input.shake {
   margin-top: auto;
 }
 
-/* seven tabs: on narrow screens only the open tab shows its name */
-@media (max-width: 1100px) {
-  .mn-tab:not(.on) > span { display: none; }
-  .mn-tab { padding: 0 calc(var(--u) * 2.6); }
-  .mn-note { min-width: 0; font-size: calc(var(--u) * 2.3); line-height: 1.15; }
-}
+/* seven tabs: when the row does not fit (the menu measures it), only the open
+   tab shows its name; if even that is too wide the tabs get narrower */
+.mn-head > .ap-btn { flex: none; }
+.mn-note { min-width: 0; }
+#menu.compact .mn-tab:not(.on) > span { display: none; }
+#menu.compact .mn-tab { padding: 0 calc(var(--u) * 2.6); }
+#menu.compact .mn-note { font-size: calc(var(--u) * 2.3); line-height: 1.15; }
+#menu.tiny .mn-tab { padding: 0 calc(var(--u) * 1.6); }
+#menu.tiny .mn-head { gap: calc(var(--u) * 0.8); }
+#menu.tiny .mn-note { display: none; }
+#menu.bare .mn-tab > span { display: none; }
+.q-n, .q-got { white-space: nowrap; }

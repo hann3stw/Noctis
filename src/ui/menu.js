@@ -67,6 +67,7 @@ export class Menu {
     this.selBeast = null; // monster shown in the bestiary
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    window.addEventListener('resize', () => { if (this.isOpen && this.el.isConnected) this.fitHead(); });
   }
 
   // hint: text shown in the army tab (army full while a soul waits)
@@ -213,6 +214,7 @@ export class Menu {
       <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
         <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
       <div class="mn-body"></div>`;
+    this.fitHead();
     const body = this.el.querySelector('.mn-body');
     if (this.tab === 'army') {
       body.appendChild(this.army.el);
@@ -454,6 +456,16 @@ export class Menu {
           <small class="s-rank">${rank}</small>
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
+  }
+
+  // The tab row must fit (tablets have wide but short screens, phones narrow
+  // ones): names of the closed tabs are hidden, then the tabs get narrower.
+  fitHead() {
+    const head = this.el.querySelector('.mn-head');
+    if (!head) return;
+    const over = () => head.scrollWidth > head.clientWidth + 1;
+    this.el.classList.remove('compact', 'tiny', 'bare');
+    for (const c of ['compact', 'tiny', 'bare']) if (over()) this.el.classList.add(c);
   }
 
   // ---- daily quests -------------------------------------------------------------

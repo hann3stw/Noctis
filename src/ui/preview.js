@@ -11,6 +11,7 @@ import { createPlayerModel } from '../render/models/player.js';
 const IDLE = { moving: false, attack: 0, dodging: false, dead: false };
 const SPIN = 0.5; // radians per second while nobody touches the character
 const MAX_RATIO = 3;
+const FIT = 4; // world units across that must fit into the free part of the screen
 
 export class Preview {
   constructor() {
@@ -170,14 +171,18 @@ export class Preview {
       r.setSize(w, h, false);
     }
     // put the character into the middle of the anchor element
-    let cx = w * 0.25;
+    let cx = w * 0.25, bw = w * 0.42;
     if (this.anchor) {
       const b = this.anchor.getBoundingClientRect();
-      if (b.width > 0) cx = b.left + b.width / 2;
+      if (b.width > 0) { cx = b.left + b.width / 2; bw = b.width; }
     }
+    // squarer screens (tablets): the free part is narrow for its height, so
+    // the camera steps back until the pedestal fits (phones stay as they are)
+    const units = (bw / h) * 2 * 8.2 * Math.tan((this.camera.fov * Math.PI) / 360);
+    const back = Math.max(1, FIT / units);
     this.zoom += (this.focus - this.zoom) * Math.min(1, dt * 6);
     const z = this.zoom;
-    this.camera.position.set(0, 2.3 - z * 0.05, 8.2 - z * 3.7);
+    this.camera.position.set(0, 2.3 - z * 0.05, (8.2 - z * 3.7) * back);
     this.camera.lookAt(0, 1.2 + z * 0.8, 0);
     this.camera.aspect = w / h;
     this.camera.setViewOffset(w, h, w / 2 - cx, 0, w, h);
