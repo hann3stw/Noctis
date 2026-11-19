@@ -78,6 +78,15 @@ export class Enemies {
 
     this.active = new Uint16Array(N);
     this.activeCount = 0;
+    // The enemies near the hunter (and the dying ones), found by a scan of all
+    // enemies a few times a second (see scan); the frame loop only walks these.
+    this.near = new Uint16Array(N);
+    this.nearCount = 0;
+    this.scanT = 0;
+    this.scanDt = 0;
+    this.scanX = 0;
+    this.scanZ = 0;
+    this.scanNow = true;
 
     // packs
     this.packCount = 0;
@@ -288,8 +297,38 @@ export class Enemies {
     return -1;
   }
 
+  // The enemies near the hunter go on the near list; far ones only get their
+  // respawn timers counted (dt = the time since the last scan).
+  scan(px, pz, respawnD2) {
+    const dt = this.scanDt, R = CONFIG.sim.activeRadius + 25, R2 = R * R;
+    this.scanDt = 0;
+    this.scanT = 0.25;
+    this.scanNow = false;
+    this.scanX = px;
+    this.scanZ = pz;
+    const near = this.near;
+    let n = 0;
+    for (let i = 0; i < this.count; i++) {
+      if (!this.alive[i]) {
+        if (this.deathT[i] > 0) near[n++] = i; // still falling apart
+        this.respawnT[i] -= dt;
+        if (this.respawnT[i] <= 0) {
+          const p = this.pack[i];
+          const dx = this.packX[p] - px, dz = this.packZ[p] - pz;
+          if (dx * dx + dz * dz > respawnD2) this.place(i);
+          else this.respawnT[i] = 2;
+        }
+        continue;
+      }
+      const dx = px - this.x[i], dz = pz - this.z[i];
+      if (dx * dx + dz * dz <= R2) near[n++] = i;
+    }
+    this.nearCount = n;
+  }
+
   // (re)spawns enemy i near its pack centre, or at (x, z) when given
   place(i, x, z) {
+    this.scanNow = true; // it may have appeared near the hunter
     const def = this.types[this.type[i]].def;
     const tier = this.tier[i];
     const T = CONFIG.enemies.tiers[tier];
@@ -680,18 +719,19 @@ export class Enemies {
     for (let t = 0; t < this.types.length; t++) this.types[t].n = 0;
     this.nMarks = 0;
 
-    for (let i = 0; i < this.count; i++) {
+    // Far enemies (dead ones waiting to respawn, alive ones out of reach) are
+    // only looked at a few times a second, or when the hunter moved a good
+    // way; the loop below walks the ones near the hunter.
+    this.scanDt += dt;
+    const mvx0 = px - this.scanX, mvz0 = pz - this.scanZ;
+    if (this.scanNow || (this.scanT -= dt) <= 0 || mvx0 * mvx0 + mvz0 * mvz0 > 225) this.scan(px, pz, respawnD2);
+    const near = this.near, nNear = this.nearCount;
+    for (let q = 0; q < nNear; q++) {
+      const i = near[q];
       if (!this.alive[i]) {
         if (this.deathT[i] > 0) {
           this.deathT[i] -= dt;
           if (this.deathT[i] > 0) this.draw(i, this.deathT[i] / DEATH_TIME, 3);
-        }
-        this.respawnT[i] -= dt;
-        if (this.respawnT[i] <= 0) {
-          const p = this.pack[i];
-          const dx = this.packX[p] - px, dz = this.packZ[p] - pz;
-          if (dx * dx + dz * dz > respawnD2) this.place(i);
-          else this.respawnT[i] = 2;
         }
         continue;
       }

@@ -627,7 +627,7 @@ export class Screens {
       : '';
     return `<div class="scr-page">${this.header(t('title.settings'), 'setBack')}
       <div class="set-list" data-scroll="set">${diff}
-        <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level) }) : t('set.graphicsHint')}</small></div>
+        <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level), pct: Math.round(gfx.renderScale * 100) }) : t('set.graphicsHint')}</small></div>
           <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')], ['ultra', t('set.ultra')]], settings.graphics)}</div></div>
         <div class="set-row"><div><b>${t('set.volume')}</b></div>
           <div class="segs"><input type="range" min="0" max="100" step="5" value="${vol}" data-act="volume"><span class="vol-val">${vol}%</span></div></div>

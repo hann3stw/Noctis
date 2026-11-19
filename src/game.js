@@ -39,7 +39,7 @@ import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
-import { reportFps, settings, gfx } from './core/settings.js';
+import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
 import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
 
 const _v = new THREE.Vector3();
@@ -415,7 +415,7 @@ export class Game {
     if (!fresh && dt < 0.5) {
       this.fpsT += dt;
       this.fpsN++;
-      if (this.fpsT >= CONFIG.graphics.auto.measure) {
+      if (this.fpsT >= measureEvery()) {
         reportFps(this.fpsN / this.fpsT);
         this.fpsT = this.fpsN = 0;
       }

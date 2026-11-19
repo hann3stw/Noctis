@@ -19,7 +19,9 @@ export function getRenderer() {
 
 export function sizeRenderer() {
   const r = getRenderer();
-  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, gfx.pixelRatio));
+  // the render scale lowers the resolution, but never below 0.7 pixels per CSS pixel
+  const base = Math.min(window.devicePixelRatio || 1, gfx.pixelRatio);
+  r.setPixelRatio(gfx.renderScale < 1 ? Math.min(base, Math.max(0.7, base * gfx.renderScale)) : base);
   r.setSize(window.innerWidth, window.innerHeight, false);
 }
 

@@ -8,6 +8,7 @@ const KEY = 'noctis.settings';
 export const settings = {
   graphics: 'auto', // auto | low | medium | high | ultra
   autoLevel: '', // preset chosen by "auto" (remembered between sessions)
+  autoScale: 0, // step of the render resolution chosen by "auto" (index into graphics.auto.scales)
   volume: 0.7, // 0..1 sound effects
   music: 0.5, // 0..1 background music
   vibrate: true, // short vibrations on hits, kills and ultimates (Android)
@@ -21,6 +22,7 @@ export const settings = {
 
 // Values of the current graphics preset, read by the game every frame.
 export const gfx = {
+  renderScale: 1, // share of the preset's resolution (auto lowers it before dropping a preset)
   pixelRatio: 1.5, particles: 1, decorRadius: 64, renderRadius: 36, shadows: true, realShadows: false,
   shadowMap: 1536, shadowRange: 26, lights: 3, bloom: false, level: 'medium',
 };
@@ -28,35 +30,72 @@ export const gfx = {
 const LEVELS = ['low', 'medium', 'high', 'ultra'];
 let ceiling = 3; // "auto" never climbs back above a level that was too slow
 let goodRuns = 0;
+let scaleTop = 0; // "auto" never raises the resolution above this step again (one that was too slow)
+let justRaised = false; // the last change was a step up of the resolution
+let runs = 0; // measurements so far (the first ones are short)
 
-// first guess for "auto": small touch screens start on medium
+// seconds the game measures the frame rate for before it calls reportFps
+export function measureEvery() {
+  const A = CONFIG.graphics.auto;
+  return runs < A.warmRuns ? A.warmMeasure : A.measure;
+}
+
+const scales = () => CONFIG.graphics.auto.scales;
+const scaleIdx = () => Math.max(0, Math.min(scales().length - 1, settings.autoScale | 0));
+
+// first guess for "auto": phones with little memory or few cores start on
+// medium, everything else on high (the render resolution then adapts to the device)
 function guessLevel() {
   const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   const small = Math.min(window.screen.width, window.screen.height) < 500;
-  return touch && small ? 'medium' : 'high';
+  const weak = (navigator.deviceMemory && navigator.deviceMemory < 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 6);
+  return touch && small && weak ? 'medium' : 'high';
 }
 
 // Called by the game every few seconds with the measured frame rate.
+// Too slow: first the render resolution steps down (a sharp picture costs the
+// most on phones), and only when it is at its lowest the preset drops. Fast
+// for a while: the resolution steps up again, then the preset.
 export function reportFps(fps) {
   if (settings.graphics !== 'auto') return;
+  runs++;
   const A = CONFIG.graphics.auto;
-  const i = LEVELS.indexOf(gfx.level);
-  if (fps < A.lowFps && i > 0) {
-    ceiling = i - 1;
+  const i = LEVELS.indexOf(gfx.level), s = scaleIdx(), last = scales().length - 1;
+  const raised = justRaised;
+  justRaised = false;
+  let changed = false;
+  if (fps < A.lowFps) {
     goodRuns = 0;
-    settings.autoLevel = LEVELS[i - 1];
-    applySettings();
-    saveSettings();
-  } else if (fps >= A.highFps && i < ceiling) {
+    if (s < last) {
+      // a step up that did not hold is not tried again
+      if (raised) scaleTop = s + 1;
+      settings.autoScale = s + 1;
+      changed = true;
+    } else if (i > 0) {
+      ceiling = i - 1;
+      settings.autoLevel = LEVELS[i - 1];
+      settings.autoScale = 0;
+      scaleTop = 0;
+      changed = true;
+    }
+  } else if (fps >= A.highFps) {
     if (++goodRuns >= A.upAfter) {
       goodRuns = 0;
-      settings.autoLevel = LEVELS[i + 1];
-      applySettings();
-      saveSettings();
+      if (s > scaleTop) {
+        settings.autoScale = s - 1;
+        justRaised = true;
+        changed = true;
+      } else if (i < ceiling) {
+        settings.autoLevel = LEVELS[i + 1];
+        settings.autoScale = Math.min(1, last); // the next preset starts a little below its full resolution
+        scaleTop = 0;
+        changed = true;
+      }
     }
   } else {
     goodRuns = 0;
   }
+  if (changed) { applySettings(); saveSettings(); }
 }
 
 export function loadSettings() {
@@ -89,6 +128,7 @@ export function applySettings() {
   gfx.lights = p.lights || 1;
   gfx.bloom = !!p.bloom;
   gfx.pixelRatio = p.pixelRatio;
+  gfx.renderScale = settings.graphics === 'auto' ? scales()[scaleIdx()] : 1;
   gfx.particles = p.particles;
   gfx.decorRadius = p.decorRadius;
   gfx.renderRadius = p.renderRadius;
@@ -103,7 +143,7 @@ export function applySettings() {
 // Changes one setting, applies and stores it.
 export function setSetting(key, value) {
   settings[key] = value;
-  if (key === 'graphics') { ceiling = 3; goodRuns = 0; }
+  if (key === 'graphics') { ceiling = 3; goodRuns = 0; scaleTop = 0; justRaised = false; runs = 0; if (value === 'auto') settings.autoScale = 0; }
   applySettings();
   saveSettings();
 }

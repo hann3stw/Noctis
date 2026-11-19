@@ -822,12 +822,16 @@ export const CONFIG = {
   graphics: {
     // "Auto" measures the frame rate while playing and steps down when it
     // stays below lowFps, or up again when it stays above highFps.
-    auto: { measure: 3, lowFps: 50, highFps: 58, upAfter: 5 },
+    // Before a preset is dropped, the render resolution steps down (scales: share of
+    // the preset's resolution); a preset is only dropped once the lowest scale is
+    // too slow too. The first 'warm' measurements are shorter, so a new device
+    // finds its level quickly.
+    auto: { measure: 3, warmMeasure: 1.5, warmRuns: 4, lowFps: 50, highFps: 58, upAfter: 5, scales: [1, 0.85, 0.72, 0.6] },
     bloom: 0.7, // strength of the glow on "ultra"
     presets: {
       // lights = flashes of real light at once; shadowMap / shadowRange = size
       // and area of the sun's shadow map; bloom = glowing effects shine
-      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: false, lights: 1 },
+      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: true, lights: 1 },
       medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34, shadows: true, lights: 3 },
       high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true, realShadows: true, shadowMap: 1536, shadowRange: 26, lights: 4 },
       ultra: { pixelRatio: 3, particles: 1.6, decorRadius: 76, renderRadius: 46, shadows: true, realShadows: true, shadowMap: 3072, shadowRange: 34, lights: 8, bloom: true },

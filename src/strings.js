@@ -559,7 +559,7 @@ const STRINGS = {
     'set.graphics': 'Graphics',
     'set.graphicsHint': 'Lower settings run smoother on weak phones',
     'set.auto': 'Auto',
-    'set.autoNow': 'Chosen by frame rate, now: {level}',
+    'set.autoNow': 'Chosen by frame rate, now: {level}, sharpness {pct}%',
     'set.low': 'Low',
     'set.medium': 'Medium',
     'set.high': 'High',
