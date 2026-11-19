@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { setMood, duckMusic, sting } from './core/music.js';
 import { CONFIG } from './config.js';
 import { rankOf, rankProgress, tierLevels, levelAt } from './core/levels.js';
 import { input, resetInput, clearEvents } from './input/input.js';
@@ -11,7 +12,7 @@ import { AimIndicator } from './render/aim.js';
 import { Xray } from './render/xray.js';
 import { World } from './world/world.js';
 import { Player } from './entities/player.js';
-import { Enemies } from './entities/enemies.js';
+import { Enemies, ST_CHASE, ST_WINDUP, ST_CHARGE } from './entities/enemies.js';
 import { Army } from './entities/army.js';
 import { Souls } from './entities/souls.js';
 import { Projectiles } from './combat/projectiles.js';
@@ -31,7 +32,7 @@ import { Tutorial } from './ui/tutorial.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
-import { reportFps, settings } from './core/settings.js';
+import { reportFps, settings, gfx } from './core/settings.js';
 import { submitScore } from './net/online.js';
 
 const _v = new THREE.Vector3();
@@ -90,6 +91,8 @@ export class Game {
     this.sun = new THREE.DirectionalLight(0xfff0d8, 1.9);
     this.sun.position.set(-6, 12, 5);
     this.scene.add(this.sun);
+    this.scene.add(this.sun.target); // follows the player (shadow maps)
+    this.shadowsOn = null;
     this.lightZone = -1;
 
     this.cam = new FollowCamera();
@@ -133,6 +136,8 @@ export class Game {
     // the tutorial of a new world, or the step a saved world stopped at
     const tut = save ? (typeof save.tutorial === 'number' ? save.tutorial : -1) : opts.tutorial ? 0 : -1;
     this.tutorial = tut >= 0 ? new Tutorial(this, this.hud.hud, tut) : null;
+
+    this.applyShadows();
 
     this.resize = this.resize.bind(this);
     this.frame = this.frame.bind(this);
@@ -370,6 +375,8 @@ export class Game {
       this.zoneRank = zone.rank;
     }
     this.updateLight(dt, zi);
+    this.updateSun();
+    this.updateMusic(dt);
     this.minimap.update(dt);
 
     this.updateAim();
@@ -461,6 +468,78 @@ export class Game {
     this.world.update(P.x, P.z, true);
     this.effects.burst(P.x, 1, P.z, 30, this.appearance.aura, 6, 0.24, 0.8);
     play('arise');
+  }
+
+  // Real shadows from the sun (graphics preset "high"): every solid body casts
+  // one, the ground and floors receive them. Without them the soft blob
+  // shadows under every unit are used (render/effects.js).
+  applyShadows() {
+    const on = !!gfx.realShadows, r = this.renderer;
+    if (this.shadowsOn === on) return;
+    this.shadowsOn = on;
+    r.shadowMap.enabled = on;
+    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.sun.castShadow = on;
+    if (on) {
+      const c = this.sun.shadow.camera;
+      c.left = -26; c.right = 26; c.top = 26; c.bottom = -26; c.near = 1; c.far = 90;
+      c.updateProjectionMatrix();
+      this.sun.shadow.mapSize.set(1536, 1536);
+      this.sun.shadow.bias = -0.0008;
+      this.sun.shadow.normalBias = 0.05;
+      this.markShadows(this.scene);
+      this.world.ground.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
+    }
+    // the materials are built again with (or without) shadows
+    this.scene.traverse((o) => {
+      if (!o.material) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.needsUpdate = true;
+    });
+  }
+
+  markShadows(root) {
+    root.traverse((o) => {
+      if (!o.isMesh || !o.material || o.material.transparent || !o.material.isMeshLambertMaterial) return;
+      const g = o.geometry && o.geometry.type;
+      const flat = g === 'CircleGeometry' || g === 'RingGeometry' || g === 'PlaneGeometry';
+      o.castShadow = !flat;
+      o.receiveShadow = true;
+    });
+  }
+
+  // The music follows what happens: enemies hunting the player (combat), a
+  // boss (boss), the Abyss, or calm travel. Checked twice a second; a fight
+  // keeps its music a few seconds after the last enemy gave up.
+  updateMusic(dt) {
+    this.musicT = (this.musicT || 0) - dt;
+    if (this.musicT > 0) return;
+    this.musicT = 0.5;
+    const P = this.player, E = this.enemies;
+    if (P.dead) { setMood('calm'); return; }
+    let fight = false, boss = false;
+    for (let i = 0; i < E.count; i++) {
+      if (!E.alive[i]) continue;
+      const st = E.state[i];
+      if (st !== ST_CHASE && st !== ST_WINDUP && st !== ST_CHARGE) continue;
+      const dx = E.x[i] - P.x, dz = E.z[i] - P.z;
+      if (dx * dx + dz * dz > 32 * 32) continue;
+      fight = true;
+      if (E.tier[i] === 3) boss = true;
+    }
+    const bi = this.gates.bossIndex();
+    if (bi >= 0 && E.alive[bi]) boss = true;
+    this.fightHold = fight ? 6 : Math.max(0, (this.fightHold || 0) - 0.5);
+    this.bossHold = boss ? 4 : Math.max(0, (this.bossHold || 0) - 0.5);
+    setMood(this.bossHold > 0 ? 'boss' : this.fightHold > 0 ? 'combat' : this.abyss.on ? 'abyss' : 'explore');
+  }
+
+  // the sun (and its shadow area) moves with the player
+  updateSun() {
+    if (!this.shadowsOn) return;
+    const P = this.player;
+    this.sun.position.set(P.x - 14, 28, P.z + 12);
+    this.sun.target.position.set(P.x, 0, P.z);
+    this.sun.target.updateMatrixWorld();
   }
 
   // Light colour follows the zone the player is in (soft blend).
@@ -611,6 +690,7 @@ export class Game {
 
   setPaused(paused) {
     this.paused = paused;
+    duckMusic(paused);
     this.last = 0;
     resetInput();
   }
@@ -620,6 +700,7 @@ export class Game {
     this.kills++;
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
+    if (tier === 3) sting('victory'); // a boss falls
     const level = E.lvl[i] + tierLevels(zi, tier);
     this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]);
     this.army.grantXp(src, xp);

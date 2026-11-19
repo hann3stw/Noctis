@@ -4,6 +4,55 @@ import { CONFIG } from '../config.js';
 import { hitArc, hitCircle, hitLine, playerHit } from './weapons.js';
 import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
 
+// The glow of every cast: colour ('aura' = the hunter's aura colour), where
+// (self, target, front of the hunter, or along a line) and how strong.
+const GLOW = {
+  shadowStep: { at: 'self', light: 70 },
+  shadowWave: { at: 'front', light: 80, sparks: 30 },
+  rulersGrasp: { at: 'target', light: 90 },
+  umbralShield: { at: 'self', color: 0x6aa8ff, light: 70 },
+  daggerRain: { at: 'target', color: 0xd8d2ff, light: 50 },
+  warCry: { at: 'self', color: 0xff6070, light: 130, sparks: 36 },
+  lifeLeech: { at: 'front', color: 0x5cf08a, light: 60 },
+  nightLance: { at: 'line', light: 90 },
+  bladeDance: { at: 'self', color: 0xe8dcff, light: 60 },
+  phantomStrike: { at: 'self', light: 90 },
+  blackFrost: { at: 'self', color: 0x9fe0ff, light: 110, sparks: 40 },
+  huntersMark: { at: 'target', color: 0xff4060, light: 70 },
+  darkMend: { at: 'self', color: 0x5cf08a, light: 90, rise: 4 },
+  bloodRage: { at: 'self', color: 0xff3040, light: 110, rise: 4 },
+  voidStorm: { at: 'target', light: 160, big: true },
+  umbralAegis: { at: 'self', color: 0x6aa8ff, light: 160, big: true },
+  oblivionRay: { at: 'line', light: 180, big: true },
+  nightfall: { at: 'self', light: 220, big: true },
+  legionsCall: { at: 'self', light: 160, big: true, rise: 5 },
+  eclipse: { at: 'self', color: 0xffd24a, light: 180, big: true, rise: 4 },
+};
+
+function castGlow(game, id, tx, tz, dx, dz) {
+  const G = GLOW[id];
+  if (!G) return;
+  const P = game.player, fx = game.effects, def = skillDef(id);
+  const col = G.color || game.appearance.aura;
+  const big = !!G.big;
+  let x = P.x, z = P.z;
+  if (G.at === 'target') { x = tx; z = tz; }
+  if (G.at === 'front') { const r = (def.range || 6) * 0.45; x += dx * r; z += dz * r; }
+  if (G.at === 'line') {
+    const len = def.range || 10;
+    for (let k = 1; k <= 6; k++) {
+      const f = k / 6;
+      fx.flare(P.x + dx * len * f, 1, P.z + dz * len * f, (big ? 3.2 : 2) * (1.2 - f * 0.5), col, 0.35 + f * 0.15, 1.5);
+    }
+    fx.sparks(P.x + dx * len * 0.5, 1, P.z + dz * len * 0.5, big ? 40 : 22, col, 7, 0.5, 0.8, 1.5);
+    x = P.x + dx * len * 0.35; z = P.z + dz * len * 0.35;
+  }
+  fx.light(x, 2.2, z, col, G.light, big ? 22 : 13, big ? 0.8 : 0.45);
+  fx.flare(x, 1.2, z, big ? 9 : 4.5, col, big ? 0.6 : 0.4, 1.8);
+  fx.flare(x, 1.2, z, big ? 4 : 2, 0xffffff, big ? 0.35 : 0.22, 1.5);
+  fx.sparks(x, 0.8, z, G.sparks || (big ? 60 : 24), col, big ? 10 : 6, big ? 0.6 : 0.45, big ? 1.3 : 0.9, G.rise || 2);
+}
+
 export function skillDef(id) {
   return CONFIG.skills[id] || CONFIG.ultimates[id];
 }
@@ -220,4 +269,5 @@ export function castSkill(game, id, dx, dz, power) {
       game.hitStop(0.06);
       break;
   }
+  castGlow(game, id, tx, tz, dx, dz);
 }

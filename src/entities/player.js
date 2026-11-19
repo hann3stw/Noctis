@@ -342,6 +342,9 @@ export class Player {
     this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
     this.game.effects.ring(this.x, this.z, 0.5, 5, 0xffd24a, 0.6);
     this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
+    this.game.effects.light(this.x, 2.5, this.z, 0xffd24a, 120, 16, 0.8);
+    this.game.effects.flare(this.x, 1.4, this.z, 6, 0xffd24a, 0.6, 1.8);
+    this.game.effects.sparks(this.x, 0.5, this.z, 40, 0xffe080, 4, 0.45, 1.4, 5);
     play('levelup');
     this.game.submitRecords();
     this.game.hud.toast(gained ? t('toast.levelUp', { level: this.level, points: gained }) : t('toast.levelUpNoPts', { level: this.level }));
@@ -741,7 +744,7 @@ export class Player {
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
     this.castAnim = 1;
-    play(slot === 2 ? 'ult' : 'skill');
+    play(slot === 2 ? 'ult' : 'skill', id);
     castSkill(this.game, id, this.pendingX, this.pendingZ, this.pendingP);
     if (slot === 2) {
       this.ult = 0; // the ultimate does not charge itself ...

@@ -675,7 +675,7 @@ export const CONFIG = {
     presets: {
       low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: false },
       medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34, shadows: true },
-      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true },
+      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true, realShadows: true },
     },
   },
 

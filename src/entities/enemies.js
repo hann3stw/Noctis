@@ -4,6 +4,7 @@
 // it belongs to, which scale its stats. Gate bosses and their summoned helpers
 // use reserved slots that only come alive inside their arena.
 import * as THREE from 'three';
+import { play } from '../core/sfx.js';
 import { CONFIG } from '../config.js';
 import { enemyPower, levelAt, rankHp } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
@@ -424,7 +425,14 @@ export class Enemies {
     this.alive[i] = 0;
     this.deathT[i] = DEATH_TIME;
     this.respawnT[i] = this.arena[i] ? Infinity : CONFIG.sim.respawnTime;
-    this.game.effects.burst(this.x[i], 0.9, this.z[i], 14 + this.tier[i] * 10, 0x6a4dbf, 5, 0.24, 0.6);
+    const fx = this.game.effects, x = this.x[i], z = this.z[i], t = this.tier[i];
+    fx.burst(x, 0.9, z, 14 + t * 10, 0x6a4dbf, 5, 0.24, 0.6);
+    fx.flare(x, 1, z, 2.4 + t * 1.4, 0xb48cff, 0.34, 1.8);
+    fx.flare(x, 1, z, 1.2 + t * 0.6, 0xffffff, 0.16, 1.5);
+    fx.sparks(x, 0.8, z, 8 + t * 10, 0x9a6bff, 3.5 + t, 0.45, 1, 2.6);
+    fx.ring(x, z, 0.3, 2 + t * 1.2, 0x8a4dff, 0.35);
+    if (t >= 1 || src < 0) fx.light(x, 1.6, z, 0x9a6bff, 30 + t * 40, 7 + t * 3, 0.35 + t * 0.1);
+    if (src < 0) play(t >= 2 ? 'killBig' : 'kill');
     this.game.onEnemyKilled(i, src);
   }
 

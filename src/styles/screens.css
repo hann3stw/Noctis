@@ -290,7 +290,7 @@ body.editing #ui {
   accent-color: #8a4dff;
   touch-action: pan-x;
 }
-.vol-val {
+.vol-val, .mus-val {
   min-width: calc(var(--u) * 10);
   text-align: right;
   font-variant-numeric: tabular-nums;

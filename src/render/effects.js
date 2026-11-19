@@ -1,5 +1,6 @@
-// Pooled visual effects: particles, slash arcs, blob shadows, health bars and
-// floating damage numbers. Nothing here allocates while the game is running.
+// Pooled visual effects: particles, glowing sparks and flares, flashes of
+// light, slash arcs, soft blob shadows, health bars and floating damage
+// numbers. Nothing here allocates while the game is running.
 import * as THREE from 'three';
 import { sectorGeometry } from './geo.js';
 import { gfx } from '../core/settings.js';
@@ -10,6 +11,26 @@ const MAX_BARS = 160;
 const MAX_NUMBERS = 24;
 const MAX_SLASHES = 10;
 const MAX_RINGS = 20;
+const MAX_SPARKS = 260;
+const MAX_FLARES = 48;
+
+// soft round spot, white in the middle: flares, sparks and the blob shadows
+let glowTex = null;
+function glowTexture() {
+  if (glowTex) return glowTex;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const cx = cv.getContext('2d');
+  const g = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.18, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.28)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, 64, 64);
+  glowTex = new THREE.CanvasTexture(cv);
+  return glowTex;
+}
 
 // slash styles
 export const SWEEP = 0; // the blade trail sweeps across the arc
@@ -81,11 +102,12 @@ export class Effects {
     blobGeo.rotateX(-Math.PI / 2);
     this.blobMesh = dynamicInstanced(
       blobGeo,
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5, depthWrite: false, alphaMap: glowTexture() }),
       MAX_BLOBS,
       false,
     );
     this.blobMesh.renderOrder = 1;
+    this.blobScale = 1.35; // the soft edge needs a little more room
     scene.add(this.blobMesh);
     this.blobCount = 0;
 
@@ -177,6 +199,31 @@ export class Effects {
     }
     this.beamNext = 0;
 
+    // --- glowing sparks and flares (camera facing, additive)
+    const quad = new THREE.PlaneGeometry(1, 1);
+    const glowMat = () => new THREE.MeshBasicMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.sMesh = dynamicInstanced(quad, glowMat(), MAX_SPARKS, true);
+    this.sMesh.renderOrder = 8;
+    scene.add(this.sMesh);
+    this.sData = new Float32Array(MAX_SPARKS * 13); // x y z vx vy vz life max size r g b rise
+    this.sNext = 0;
+    this.fMesh = dynamicInstanced(quad, glowMat(), MAX_FLARES, true);
+    this.fMesh.renderOrder = 9;
+    scene.add(this.fMesh);
+    this.fData = new Float32Array(MAX_FLARES * 10); // x y z size grow life max r g b
+    this.fNext = 0;
+
+    // --- flashes of real light (they light up the ground and the enemies)
+    this.lights = [];
+    const nLights = gfx.level === 'low' ? 1 : 3;
+    for (let i = 0; i < nLights; i++) {
+      const l = new THREE.PointLight(0xffffff, 0, 10, 1.6);
+      l.userData = { life: 0, max: 1, peak: 0 };
+      scene.add(l);
+      this.lights.push(l);
+    }
+    this.lightNext = 0;
+
     // --- damage numbers (DOM)
     this.numbers = [];
     for (let i = 0; i < MAX_NUMBERS; i++) {
@@ -212,6 +259,55 @@ export class Effects {
       d[o + 8] = size * (0.6 + Math.random() * 0.8);
       d[o + 9] = _c.r; d[o + 10] = _c.g; d[o + 11] = _c.b;
     }
+    // every burst glows a little too
+    this.sparks(x, y, z, Math.ceil(count * 0.5), color, speed * 0.7, size * 1.8, life * 1.1, 1.5);
+  }
+
+  // glowing sparks: float, slow down and fade (rise > 0 drifts upwards)
+  sparks(x, y, z, count, color, speed = 4, size = 0.35, life = 0.6, rise = 1) {
+    count = Math.max(1, Math.round(count * gfx.particles));
+    _c.setHex(color);
+    const d = this.sData;
+    for (let i = 0; i < count; i++) {
+      const o = this.sNext * 13;
+      this.sNext = (this.sNext + 1) % MAX_SPARKS;
+      const a = Math.random() * Math.PI * 2, sp = speed * (0.3 + Math.random() * 0.7);
+      d[o] = x; d[o + 1] = y; d[o + 2] = z;
+      d[o + 3] = Math.cos(a) * sp; d[o + 4] = (Math.random() - 0.3) * sp; d[o + 5] = Math.sin(a) * sp;
+      d[o + 6] = d[o + 7] = life * (0.6 + Math.random() * 0.5);
+      d[o + 8] = size * (0.6 + Math.random() * 0.8);
+      d[o + 9] = _c.r; d[o + 10] = _c.g; d[o + 11] = _c.b;
+      d[o + 12] = rise;
+    }
+  }
+
+  // a flash of glow that grows and fades (impacts, casts, muzzle of a weapon)
+  flare(x, y, z, size, color, dur = 0.3, grow = 1.6) {
+    const d = this.fData, o = this.fNext * 10;
+    this.fNext = (this.fNext + 1) % MAX_FLARES;
+    _c.setHex(color);
+    d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = grow;
+    d[o + 5] = d[o + 6] = dur;
+    d[o + 7] = _c.r; d[o + 8] = _c.g; d[o + 9] = _c.b;
+  }
+
+  // a short burst of real light at a point
+  light(x, y, z, color, intensity = 60, range = 10, dur = 0.35) {
+    if (!this.lights.length) return;
+    // the strongest flash wins when every light is busy
+    let l = this.lights[this.lightNext];
+    this.lightNext = (this.lightNext + 1) % this.lights.length;
+    if (l.userData.life > 0 && l.userData.peak > intensity) {
+      const weakest = this.lights.reduce((a, b) => (b.intensity < a.intensity ? b : a));
+      if (weakest.intensity > intensity) return;
+      l = weakest;
+    }
+    l.color.setHex(color);
+    l.position.set(x, y, z);
+    l.distance = range;
+    l.userData.life = l.userData.max = dur;
+    l.userData.peak = intensity;
+    l.intensity = intensity;
   }
 
   // ---- slash --------------------------------------------------------------
@@ -297,9 +393,10 @@ export class Effects {
   }
 
   blob(x, z, r) {
-    if (this.blobCount >= MAX_BLOBS || !gfx.shadows) return;
+    if (this.blobCount >= MAX_BLOBS || !gfx.shadows || gfx.realShadows) return;
     const a = this.blobMesh.instanceMatrix.array;
     const o = this.blobCount++ * 16;
+    r *= this.blobScale;
     a[o] = r; a[o + 5] = 1; a[o + 10] = r;
     a[o + 12] = x; a[o + 13] = 0.04; a[o + 14] = z;
   }
@@ -316,6 +413,14 @@ export class Effects {
     const w = width * (frac < 0 ? 0 : frac);
     const shift = -(width - w) / 2;
     this._bar(this.barFill.instanceMatrix.array, o, x + this.rx * shift, y + this.ry * shift, z + this.rz * shift, w, h);
+  }
+
+  // camera facing square of the given size
+  _bb(a, o, x, y, z, s) {
+    a[o] = this.rx * s; a[o + 1] = this.ry * s; a[o + 2] = this.rz * s;
+    a[o + 4] = this.ux * s; a[o + 5] = this.uy * s; a[o + 6] = this.uz * s;
+    a[o + 8] = this.fx; a[o + 9] = this.fy; a[o + 10] = this.fz;
+    a[o + 12] = x; a[o + 13] = y; a[o + 14] = z;
   }
 
   _bar(a, o, x, y, z, w, h) {
@@ -374,6 +479,58 @@ export class Effects {
     this.pMesh.count = n;
     this.pMesh.instanceMatrix.needsUpdate = true;
     this.pMesh.instanceColor.needsUpdate = true;
+
+    // glowing sparks
+    {
+      const sd = this.sData, sm = this.sMesh.instanceMatrix.array, sc = this.sMesh.instanceColor.array;
+      const drag = Math.exp(-dt * 3.2);
+      let k = 0;
+      for (let i = 0; i < MAX_SPARKS; i++) {
+        const o = i * 13;
+        if (sd[o + 6] <= 0) continue;
+        sd[o + 6] -= dt;
+        if (sd[o + 6] <= 0) continue;
+        sd[o + 3] *= drag; sd[o + 5] *= drag;
+        sd[o + 4] = sd[o + 4] * drag + sd[o + 12] * dt;
+        sd[o] += sd[o + 3] * dt; sd[o + 1] += sd[o + 4] * dt; sd[o + 2] += sd[o + 5] * dt;
+        const f = sd[o + 6] / sd[o + 7];
+        this._bb(sm, k * 16, sd[o], sd[o + 1], sd[o + 2], sd[o + 8] * (0.4 + 0.6 * f));
+        const fade = f < 0.5 ? f * 2 : 1;
+        sc[k * 3] = sd[o + 9] * fade; sc[k * 3 + 1] = sd[o + 10] * fade; sc[k * 3 + 2] = sd[o + 11] * fade;
+        k++;
+      }
+      this.sMesh.count = k;
+      this.sMesh.instanceMatrix.needsUpdate = true;
+      this.sMesh.instanceColor.needsUpdate = true;
+    }
+    // flares
+    {
+      const fd = this.fData, fm = this.fMesh.instanceMatrix.array, fc = this.fMesh.instanceColor.array;
+      let k = 0;
+      for (let i = 0; i < MAX_FLARES; i++) {
+        const o = i * 10;
+        if (fd[o + 5] <= 0) continue;
+        fd[o + 5] -= dt;
+        if (fd[o + 5] <= 0) continue;
+        const p = 1 - fd[o + 5] / fd[o + 6];
+        const e = 1 - (1 - p) * (1 - p);
+        this._bb(fm, k * 16, fd[o], fd[o + 1], fd[o + 2], fd[o + 3] * (1 + (fd[o + 4] - 1) * e));
+        const a = (1 - p) * (1 - p) * 1.4;
+        fc[k * 3] = fd[o + 7] * a; fc[k * 3 + 1] = fd[o + 8] * a; fc[k * 3 + 2] = fd[o + 9] * a;
+        k++;
+      }
+      this.fMesh.count = k;
+      this.fMesh.instanceMatrix.needsUpdate = true;
+      this.fMesh.instanceColor.needsUpdate = true;
+    }
+    // flashes of light
+    for (const l of this.lights) {
+      const u = l.userData;
+      if (u.life <= 0) continue;
+      u.life -= dt;
+      const f = Math.max(0, u.life / u.max);
+      l.intensity = u.peak * f * f;
+    }
 
     // slashes
     for (let i = 0; i < MAX_SLASHES; i++) {

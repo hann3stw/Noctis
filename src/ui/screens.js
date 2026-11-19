@@ -229,6 +229,7 @@ export class Screens {
       case 'edTab':
         this.ed.tab = v;
         this.preview.focus = ED_FACE[v] ? 1 : 0;
+        this.preview.setLook(this.ed.look, this.shownEquip());
         this.render();
         break;
       case 'random': this.ed.look = randomLook(); this.lookChanged(); break;
@@ -292,6 +293,10 @@ export class Screens {
       setSetting('volume', Number(e.target.value) / 100);
       const out = this.el.querySelector('.vol-val');
       if (out) out.textContent = e.target.value + '%';
+    } else if (e.target.dataset.act === 'music') {
+      setSetting('music', Number(e.target.value) / 100);
+      const out = this.el.querySelector('.mus-val');
+      if (out) out.textContent = e.target.value + '%';
     } else if (e.target.dataset.act === 'name' && this.ed) {
       this.ed.name = e.target.value;
     } else if (e.target.dataset.act === 'pick' && this.ed) {
@@ -303,7 +308,7 @@ export class Screens {
         this.pickQueued = true;
         requestAnimationFrame(() => {
           this.pickQueued = false;
-          if (this.ed && this.preview) this.preview.setLook(this.ed.look, this.ed.equip);
+          if (this.ed && this.preview) this.preview.setLook(this.ed.look, this.shownEquip());
         });
       }
     }
@@ -565,6 +570,7 @@ export class Screens {
       `<button class="seg${String(cur) === String(v) ? ' on' : ''}" data-act="${act}" data-v="${v}">${label}</button>`).join('');
     const toggle = (act, on) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}">${on ? t('set.on') : t('set.off')}</button>`;
     const vol = Math.round(settings.volume * 100);
+    const mus = Math.round((settings.music ?? 0.5) * 100);
     // the difficulty belongs to the world: only while one is running
     const g = this.app.game;
     const diff = g && this.params.back === 'pause'
@@ -577,6 +583,8 @@ export class Screens {
           <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], settings.graphics)}</div></div>
         <div class="set-row"><div><b>${t('set.volume')}</b></div>
           <div class="segs"><input type="range" min="0" max="100" step="5" value="${vol}" data-act="volume"><span class="vol-val">${vol}%</span></div></div>
+        <div class="set-row"><div><b>${t('set.music')}</b></div>
+          <div class="segs"><input type="range" min="0" max="100" step="5" value="${mus}" data-act="music"><span class="mus-val">${mus}%</span></div></div>
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
@@ -655,8 +663,14 @@ export class Screens {
     this.ed = null;
   }
 
+  // the equipment shown: without the helmet while the face or hair is edited
+  shownEquip() {
+    const e = this.ed.equip;
+    return ED_FACE[this.ed.tab] && e && e.helmet ? { ...e, helmet: null } : e;
+  }
+
   lookChanged() {
-    this.preview.setLook(this.ed.look, this.ed.equip);
+    this.preview.setLook(this.ed.look, this.shownEquip());
     this.render();
   }
 

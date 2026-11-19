@@ -558,6 +558,10 @@ function buildAccessory(kind, M) {
   return g;
 }
 
+function castShadows(root) {
+  root.traverse((o) => { if (o.isMesh && o.material && o.material.isMeshLambertMaterial) o.castShadow = true; });
+}
+
 export function createPlayerModel(appearance) {
   const A = normLook(appearance);
   const root = new THREE.Group();
@@ -775,12 +779,14 @@ export function createPlayerModel(appearance) {
     }
   }
   let time = Math.random() * 10;
+  castShadows(body);
 
   // ---- equipment: rebuilt whenever it changes ---------------------------------
   let gear = []; // { group, parent }
   let gearKey = '';
 
   function attach(parent, group) {
+    castShadows(group);
     parent.add(group);
     gear.push({ group, parent });
   }
@@ -827,6 +833,7 @@ export function createPlayerModel(appearance) {
 
   let walk = 0;
   let fall = 0;
+  let lean = 0;
   const ease = (t) => 1 - Math.pow(1 - t, 3);
 
   // p: 0 -> 1 through the attack
@@ -894,7 +901,9 @@ export function createPlayerModel(appearance) {
     // alternates every attack), cast (1 -> 0 while casting a skill), dodging, dead }
     animate(dt, st) {
       fall += ((st.dead ? 1 : 0) - fall) * Math.min(1, dt * 8);
-      body.rotation.x = -fall * 1.45 + (st.dodging ? 0.55 : 0);
+      const run = st.moving && !st.dead;
+      lean += ((run ? 0.13 : 0) - lean) * Math.min(1, dt * 10);
+      body.rotation.x = -fall * 1.45 + (st.dodging ? 0.55 : 0) + lean;
 
       if (st.moving && !st.dead) walk += dt * 13;
       const swing = st.moving && !st.dead ? Math.sin(walk) * 0.75 : 0;
@@ -902,7 +911,12 @@ export function createPlayerModel(appearance) {
       legR.rotation.x += (-swing - legR.rotation.x) * 0.5;
       armL.rotation.x += (-swing * 0.7 - armL.rotation.x) * 0.5;
 
-      body.position.y = fall * 0.25;
+      body.position.y = fall * 0.25
+        + (run ? Math.abs(Math.sin(walk)) * 0.07 : Math.sin(time * 2.2) * 0.018); // bob / breathing
+      head.rotation.x = run ? -0.1 : Math.sin(time * 1.1) * 0.03;
+      // a short lunge forward on every attack
+      const lunge = st.attack > 0 ? Math.sin((1 - st.attack) * Math.PI) * 0.16 : 0;
+      body.position.z += (lunge - body.position.z) * Math.min(1, dt * 20);
       if (st.attack > 0) {
         attackPose(st.weapon, 1 - st.attack, st.combo);
       } else if (st.cast > 0) {

@@ -8,7 +8,8 @@ const KEY = 'noctis.settings';
 export const settings = {
   graphics: 'auto', // auto | low | medium | high
   autoLevel: '', // preset chosen by "auto" (remembered between sessions)
-  volume: 0.7, // 0..1
+  volume: 0.7, // 0..1 sound effects
+  music: 0.5, // 0..1 background music
   buttonSize: 1, // 0.8 .. 1.3
   swap: false, // movement on the right, buttons on the left
   showFps: false,
@@ -18,7 +19,7 @@ export const settings = {
 };
 
 // Values of the current graphics preset, read by the game every frame.
-export const gfx = { pixelRatio: 1.5, particles: 1, decorRadius: 64, renderRadius: 36, shadows: true, level: 'medium' };
+export const gfx = { pixelRatio: 1.5, particles: 1, decorRadius: 64, renderRadius: 36, shadows: true, realShadows: false, level: 'medium' };
 
 const LEVELS = ['low', 'medium', 'high'];
 let ceiling = 2; // "auto" never climbs back above a level that was too slow
@@ -78,6 +79,7 @@ export function applySettings() {
   const p = CONFIG.graphics.presets[level] || CONFIG.graphics.presets.medium;
   gfx.level = CONFIG.graphics.presets[level] ? level : 'medium';
   gfx.shadows = p.shadows;
+  gfx.realShadows = !!p.realShadows; // shadow maps from the sun (only on high)
   gfx.pixelRatio = p.pixelRatio;
   gfx.particles = p.particles;
   gfx.decorRadius = p.decorRadius;

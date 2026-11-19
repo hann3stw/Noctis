@@ -5,6 +5,7 @@ import { Screens } from './ui/screens.js';
 import { settings, loadSettings, saveSettings, setSetting, onGraphicsChange } from './core/settings.js';
 import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText } from './core/storage.js';
 import { unlockAudio } from './core/sfx.js';
+import { startMusic, setMood } from './core/music.js';
 import { initKeyboard, setEscapeHandler } from './input/keyboard.js';
 import { sizeRenderer } from './render/renderer.js';
 import { randomSeed } from './core/rng.js';
@@ -27,14 +28,16 @@ export class App {
     loadSettings();
     onGraphicsChange(() => {
       sizeRenderer();
-      if (this.game) this.game.resize();
+      if (this.game) { this.game.resize(); this.game.applyShadows(); }
     });
     initKeyboard();
     setEscapeHandler(() => this.onEscape());
     window.addEventListener('contextmenu', (e) => e.preventDefault());
-    const unlock = () => unlockAudio();
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
+    const unlock = () => { unlockAudio(); startMusic(); };
+    // capture phase: the game buttons stop their events from bubbling up
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('touchend', unlock, true);
+    window.addEventListener('keydown', unlock, true);
     window.addEventListener('resize', () => { if (!this.game) sizeRenderer(); });
     sizeRenderer();
 
@@ -309,6 +312,7 @@ export class App {
     if (game.slot >= 0) this.cloud.queue(game.slot, this.slots[game.slot], true);
     game.destroy();
     this.game = null;
+    setMood('menu');
     if (this.debug) window.__noctis = null;
     this.screens.show('title');
   }

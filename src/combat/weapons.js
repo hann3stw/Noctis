@@ -18,10 +18,15 @@ export function playerHit(game, i, base, kx, kz) {
   play(crit ? 'crit' : 'hit');
   const fx = game.effects;
   if (crit) {
+    fx.flare(E.x[i], 1.1, E.z[i], 3.2, 0xffc040, 0.26, 1.6);
+    fx.flare(E.x[i], 1.1, E.z[i], 1.4, 0xffffff, 0.14, 1.4);
+    fx.sparks(E.x[i], 1, E.z[i], 10, 0xffd060, 7, 0.32, 0.45, 0.5);
+    fx.light(E.x[i], 1.6, E.z[i], 0xffc040, 45, 7, 0.22);
     fx.ring(E.x[i], E.z[i], 0.4, 2.6, 0xffc040, 0.3, 0, 1.0);
     game.cam.shake(0.18, 0.15);
     game.hitStop(0.045);
   } else {
+    fx.flare(E.x[i], 1.1, E.z[i], 1.9, 0xe8dcff, 0.18, 1.5);
     fx.ring(E.x[i], E.z[i], 0.3, 1.5, 0xffffff, 0.18, 0, 1.0);
   }
   const x = E.x[i], z = E.z[i];
@@ -122,6 +127,7 @@ export function fireWeapon(game, weaponId, dx, dz, power) {
     const dir = P.combo ? -1 : 1;
     const color = weaponId === 'daggers' ? 0xe8dcff : 0xc9a8ff;
     fx.slash(P.x, P.z, Math.atan2(dx, dz), w.range, w.arcDeg, color, SWEEP, dir, weaponId === 'daggers' ? 0.16 : 0.26);
+    fx.flare(P.x + dx * w.range * 0.55, 1, P.z + dz * w.range * 0.55, w.range * 0.8, color, 0.16, 1.3);
   } else if (w.shape === 'circle') {
     hitCircle(game, P.x, P.z, w.range, base);
     fx.slash(P.x, P.z, Math.atan2(dx, dz), w.range, 360, 0xc9a8ff, SWEEP, -1, 0.34);
@@ -141,6 +147,8 @@ export function fireWeapon(game, weaponId, dx, dz, power) {
     const x = P.x + dx * w.range, z = P.z + dz * w.range;
     hitCircle(game, x, z, w.radius, base, w.stun);
     fx.slash(x, z, 0, w.radius, 360, 0xffd9a0, EXPAND, 1, 0.3);
+    fx.flare(x, 0.6, z, w.radius * 1.6, 0xffb060, 0.3, 1.5);
+    fx.light(x, 1.5, z, 0xffb060, 60, w.radius * 3 + 4, 0.3);
     fx.ring(x, z, 0.5, w.radius + 0.8, 0xffb060, 0.3);
     fx.burst(x, 0.3, z, 12, 0xd8c0a0, 6, 0.2, 0.4);
     game.cam.shake(0.14, 0.12);

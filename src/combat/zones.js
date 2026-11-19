@@ -51,6 +51,8 @@ export class Zones {
       fx.slash(zn.x, zn.z, 0, zn.r, 360, zn.color, EXPAND, 1, 0.3);
       fx.ring(zn.x, zn.z, zn.r * 0.3, zn.r * 1.15, zn.color, 0.35);
       fx.burst(zn.x, 0.4, zn.z, 10, zn.color, 6, 0.2, 0.45);
+      fx.flare(zn.x, 0.8, zn.z, zn.r * 1.3, zn.color, 0.28, 1.4);
+      fx.light(zn.x, 1.8, zn.z, zn.color, 45, zn.r * 3 + 4, 0.25);
       if (--zn.ticks > 0) {
         zn.t = zn.total = zn.interval;
         if (zn.rain) fx.rain(zn.x, zn.z, zn.r, 10, 0xe8dcff);

@@ -314,6 +314,7 @@ export class World {
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(d.cap * 3).fill(1), 3);
     mesh.boundingSphere = new THREE.Sphere();
     mesh.matrixAutoUpdate = false;
+    mesh.castShadow = !d.def.glow; // used when shadow maps are on
     return mesh;
   }
 
