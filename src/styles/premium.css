@@ -3821,3 +3821,22 @@ input.shake {
   font-size: calc(var(--u) * 2.7);
   color: #ffe08a;
 }
+
+/* ---- bestiary: 3D view of the monster on the left ---- */
+.b-stage {
+  flex: 0.95;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: calc(var(--u) * 2);
+  background: radial-gradient(ellipse at 50% 35%, rgba(70, 40, 140, 0.45), rgba(10, 6, 20, 0.85) 75%);
+  border: 1px solid var(--line);
+  box-shadow: var(--bevel), var(--lift);
+}
+.b-stage .ap-canvas {
+  position: absolute;
+  inset: 0;
+}
+.bestiary .b-left {
+  flex: 1.5;
+}

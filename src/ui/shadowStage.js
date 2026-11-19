@@ -1,10 +1,11 @@
-// 3D view of the shadow selected in the army tab. It has its own small
+// 3D view of the shadow selected in the army tab (and of the monster in the
+// bestiary: look.mode 'enemy' = in its own colours, 'silhouette' = not met yet). It has its own small
 // renderer and canvas inside the panel (the game canvas is not touched), so
 // it also works while the game is paused. The shadow turns slowly and can be
 // turned by dragging. The renderer is only alive while the panel is shown:
 // once the army tab is left or the menu closes, it frees its GPU memory.
 import * as THREE from 'three';
-import { buildShadowGeometry } from '../render/models/enemies.js';
+import { buildShadowGeometry, buildEnemyGeometry } from '../render/models/enemies.js';
 
 const SPIN = 0.55; // radians per second while nobody touches it
 const HEIGHT = 2.7; // every shadow is scaled to about this height
@@ -36,7 +37,8 @@ export class ShadowStage {
     this.onUp = this.onUp.bind(this);
   }
 
-  // look: { id, tint: [r, g, b], aura, rankHex, glow (0 = no outline) }
+  // look: { id, mode, tint: [r, g, b], aura, rankHex, glow (0 = no outline) }
+  // (mode: 'shadow' (default), 'enemy' or 'silhouette')
   show(host, look) {
     this.host = host;
     this.look = look;
@@ -124,14 +126,21 @@ export class ShadowStage {
       this.model = null;
     }
     const L = this.look;
-    const geo = buildShadowGeometry(L.id);
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    mat.color.setRGB(L.tint[0] * 2.6, L.tint[1] * 2.6, L.tint[2] * 2.6); // brighter than in the field, so the shape reads
-    mat.emissive.setRGB(L.tint[0] * 0.07, L.tint[1] * 0.07, L.tint[2] * 0.07);
+    const mode = L.mode || 'shadow';
+    const geo = mode === 'shadow' ? buildShadowGeometry(L.id) : buildEnemyGeometry(L.id);
+    let mat;
+    if (mode === 'silhouette') mat = new THREE.MeshBasicMaterial({ color: 0x0a0614 });
+    else {
+      mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+      if (mode === 'shadow') {
+        mat.color.setRGB(L.tint[0] * 2.6, L.tint[1] * 2.6, L.tint[2] * 2.6); // brighter than in the field, so the shape reads
+        mat.emissive.setRGB(L.tint[0] * 0.07, L.tint[1] * 0.07, L.tint[2] * 0.07);
+      }
+    }
     const body = new THREE.Mesh(geo, mat);
     const grp = new THREE.Group();
     grp.add(body);
-    if (L.glow > 0) {
+    if (L.glow > 0 && mode === 'shadow') {
       const gm = new THREE.MeshBasicMaterial({ side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
       gm.color.setHex(L.rankHex).multiplyScalar(L.glow);
       const out = new THREE.Mesh(geo.clone(), gm);

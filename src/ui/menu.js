@@ -5,6 +5,7 @@ import { CONFIG } from '../config.js';
 import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
+import { ShadowStage } from './shadowStage.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 import { msToMidnight } from '../core/quests.js';
@@ -53,6 +54,10 @@ export class Menu {
     this.el.id = 'menu';
     root.appendChild(this.el);
     this.army = new ArmyPanel(game);
+    // 3D view of the monster in the bestiary (the element stays while the tab is redrawn)
+    this.beastStage = new ShadowStage();
+    this.beastEl = document.createElement('div');
+    this.beastEl.className = 'b-stage';
     this.tab = 'gear';
     this.isOpen = false;
     this.opens = 0; // how often it was opened (the tutorial waits for it)
@@ -230,6 +235,7 @@ export class Menu {
       const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look(),
         quests: () => this.questsView(), bestiary: () => this.bestiaryView() };
       body.innerHTML = views[this.tab]();
+      if (this.tab === 'bestiary') this.showBeast(body);
     }
     for (const [key, top] of scroll) {
       const l = this.el.querySelector(`[data-scroll="${key}"]`);
@@ -544,9 +550,20 @@ export class Menu {
     const rest = ids.filter((id) => zoneOf(id) < 0);
     if (rest.length) list += `<div class="b-zone"><h4>${t('best.other')}</h4><div class="b-grid">${rest.map(card).join('')}</div></div>`;
     const c = B.counts();
-    return `<div class="bestiary">
+    return `<div class="bestiary"><div class="b-stage-slot"></div>
       <div class="b-left" data-scroll="bestiary"><div class="b-sum">${t('best.sum', { seen: c.seen, all: c.all, mastered: c.mastered })}</div>${list}</div>
       <div class="b-right" data-scroll="beast">${this.beastPage(this.selBeast, zoneOf(this.selBeast))}</div></div>`;
+  }
+
+  // the monster picked, in 3D on the left (a black outline until it was met)
+  showBeast(body) {
+    const slot = body.querySelector('.b-stage-slot');
+    if (!slot) return;
+    const id = this.selBeast, zones = CONFIG.world.zones, zi = zones.findIndex((z) => z.enemyTypes.includes(id) || z.boss === id);
+    slot.replaceWith(this.beastEl);
+    const known = this.game.bestiary.step(id) > 0;
+    const ok = this.beastStage.show(this.beastEl, { id, mode: known ? 'enemy' : 'silhouette', aura: zi >= 0 ? zones[zi].gateColor : 0x8a4dff });
+    if (!ok) this.beastEl.remove(); // no WebGL: no view
   }
 
   beastPage(id, zi) {
