@@ -3427,12 +3427,32 @@ input.shake {
 .bm-map {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 0;
+  position: relative;
 }
 .bm-map canvas {
-  filter: drop-shadow(0 0 calc(var(--u) * 4) rgba(120, 80, 255, 0.4));
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  border-radius: calc(var(--u) * 2.4);
+  border: 2px solid rgba(233, 199, 123, 0.7);
+  box-shadow: 0 0 calc(var(--u) * 4) rgba(120, 80, 255, 0.4);
+}
+.bm-map canvas:active {
+  cursor: grabbing;
+}
+.bm-fit {
+  display: flex;
+  gap: calc(var(--u) * 1);
+}
+.bm-fit .ap-btn {
+  flex: 1;
+  min-height: calc(var(--u) * 6.4);
+  padding: 0 calc(var(--u) * 1);
+  font-size: calc(var(--u) * 2.3);
 }
 .bm-side {
   width: min(calc(var(--u) * 52), 34vw);

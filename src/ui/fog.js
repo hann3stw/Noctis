@@ -93,16 +93,21 @@ export class Fog {
   }
 
   // Draws the fog over a map: (cx, cz) world point in the middle, k pixels
-  // per world unit, size S.
-  draw(g, cx, cz, k, S) {
+  // per world unit, size W x H.
+  draw(g, cx, cz, k, W, H = W) {
     this.flush();
-    const c = this.cell, half = S / 2;
-    // the world square seen, in fog pixels
-    const sx = (cx - half / k + this.R) / c, sz = (cz - half / k + this.R) / c, sw = S / k / c;
+    const c = this.cell;
+    // the world rectangle seen, in fog pixels
+    const sx = (cx - W / 2 / k + this.R) / c, sz = (cz - H / 2 / k + this.R) / c, sw = W / k / c, sh = H / k / c;
     g.save();
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
-    g.drawImage(this.canvas, sx, sz, sw, sw, 0, 0, S, S);
+    // the part of the view outside the fog picture (outside the world) stays dark
+    const n = this.canvas.width;
+    const x0 = Math.max(0, sx), z0 = Math.max(0, sz), x1 = Math.min(n, sx + sw), z1 = Math.min(n, sz + sh);
+    if (x1 > x0 && z1 > z0) {
+      g.drawImage(this.canvas, x0, z0, x1 - x0, z1 - z0, ((x0 - sx) / sw) * W, ((z0 - sz) / sh) * H, ((x1 - x0) / sw) * W, ((z1 - z0) / sh) * H);
+    }
     g.restore();
   }
 
