@@ -1,4 +1,5 @@
-// Army tab of the menu. Left: every shadow as a card, sorted by power, level
+// Army tab of the menu. Left: a 3D view of the selected shadow (turns by
+// itself, drag to turn it), then every shadow as a card, sorted by power, level
 // or rank and filtered by rank group and role. Right: the selected shadow
 // with its values, its rank (every rank has a limited number), its name
 // (officers only) and Dismiss. With nothing selected the right side shows
@@ -7,6 +8,7 @@ import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
 import { fmt } from '../core/format.js';
 import { RANKS, rankOf } from '../core/levels.js';
+import { ShadowStage } from './shadowStage.js';
 
 function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -23,6 +25,15 @@ export class ArmyPanel {
     this.game = game;
     this.el = document.createElement('div');
     this.el.className = 'ap-root';
+    // these three stay while the tab is redrawn (the 3D view lives in the first)
+    this.stageEl = document.createElement('div');
+    this.stageEl.className = 'ap-stage';
+    this.leftEl = document.createElement('div');
+    this.leftEl.className = 'ap-left';
+    this.rightEl = document.createElement('div');
+    this.rightEl.className = 'ap-right';
+    this.el.append(this.stageEl, this.leftEl, this.rightEl);
+    this.stage = new ShadowStage();
     this.selected = -1;
     this.confirm = false;
     this.locked = false;
@@ -36,6 +47,16 @@ export class ArmyPanel {
   reset() {
     this.selected = -1;
     this.confirm = false;
+    this.stage.hide();
+  }
+
+  // how the selected shadow looks in the 3D view
+  stageLook(u) {
+    const army = this.game.army, r = u.rank || 0, b = 1 + u.stage * 0.45;
+    return {
+      id: u.type, tint: [army.tr * b, army.tg * b, army.tb * b], aura: army.auraHex,
+      rankHex: army.rankColor(u), glow: r >= 3 ? 0.9 : r === 2 ? 0.4 : 0,
+    };
   }
 
   onClick(e) {
@@ -178,11 +199,15 @@ export class ArmyPanel {
     const note = this.locked ? t('army.campOnly') : this.hint ? esc(this.hint) : '';
     const scroll = this.el.querySelector('.ap-grid');
     const top = scroll ? scroll.scrollTop : 0;
-    this.el.innerHTML = `<div class="ap-left">
-        <div class="ap-head"><h3>${head}</h3>${note ? `<span class="ap-note">${note}</span>` : ''}</div>
+    this.leftEl.innerHTML = `<div class="ap-head"><h3>${head}</h3>${note ? `<span class="ap-note">${note}</span>` : ''}</div>
         <div class="ap-tools"><div class="segs ap-segs">${sorts}</div><div class="segs ap-segs">${groups}</div><div class="segs ap-segs">${roles}</div></div>
-        <div class="ap-grid" data-scroll="army">${body}</div></div>
-      <div class="ap-right">${sel ? this.detail(sel) : this.overview()}</div>`;
+        <div class="ap-grid" data-scroll="army">${body}</div>`;
+    this.rightEl.innerHTML = sel ? this.detail(sel) : this.overview();
     this.el.querySelector('.ap-grid').scrollTop = top;
+    // the 3D view of the selected shadow
+    this.el.classList.toggle('has-sel', !!sel);
+    if (sel) {
+      if (!this.stage.show(this.stageEl, this.stageLook(sel))) this.el.classList.remove('has-sel'); // no WebGL: no view
+    } else this.stage.hide();
   }
 }

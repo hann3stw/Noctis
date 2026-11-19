@@ -3762,3 +3762,33 @@ input.shake {
     transform: none;
   }
 }
+
+/* ---- army tab: 3D view of the selected shadow on the left ---- */
+.ap-stage {
+  display: none;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: calc(var(--u) * 2);
+  background: radial-gradient(ellipse at 50% 35%, rgba(70, 40, 140, 0.45), rgba(10, 6, 20, 0.85) 75%);
+  border: 1px solid var(--line);
+  box-shadow: var(--bevel), var(--lift);
+}
+.ap-root.has-sel {
+  grid-template-columns: minmax(0, 27fr) minmax(0, 40fr) minmax(0, 33fr);
+}
+.ap-root.has-sel .ap-stage {
+  display: block;
+}
+.ap-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.ap-canvas:active {
+  cursor: grabbing;
+}
