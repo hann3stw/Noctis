@@ -765,7 +765,7 @@ export class Game {
     if (souls.level[i] < P.level) return 1; // weaker than you: always rises
     const ranks = rankProgress(souls.level[i]) - rankProgress(P.level);
     const c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + P.stats.int * CONFIG.progression.stats.int.arise
-      + (souls.gate[i] ? CONFIG.gates.ariseBonus : 0);
+      + (souls.gate[i] && souls.tier[i] < 3 ? CONFIG.gates.ariseBonus : 0); // gate bosses get no bonus
     return Math.max(A.minChance, Math.min(1, c));
   }
 

@@ -619,7 +619,7 @@ export const CONFIG = {
     escorts: 3, // per champion of a guard stage
     stagePause: 2.5, // seconds between two stages
     stageLuck: 0.5, // luck of the item of a stage
-    ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
+    ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %), but not the boss
   },
 
   // Gate tiers: clearing the deadly gate of a zone makes the next deadly gate
