@@ -53,6 +53,7 @@ export class Tips {
     if (P.inCamp && P.inventory.length > 0) this.show('gear');
     if (P.points > 0) this.show('stats');
     if (P.moving && !P.sprint && P.calmT > 8 && !P.inCamp && g.gates.active < 0) this.show('shadowStep');
+    if (g.gates.active < 0 && g.trialDue()) this.show('trial');
   }
 
   update(dt) {

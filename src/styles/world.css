@@ -110,7 +110,9 @@
 }
 
 /* ---- boss bar (inside an arena the zone label makes room for it) ---------------- */
-#hud.arena .zone {
+#hud.arena .zone,
+#hud.bossup .zone,
+#hud.bossup .zone-card {
   display: none;
 }
 .boss-bar {

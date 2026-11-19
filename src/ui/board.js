@@ -7,7 +7,44 @@ import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
 import { fmt, flashClass } from '../core/format.js';
 import { settings, setSetting } from '../core/settings.js';
-import { loadBoard, cleanName, myId } from '../net/online.js';
+import { loadBoard, cleanName, myId, LOOK_COLORS } from '../net/online.js';
+import { RARITY_CSS, itemName } from '../core/items.js';
+import { gearIcon } from './gearIcons.js';
+import { snapshot } from './preview.js';
+import { normLook } from '../render/models/player.js';
+
+const SLOTS = ['weapon', 'helmet', 'chest', 'gloves', 'boots'];
+const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+const int = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi ? v : d);
+
+// Look and gear of a leaderboard row come from other players: only known
+// values are kept, everything else falls back to the defaults.
+function cleanLook(l) {
+  if (!l || typeof l !== 'object') return null;
+  const a = { ...CONFIG.defaultAppearance };
+  for (const k of LOOK_COLORS) if (Number.isInteger(l[k]) && l[k] >= 0 && l[k] <= 0xffffff) a[k] = l[k];
+  if (typeof l.cape === 'boolean') a.cape = l.cape;
+  for (const k of ['hairStyle', 'build', 'height', 'facialHair', 'eyeShape', 'mark', 'accessory', 'outfit', 'capeStyle', 'auraStyle']) if (Number.isInteger(l[k])) a[k] = l[k];
+  return normLook(a);
+}
+
+function cleanGear(g) {
+  if (!g || typeof g !== 'object') return null;
+  const out = {};
+  for (const slot of SLOTS) {
+    const it = g[slot];
+    if (!it || typeof it !== 'object') { out[slot] = null; continue; }
+    const weapon = slot === 'weapon';
+    if (weapon && !has(CONFIG.weapons, it.type)) { out[slot] = null; continue; }
+    const c = { kind: weapon ? 'weapon' : 'armor', type: weapon ? it.type : slot, rarity: int(it.rarity, 0, 7, 0), level: int(it.level, 1, 999999, 1), up: int(it.up, 0, 99, 0) };
+    if (!weapon) c.set = has(CONFIG.items.sets, it.set) ? it.set : Object.keys(CONFIG.items.sets)[0];
+    const U = CONFIG.uniques;
+    if (c.rarity === 7 && (weapon ? has(U.weapon, it.uq) : U.armor[slot] && has(U.armor[slot], it.uq))) c.uq = it.uq;
+    else if (c.rarity === 7) c.rarity = 6;
+    out[slot] = c;
+  }
+  return out;
+}
 
 export function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -24,6 +61,8 @@ export class Board {
     this.data = null; // the board shown
     this.state = ''; // '' | 'loading' | 'error'
     this.naming = false;
+    this.openId = ''; // the row whose hunter is shown
+    this.pics = {}; // pictures of hunters: user_id -> { key, url }
   }
 
   // shows a board (and loads it again)
@@ -51,6 +90,7 @@ export class Board {
 
   // true when the click was for the board
   handle(act, root, v) {
+    if (act === 'lbShow') { this.openId = this.openId === v ? '' : v; this.onChange(); return true; }
     if (act === 'lbKind') { if (v !== this.kind) this.show(v); return true; }
     if (act === 'lbRefresh') { this.fetch(); return true; }
 
@@ -75,6 +115,28 @@ export class Board {
     return !!settings.hunterName && this.state !== 'loading';
   }
 
+  // the hunter of a row: a picture of its look and the gear it wears
+  details(r) {
+    const look = cleanLook(r.look), gear = cleanGear(r.gear);
+    if (!look && !gear) return `<div class="lb-det"><p class="lb-note">${t('lb.noLook')}</p></div>`;
+    const equip = { ...(gear || {}) };
+    if (!equip.weapon) equip.weapon = { kind: 'weapon', type: Object.keys(CONFIG.weapons)[0], rarity: 0, level: 1, up: 0 };
+    let pic = '';
+    const key = JSON.stringify([look, gear]);
+    const cached = this.pics[r.user_id];
+    if (cached && cached.key === key) pic = cached.url;
+    else {
+      try { pic = snapshot(look || { ...CONFIG.defaultAppearance }, equip); } catch (_) { pic = ''; }
+      this.pics[r.user_id] = { key, url: pic };
+    }
+    const items = SLOTS.map((slot) => {
+      const it = gear && gear[slot];
+      if (!it) return `<div class="lb-it empty"><i></i><div><b>${t('slot.' + slot)}</b><small>${t('lb.emptySlot')}</small></div></div>`;
+      return `<div class="lb-it" style="--rc:${RARITY_CSS[it.rarity]}"><i>${gearIcon(it)}</i><div><b>${esc(itemName(it))}</b><small>${t('rarity.' + it.rarity)} · ${t('lb.itemLevel', { n: it.level })}</small></div></div>`;
+    }).join('');
+    return `<div class="lb-det">${pic ? `<img class="lb-av" src="${pic}" alt="">` : ''}<div class="lb-gear">${gear ? items : `<p class="lb-note">${t('lb.noLook')}</p>`}</div></div>`;
+  }
+
   // hasRecord: the player has a record for the board shown (for the note below the list)
   html(hasRecord) {
     const kinds = ['level', 'abyss'].map((k) => `<button class="seg${this.kind === k ? ' on' : ''}" data-act="lbKind" data-v="${k}">${t('lb.kind.' + k)}</button>`).join('');
@@ -94,11 +156,11 @@ export class Board {
     const id = myId(), D = CONFIG.difficulty.levels, lv = this.kind === 'level';
     const dif = (r) => (D[r.difficulty] ? ` · <i class="dif-${r.difficulty}">${t('diff.' + r.difficulty)}</i>` : '');
     const mas = (r) => (r.mastery ? ' · ' + t('lb.mastery', { n: fmt(r.mastery) }) : '');
-    const row = (r, place) => `<div class="lb-row${r.user_id === id ? ' me' : ''}${place <= 3 ? ' top' + place : ''}"><em>${place}</em>
+    const row = (r, place) => `<div class="lb-row${r.user_id === id ? ' me' : ''}${place <= 3 ? ' top' + place : ''}${r.user_id === this.openId ? ' open' : ''}" data-act="lbShow" data-v="${esc(r.user_id)}"><em>${place}</em>
       <div><b>${esc(r.name)}</b><small>${lv
     ? t('lb.subRank', { rank: esc(r.rank) }) + mas(r) + (r.floor > 0 ? ' · ' + t('lb.floor', { n: r.floor }) : '')
     : t('lb.sub', { level: r.level, rank: esc(r.rank) }) + mas(r) + dif(r)}</small></div>
-      <span>${lv ? t('lb.level', { n: r.level }) : t('lb.floor', { n: r.floor })}</span></div>`;
+      <span>${lv ? t('lb.level', { n: r.level }) : t('lb.floor', { n: r.floor })}</span><i class="lb-more"></i></div>${r.user_id === this.openId ? this.details(r) : ''}`;
     const rows = this.data.rows.map((r, i) => row(r, i + 1)).join('') || `<div class="lb-msg">${t('lb.empty')}</div>`;
     const me = this.data.me;
     const mine = me

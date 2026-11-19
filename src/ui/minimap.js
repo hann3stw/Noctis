@@ -68,6 +68,21 @@ export const ICON = {
     g.fillRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.6);
     g.restore();
   },
+  // a hunted monster: a red skull-like mark
+  hunt(g, x, y, r) {
+    g.save();
+    g.shadowColor = '#ff3048';
+    g.shadowBlur = r * 1.4;
+    g.fillStyle = '#ff3048';
+    g.strokeStyle = '#2a0008';
+    g.lineWidth = Math.max(1.2, r * 0.22);
+    g.beginPath(); g.arc(x, y - r * 0.15, r * 0.8, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.shadowBlur = 0;
+    g.fillRect(x - r * 0.45, y + r * 0.35, r * 0.9, r * 0.5);
+    g.fillStyle = '#2a0008';
+    g.beginPath(); g.arc(x - r * 0.3, y - r * 0.2, r * 0.2, 0, Math.PI * 2); g.arc(x + r * 0.3, y - r * 0.2, r * 0.2, 0, Math.PI * 2); g.fill();
+    g.restore();
+  },
   abyss(g, x, y, r) {
     g.fillStyle = '#0a0010';
     g.strokeStyle = '#ff2850';
@@ -193,6 +208,12 @@ function paintWorld(game, g, S, cx, cz, R, big, chests = true) {
   ICON.camp(g, ox, oy, Math.max(S / (big ? 45 : 26), CONFIG.world.campRadius * k));
   const ab = game.gates.list[game.gates.abyssIndex];
   if (ab && big && k > 0.2) ICON.abyss(g, X(ab.x), Y(ab.z), S / 80);
+  // the rank trial, while it is due
+  const tr = game.gates.list[game.gates.trialIndex];
+  if (tr && tr.open && game.gates.active < 0) ICON.gate(g, X(tr.x), Y(tr.z), Math.max(4, S / (big ? 80 : 30)), CONFIG.trial.color, 0xffffff);
+  // the hunted monster on the big map
+  const hi = game.hunts.i;
+  if (big && hi >= 0 && game.enemies.alive[hi]) ICON.hunt(g, X(game.enemies.x[hi]), Y(game.enemies.z[hi]), Math.max(5, S / 60));
   return { X, Y, k };
 }
 
@@ -313,13 +334,21 @@ export class Minimap {
     if (arena < 0) {
       // gates: always visible, on the edge when they are out of view
       for (const gt of gates.list) {
-        if (!gt.open || gt.abyss || gt.zone !== game.curZone) continue;
+        if (!gt.open || gt.abyss || gt.trial || gt.zone !== game.curZone) continue;
         let x = X(gt.x), y = Y(gt.z);
         const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 14;
         const out = d > lim;
         if (out) { x = half + (dx / d) * lim; y = half + (dy / d) * lim; }
         const s = (S / (out ? 24 : 18)) * (1 + gt.diff * 0.15);
         ICON.gate(g, x, y, s, CONFIG.world.zones[gt.zone].gateColor, CONFIG.gates.difficulties[gt.diff].color);
+      }
+      // the hunted monster: always visible, on the edge when out of view
+      const hi = game.hunts.i;
+      if (hi >= 0 && game.enemies.alive[hi]) {
+        let x = X(game.enemies.x[hi]), y = Y(game.enemies.z[hi]);
+        const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 14;
+        if (d > lim) { x = half + (dx / d) * lim; y = half + (dy / d) * lim; }
+        ICON.hunt(g, x, y, S / 20);
       }
       // outposts nearby (those just out of view sit on the edge)
       const r = Math.max(4, S / 19);
@@ -608,7 +637,7 @@ class BigMap {
     });
     // every open gate of the zones you know, so you can head for it
     game.gates.list.forEach((gt, gi) => {
-      if (!gt.open || gt.abyss || !game.knownZones.has(gt.zone)) return;
+      if (!gt.open || gt.abyss || gt.trial || !game.knownZones.has(gt.zone)) return;
       const x = X(gt.x), y = Y(gt.z), s = Math.max(4, S / 70) * (1 + gt.diff * 0.15);
       if (!inside(x, y, s)) return;
       ICON.gate(g, x, y, s, zones[gt.zone].gateColor, CONFIG.gates.difficulties[gt.diff].color);

@@ -54,6 +54,7 @@ export class Hud {
             <div class="bar hp"><em></em><i></i><span></span></div>
             <div class="bar mp"><i></i><span></span></div>
             <div class="xp"><div class="bar"><i></i></div></div>
+            <div class="rk"><div class="bar"><i></i></div><span></span></div>
           </div>
         </div>
         <div class="qtrack"></div>
@@ -175,6 +176,9 @@ export class Hud {
     this.xpFill = $('.xp .bar i');
     this.xpLabel = $('.lvl-badge b');
     this.rankLabel = $('.lvl-badge small');
+    this.rkBox = $('.rk');
+    this.rkFill = $('.rk .bar i');
+    this.rkText = $('.rk span');
     this.hpTrail = $('.bar.hp em');
     this.zoneCard = $('.zone-card');
     this.zoneCardT = 0;
@@ -259,7 +263,7 @@ export class Hud {
     // -50 = gate cleared, -60 = Abyss floor cleared
     const ab = gates.abyssIndex, P = game.player;
     const near = gates.active < 0 ? gates.near : gates.exitOpen ? (gates.inAbyss ? -60 : -50) : -1;
-    const sig = near + ':' + game.modsOpen() + ':' + game.mods.length + ':' + game.abyss.best + ':' + game.abyss.floor + ':' + game.abyss.unlocked;
+    const sig = near + ':' + game.modsOpen() + ':' + game.mods.length + ':' + game.abyss.best + ':' + game.abyss.floor + ':' + game.abyss.unlocked + ':' + game.gateTiers.join(',');
     if (sig !== this.vGate) {
       this.vGate = sig;
       this.gatePanel.classList.toggle('on', near !== -1);
@@ -280,6 +284,11 @@ export class Hud {
           : A.best ? t('abyss.best', { n: A.best }) : t('abyss.bestNone');
         this.gatePanel.dataset.d = 'abyss';
         this.gateBtn.classList.toggle('off', !A.unlocked);
+      } else if (near === gates.trialIndex && near >= 0) {
+        const zs = CONFIG.world.zones, nz = zs[Math.min(zs.length - 1, game.rankIndex + 1)];
+        this.gateTitle.textContent = t('trial.name', { rank: RANKS[game.rankIndex + 1] });
+        this.gateInfo.textContent = t('trial.info', { boss: t('enemy.' + nz.boss), level: P.level });
+        this.gatePanel.dataset.d = 'trial';
       } else if (near === -50) {
         this.gateTitle.textContent = t('gate.cleared');
         this.gateInfo.textContent = t('gate.leaveInfo');
@@ -287,7 +296,8 @@ export class Hud {
       } else if (near >= 0) {
         const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
         const diff = CONFIG.gates.difficulties[gate.diff];
-        this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id), rank: zone.rank });
+        const tier = diff.id === 'deadly' ? game.gateTier(gate.zone) : 0;
+        this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id) + (tier ? ' +' + tier : ''), rank: zone.rank });
         this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level, n: diff.stages.length + 1 }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
         this.gatePanel.dataset.d = diff.id;
         this.gateBtn2.style.display = game.modsOpen() ? '' : 'none';
@@ -295,15 +305,16 @@ export class Hud {
       }
     }
     // boss health
-    const b = gates.bossIndex();
-    const show = b >= 0 && E.alive[b] ? b : -1;
+    const b = gates.bossIndex(), hb = game.hunts.barIndex();
+    const show = b >= 0 && E.alive[b] ? b : hb;
     if (show !== this.vBoss) {
       this.vBoss = show;
       this.bossBar.classList.toggle('on', show >= 0);
+      this.bossBar.classList.toggle('hunt', show >= 0 && show === hb);
       if (show >= 0) {
-        this.bossName.textContent = t('enemy.' + E.types[E.type[show]].id);
-        // where the next phases begin
-        const n = gates.phaseCount(gates.active);
+        this.bossName.textContent = show === hb ? game.hunts.name : t('enemy.' + E.types[E.type[show]].id);
+        // where the next phases begin (a hunted monster has none)
+        const n = show === hb ? 1 : gates.phaseCount(gates.active);
         this.bossMarks.forEach((m, k) => {
           m.style.display = k < n - 1 ? '' : 'none';
           m.style.left = CONFIG.boss.phases[k] * 100 + '%';
@@ -647,6 +658,19 @@ export class Hud {
       this.xpLabel.textContent = P.level;
       this.xpLabel.dataset.n = String(P.level).length; // 4 digits get a smaller font
       this.rankLabel.textContent = t('hud.rankShort', { rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
+    }
+    // progress through the rank, up to its trial (or to the Abyss in the last one)
+    const RL = CONFIG.levels.rankLevels, ri = game.rankIndex, cap = game.levelCap();
+    const due = game.trialDue();
+    const rp = maxed ? 1 : Math.min(1, (P.level - RL[ri] + Math.min(1, P.xp / P.xpNeed())) / Math.max(1, cap - RL[ri] + 1));
+    const rkSig = Math.floor(rp * 200) + ':' + due + ':' + ri + ':' + maxed;
+    if (rkSig !== this.vRk) {
+      this.vRk = rkSig;
+      this.rkFill.style.transform = 'scaleX(' + rp + ')';
+      this.rkBox.classList.toggle('due', due);
+      this.rkBox.style.display = maxed ? 'none' : '';
+      this.rkText.textContent = due ? t('hud.trialReady')
+        : ri + 1 < RANKS.length ? t('hud.nextRank', { rank: RANKS[ri + 1], level: cap + 1 }) : t('hud.toAbyss', { level: CONFIG.levels.maxLevel });
     }
     // "!" on the menu when there is something new (points, items, skills)
     const news = P.hasNews() || game.quests.ready() > 0 || game.bestiary.fresh.size > 0;

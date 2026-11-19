@@ -35,11 +35,12 @@ import { Fog } from './ui/fog.js';
 import { Quests } from './core/quests.js';
 import { Bestiary } from './core/bestiary.js';
 import { Waypoint } from './core/waypoint.js';
+import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
 import { reportFps, settings, gfx } from './core/settings.js';
-import { submitScore } from './net/online.js';
+import { submitScore, publicLook, publicGear } from './net/online.js';
 
 const _v = new THREE.Vector3();
 const _col = new THREE.Color();
@@ -82,6 +83,8 @@ export class Game {
     this.zoneId = 'meadow';
     this.zoneRank = 'E';
     this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S (from the level)
+    this.trialRank = save ? save.trialRank || 0 : 0; // highest rank whose trial was passed
+    this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
     this.soulNear = -1; // soul in reach of the Arise button
     this.ariseCost = 0;
@@ -150,6 +153,7 @@ export class Game {
       for (const si of this.discovered) { const o = this.world.safes[si]; this.fog.revealAround(o.x, o.z, CONFIG.minimap.fogReveal); }
     }
     this.waypoint = new Waypoint(this, save && save.mark);
+    this.hunts = new Hunts(this);
     if (!this.quests.list.length || this.quests.day < 0) this.quests.make();
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
@@ -191,10 +195,19 @@ export class Game {
   submitRecords() {
     if (this.slot < 0) return;
     const P = this.player;
+    const look = publicLook(this.appearance), gear = publicGear(P.equip);
+    this.shownKey = JSON.stringify([look, gear]);
     submitScore({
       floor: this.abyss.best || 0, level: P.level, mastery: P.mastery.lv,
-      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty,
+      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty, look, gear,
     }, settings.hunterName);
+  }
+
+  // new gear or a new look: the leaderboard shows it too (checked on saving)
+  submitLookIfChanged() {
+    if (this.slot < 0) return;
+    const key = JSON.stringify([publicLook(this.appearance), publicGear(this.player.equip)]);
+    if (key !== this.shownKey) this.submitRecords();
   }
 
   resize() {
@@ -216,6 +229,8 @@ export class Game {
       updated: Date.now(),
       playTime: Math.round(this.playTime),
       rankIndex: this.rankIndex,
+      trialRank: this.trialRank,
+      gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
       discovered: [...this.discovered],
       knownZones: [...this.knownZones],
@@ -278,6 +293,48 @@ export class Game {
     return rankOf(level);
   }
 
+  // Highest level the hunter can reach now: the last level of the rank, until
+  // the rank trial is passed (the last rank has none).
+  levelCap() {
+    const L = CONFIG.levels, r = Math.max(this.rankIndex, this.trialRank);
+    return r + 1 < L.rankLevels.length ? L.rankLevels[r + 1] - 1 : L.maxLevel;
+  }
+
+  // the rank trial waits in the camp
+  trialDue() {
+    const P = this.player;
+    return this.rankIndex + 1 < RANKS.length && this.trialRank <= this.rankIndex && P.level >= this.levelCap();
+  }
+
+  announceTrial() {
+    this.hud.banner(t('trial.ready'), t('trial.readySub', { rank: RANKS[this.rankIndex + 1] }));
+    if (this.tips) this.tips.show('trial');
+  }
+
+  // the boss of the rank trial fell: the level and the new rank
+  passTrial() {
+    const P = this.player;
+    this.trialRank = this.rankIndex + 1;
+    P.xp = Math.max(P.xp, P.xpNeed());
+    P.addXp(0);
+    this.quests.add('gate', { diff: 2 });
+    this.save();
+  }
+
+  // tier of the deadly gate of zone zi (0 = plain)
+  gateTier(zi) {
+    return this.gateTiers[zi] || 0;
+  }
+
+  // the deadly gate of zone zi was cleared at its tier: the next one is harder
+  gateTierUp(zi) {
+    const n = this.gateTier(zi);
+    if (n >= CONFIG.gateTiers.max) return false;
+    while (this.gateTiers.length <= zi) this.gateTiers.push(0);
+    this.gateTiers[zi] = n + 1;
+    return true;
+  }
+
   // Called after a level up: a new rank gives lots of stat points.
   checkRank() {
     const P = this.player, G = CONFIG.progression;
@@ -303,6 +360,7 @@ export class Game {
     this.fpsN = 0;
     this.hitStopT = 0;
     if (this.slot < 0 || !this.running) return Promise.resolve(false);
+    this.submitLookIfChanged();
     const data = this.serialize();
     this.hud.showSaving();
     return this.app.store(this.slot, data).then((ok) => {
@@ -431,6 +489,7 @@ export class Game {
     this.tips.update(dt);
     this.quests.update(dt);
     this.waypoint.update(dt);
+    this.hunts.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point
@@ -801,6 +860,7 @@ export class Game {
     if (gate && gate.abyss) this.abyss.onKill(i, tier);
     else if (tier === 3) this.gates.onBossKilled(E.arena[i] - 1, E.x[i], E.z[i]);
     else this.loot.enemyDrop(E.x[i], E.z[i], level, tier);
+    if (i === this.hunts.i) this.hunts.onKill(i);
   }
 
   onPlayerRespawn() {

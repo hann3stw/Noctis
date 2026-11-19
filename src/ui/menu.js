@@ -474,12 +474,14 @@ export class Menu {
     // the rank and when the next one comes
     const L = CONFIG.levels.rankLevels, r = this.game.rankIndex;
     const rank = r + 1 < L.length
-      ? t('stats.nextRank', { rank: RANKS[r], next: RANKS[r + 1], level: L[r + 1] })
+      ? this.game.trialDue() ? t('stats.trialRank', { rank: RANKS[r], next: RANKS[r + 1] }) : t('stats.nextRank', { rank: RANKS[r], next: RANKS[r + 1], level: L[r + 1] })
       : t('stats.maxRank', { rank: RANKS[r] });
+    // deadly gate tiers reached per zone
+    const tiers = this.game.gateTiers.map((n, zi) => (n > 0 ? t('zone.' + CONFIG.world.zones[zi].id) + ' +' + n : '')).filter(Boolean).join(' · ');
     return `<div class="stats">
       <div class="s-left" data-scroll="stats">
         <div class="s-head"><b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: fmt(Math.floor(P.xp)), need: fmt(P.xpNeed()) })}</span>
-          <small class="s-rank">${rank}</small>
+          <small class="s-rank">${rank}</small>${tiers ? `<small class="s-rank">${t('stats.tiers', { list: tiers })}</small>` : ''}
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
   }

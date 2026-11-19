@@ -12,7 +12,7 @@ import { gfx } from '../core/settings.js';
 import { mulberry32, hashSeed } from '../core/rng.js';
 import { flatMaterial } from '../render/geo.js';
 import { buildEnemyGeometry } from '../render/models/enemies.js';
-import { arenaCenter } from '../world/gates.js';
+import { arenaCenter, gateDiff } from '../world/gates.js';
 import { fmt } from '../core/format.js';
 import { play } from '../core/sfx.js';
 
@@ -318,10 +318,11 @@ export class Enemies {
         dmgM = pw;
         xpM = pw;
       } else {
-        const gd = CONFIG.gates.difficulties[gate.diff];
+        // a rank trial, or a gate difficulty (deadly gates: their tier on top)
+        const gd = gateDiff(gate), GT = CONFIG.gateTiers, tier = gate.tier || 0;
         lv = gate.level;
-        hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1);
-        dmgM = gd.damage;
+        hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1) * Math.pow(GT.hp, tier);
+        dmgM = gd.damage * Math.pow(GT.damage, tier);
       }
       const tough = game.modOn('tough');
       if (tough) hpM *= tough.hp;

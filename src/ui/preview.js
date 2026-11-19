@@ -190,3 +190,49 @@ export class Preview {
     r.render(this.scene, this.camera);
   }
 }
+
+// A still picture of a hunter for the leaderboard: drawn once into an
+// offscreen target of the shared renderer (twice the size, then scaled down
+// for smooth edges) and returned as a data URL. The game canvas is not touched.
+let snap = null;
+export function snapshot(appearance, equip, w = 200, h = 260) {
+  const r = getRenderer();
+  if (!snap) snap = new Preview();
+  snap.setLook(appearance, equip);
+  snap.model.root.rotation.y = 0.45;
+  snap.model.animate(0.016, IDLE);
+  const cam = snap.camera;
+  cam.clearViewOffset();
+  cam.aspect = w / h;
+  cam.position.set(0, 2.1, 7.4);
+  cam.lookAt(0, 1.15, 0);
+  cam.updateProjectionMatrix();
+  const W = w * 2, H = h * 2;
+  const rt = new THREE.WebGLRenderTarget(W, H);
+  rt.texture.colorSpace = THREE.SRGBColorSpace;
+  const prev = r.getRenderTarget();
+  const buf = new Uint8Array(W * H * 4);
+  try {
+    r.setRenderTarget(rt);
+    r.render(snap.scene, cam);
+    r.readRenderTargetPixels(rt, 0, 0, W, H, buf);
+  } finally {
+    r.setRenderTarget(prev);
+    rt.dispose();
+  }
+  // the rows come bottom first
+  const big = document.createElement('canvas');
+  big.width = W;
+  big.height = H;
+  const bx = big.getContext('2d'), img = bx.createImageData(W, H);
+  for (let y = 0; y < H; y++) img.data.set(buf.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+  for (let k = 3; k < img.data.length; k += 4) img.data[k] = 255; // the cleared background reads back see-through
+  bx.putImageData(img, 0, 0);
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const ox = out.getContext('2d');
+  ox.imageSmoothingQuality = 'high';
+  ox.drawImage(big, 0, 0, w, h);
+  return out.toDataURL('image/jpeg', 0.88);
+}

@@ -17,12 +17,18 @@ import { hashSeed } from '../core/rng.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
-export { RANKS } from '../core/levels.js';
+import { RANKS } from '../core/levels.js';
+export { RANKS };
 const PAUSE = 0, WINDUP = 1, CHARGE = 2, ROAR = 3;
 
 // arenas lie far outside the world, one per gate
 export function arenaCenter(i) {
   return { x: 4200 + i * 220, z: 4200 };
+}
+
+// the values of a gate: the rank trial or one of the gate difficulties
+export function gateDiff(g) {
+  return g.trial ? CONFIG.trial : CONFIG.gates.difficulties[g.diff];
 }
 
 function portalMesh(color, w, h) {
@@ -57,6 +63,7 @@ export class Gates {
     this.spawnT = 0;
     this.poolLeft = 0; // monsters of the stage still standing
     this.abyssIndex = this.list.findIndex((g) => g.abyss);
+    this.trialIndex = this.list.findIndex((g) => g.trial);
     this.runMods = []; // modifiers of the gate the player is in
     this.timeLeft = 0; // Against the Clock in a normal gate
 
@@ -64,17 +71,17 @@ export class Gates {
     const frameGeo = gateFrameGeometry();
     // bigger gates and a coloured core for the harder ones
     this.portals = this.list.map((g) => {
-      const zone = CONFIG.world.zones[g.zone], diff = CONFIG.gates.difficulties[g.diff];
+      const zone = CONFIG.world.zones[g.zone], diff = gateDiff(g);
       const grp = new THREE.Group();
       grp.add(new THREE.Mesh(frameGeo, flatMaterial));
-      // the Abyss: a deep red portal with a black core
-      const portal = portalMesh(g.abyss ? 0xff2850 : zone.gateColor, 1.9, 2.4);
+      // the Abyss: a deep red portal with a black core; the rank trial: gold
+      const portal = portalMesh(g.abyss ? 0xff2850 : g.trial ? CONFIG.trial.color : zone.gateColor, 1.9, 2.4);
       portal.position.y = 2.55;
-      const core = portalMesh(g.abyss ? 0x0a0010 : diff.color, 1.0, 1.4);
+      const core = portalMesh(g.abyss ? 0x0a0010 : g.trial ? 0xffffff : diff.color, 1.0, 1.4);
       core.material.opacity = 0.35;
       core.position.set(0, 2.55, 0.02);
       grp.add(portal, core);
-      grp.scale.setScalar(g.abyss ? 1.25 : 1 + g.diff * 0.18);
+      grp.scale.setScalar(g.abyss ? 1.25 : g.trial ? 1.15 : 1 + g.diff * 0.18);
       game.scene.add(grp);
       return { grp, portal, core };
     });
@@ -100,11 +107,11 @@ export class Gates {
   // use. Which one depends on the world seed and how often it opened (gen).
   place(gi) {
     const g = this.list[gi], world = this.game.world;
-    if (g.abyss) {
+    if (g.abyss || g.trial) {
       const p = this.portals[gi];
       p.grp.position.set(g.x, 0, g.z);
       p.grp.rotation.y = Math.atan2(-g.x, -g.z);
-      p.grp.visible = true;
+      p.grp.visible = !!g.abyss;
       return;
     }
     const sites = world.gateSites.filter((s) => s.zone === g.zone);
@@ -154,12 +161,18 @@ export class Gates {
   // Deadly gates and the Abyss: the boss has a third phase
   phaseCount(gi) {
     const g = this.list[gi];
-    return g && (g.abyss || CONFIG.gates.difficulties[g.diff].id === 'deadly') ? 3 : 2;
+    return g && (g.abyss || g.trial || CONFIG.gates.difficulties[g.diff].id === 'deadly') ? 3 : 2;
   }
 
   // ---- arena ---------------------------------------------------------------------
   buildArena(gi) {
-    if (this.arenas[gi]) return this.arenas[gi];
+    const old = this.arenas[gi];
+    if (old && old.userData.zone === this.list[gi].zone) return old;
+    if (old) {
+      // the rank trial changes its zone: a new arena in the new colours
+      this.game.scene.remove(old);
+      old.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    }
     const zone = CONFIG.world.zones[this.list[gi].zone];
     const c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
     const grp = new THREE.Group();
@@ -186,6 +199,7 @@ export class Gates {
     grp.add(pillars);
     grp.position.set(c.x, 0, c.z);
     grp.visible = false;
+    grp.userData.zone = this.list[gi].zone;
     this.game.scene.add(grp);
     this.arenas[gi] = grp;
     return grp;
@@ -209,12 +223,28 @@ export class Gates {
     return this.active >= 0 ? this.game.enemies.arenaBoss[this.active] : -1;
   }
 
+  // The rank trial: the boss of the next zone at the last level of your rank,
+  // in an arena of the next zone's colours.
+  setupTrial(gi) {
+    const game = this.game, E = game.enemies, g = this.list[gi], zones = CONFIG.world.zones;
+    const r = game.rankIndex;
+    g.zone = Math.min(zones.length - 1, r + 1);
+    g.level = zones[Math.min(zones.length - 1, r)].levelTo;
+    const b = E.arenaBoss[gi];
+    E.vanish(b);
+    E.type[b] = E.typeIndex[zones[g.zone].boss];
+    E.zone[b] = g.zone;
+  }
+
   // floor: where an Abyss run starts
   enter(gi, floor = 1) {
     const game = this.game, P = game.player, E = game.enemies;
     if (this.active >= 0 || P.dead || gi < 0 || !this.list[gi].open) return;
     const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
-    if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
+    if (g.trial) this.setupTrial(gi);
+    else if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
+    // deadly gates: the tier of their zone (Deadly +1, +2 ...)
+    g.tier = !g.abyss && !g.trial && CONFIG.gates.difficulties[g.diff].id === 'deadly' ? game.gateTier(g.zone) : 0;
     this.runMods = game.modsOpen() ? [...game.mods] : [];
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
     this.timeLeft = 0;
@@ -237,7 +267,7 @@ export class Gates {
       for (const a of E.arenaAdds[gi]) E.vanish(a);
     } else {
       // the stages come first, the boss last
-      const D = CONFIG.gates.difficulties[g.diff];
+      const D = gateDiff(g);
       E.usePool(gi);
       E.vanish(E.arenaBoss[gi]);
       this.stages = [...D.stages, 'boss'];
@@ -258,6 +288,9 @@ export class Gates {
     game.world.update(P.x, P.z, true);
     if (g.abyss) {
       game.abyss.begin(floor);
+    } else if (g.trial) {
+      game.hud.banner(t('trial.name', { rank: RANKS[game.rankIndex + 1] }), t('trial.entered', { n: this.stages.length, boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
+      play('arise');
     } else {
       game.hud.toast(t('gate.entered', { n: this.stages.length, boss: t('enemy.' + CONFIG.world.zones[g.zone].boss) }));
       play('arise');
@@ -298,12 +331,15 @@ export class Gates {
 
   onBossKilled(gi, x, z) {
     const game = this.game, P = game.player, E = game.enemies;
-    const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = CONFIG.gates.difficulties[gate.diff];
+    const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = gateDiff(gate);
     const modLuck = this.runMods.length * CONFIG.modifiers.luck;
+    // deadly gate tiers: more luck and a better chance for the top rarity
+    const GT = CONFIG.gateTiers, tier = gate.tier || 0;
+    const luck = P.luck + D.luck + modLuck + tier * GT.luck, top = Math.min(1, CONFIG.items.bossTopChance + tier * GT.topChance);
     this.timeLeft = 0;
     for (let k = 0; k < D.items; k++) {
       const a = (k / D.items) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, P.luck + D.luck + modLuck, P.known, D.minRarity, k < D.items - 1, CONFIG.items.bossTopChance));
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, luck, P.known, D.minRarity, k < D.items - 1, top));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -313,13 +349,22 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
-    const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck) * (1 + 0.3 * D.stages.length));
-    P.essence += ess;
-    game.hud.toast(t('toast.essence', { n: ess }));
-    if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
-    game.quests.add('gate', { diff: gate.diff });
-    game.hud.banner(t('toast.gateCleared'), t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
     this.exitOpen = true;
+    if (gate.trial) {
+      const ess = CONFIG.trial.essence * (game.rankIndex + 1);
+      P.essence += ess;
+      game.hud.toast(t('trial.passed') + ' · ' + t('toast.essence', { n: ess }));
+      game.passTrial(); // the level, the new rank and its banner
+    } else {
+      const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck) * (1 + 0.3 * D.stages.length) * (1 + tier * GT.essence));
+      P.essence += ess;
+      game.hud.toast(t('toast.essence', { n: ess }));
+      if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
+      game.quests.add('gate', { diff: gate.diff });
+      const up = D.id === 'deadly' && game.gateTierUp(gate.zone);
+      if (up && game.tips) game.tips.show('gateTier');
+      game.hud.banner(t('toast.gateCleared'), up ? t('gate.tierUp', { n: game.gateTier(gate.zone) }) : t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
+    }
     this.exit.visible = true;
     game.effects.burst(x, 2, z, 60, zone.gateColor, 10, 0.3, 1.2);
     play('levelup');
@@ -360,7 +405,7 @@ export class Gates {
 
   nextStage() {
     const game = this.game, E = game.enemies, gi = this.active, g = this.list[gi];
-    const D = CONFIG.gates.difficulties[g.diff], G = CONFIG.gates, zone = CONFIG.world.zones[g.zone];
+    const D = gateDiff(g), G = CONFIG.gates, zone = CONFIG.world.zones[g.zone];
     this.stageI++;
     const kind = this.stageKind, n = this.stageI + 1, max = this.stages.length;
     if (kind === 'boss') {
@@ -404,13 +449,13 @@ export class Gates {
 
   stageCleared() {
     const game = this.game, P = game.player, gi = this.active, g = this.list[gi];
-    const D = CONFIG.gates.difficulties[g.diff];
+    const D = gateDiff(g);
     // a little reward for every stage
     const a = Math.atan2(P.dirX, P.dirZ);
     this.clamp(P.x + Math.sin(a) * 3, P.z + Math.cos(a) * 3, 1);
     const modLuck = this.runMods.length * CONFIG.modifiers.luck;
     game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.luck + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
-    const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck));
+    const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck) * (1 + (g.tier || 0) * CONFIG.gateTiers.essence));
     P.essence += ess;
     game.hud.toast(t('gate.stageCleared', { n: this.stageI + 1 }) + ' · ' + t('toast.essence', { n: ess }));
     play('stage');
@@ -436,7 +481,7 @@ export class Gates {
       this.surviveT -= dt;
       this.spawnT -= dt;
       if (this.spawnT <= 0 && alive < G.surviveAlive) {
-        this.spawnOne(gi, this.eliteRoll(CONFIG.gates.difficulties[this.list[gi].diff]));
+        this.spawnOne(gi, this.eliteRoll(gateDiff(this.list[gi])));
         this.spawnT = G.surviveEvery;
       }
       if (this.surviveT <= 0) { this.surviveT = 0; game.hud.toast(t('gate.surviveDone')); }
@@ -461,7 +506,7 @@ export class Gates {
       this.zoneNow = zone;
       for (let i = 0; i < this.list.length; i++) {
         const g = this.list[i], here = g.zone === zone;
-        if (g.abyss) continue;
+        if (g.abyss || g.trial) continue;
         if (!g.open) {
           if (g.t > 0) g.t -= dt;
           if (g.t <= 0 && here) {
@@ -477,13 +522,20 @@ export class Gates {
       if (P.dead) return;
       const r2 = CONFIG.gates.enterRange * CONFIG.gates.enterRange;
       for (let i = 0; i < this.list.length; i++) {
-        if (!this.list[i].open || this.list[i].abyss || this.list[i].zone !== zone) continue;
+        if (!this.list[i].open || this.list[i].abyss || this.list[i].trial || this.list[i].zone !== zone) continue;
         const dx = this.list[i].x - P.x, dz = this.list[i].z - P.z;
         if (dx * dx + dz * dz < r2) { this.near = i; break; }
       }
       if (this.near >= 0 && game.tips) game.tips.show('gate');
       const ab = this.list[this.abyssIndex];
       if (this.near < 0 && ab && (ab.x - P.x) ** 2 + (ab.z - P.z) ** 2 < r2 * 2.5) this.near = this.abyssIndex; // a bigger portal
+      // the rank trial: open while it is due
+      const tr = this.list[this.trialIndex];
+      if (tr) {
+        tr.open = game.trialDue();
+        this.portals[this.trialIndex].grp.visible = tr.open;
+        if (tr.open && this.near < 0 && (tr.x - P.x) ** 2 + (tr.z - P.z) ** 2 < r2 * 2) this.near = this.trialIndex;
+      }
     } else if (this.exitOpen) {
       this.exitPortal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
     } else {
@@ -520,7 +572,7 @@ export class Gates {
     const game = this.game;
     if (game.player.dead) return;
     if (this.active >= 0) { if (this.exitOpen && this.inAbyss) this.leave(false); }
-    else if (this.near >= 0 && this.near !== this.abyssIndex && game.modsOpen()) game.abyssPanel.open('mods');
+    else if (this.near >= 0 && this.near !== this.abyssIndex && this.near !== this.trialIndex && game.modsOpen()) game.abyssPanel.open('mods');
   }
 
   // ---- boss brain -----------------------------------------------------------------

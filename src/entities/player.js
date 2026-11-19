@@ -338,8 +338,10 @@ export class Player {
     const max = CONFIG.levels.maxLevel;
     if (this.level >= max) { this.addMasteryXp(amount); return; }
     this.xp += amount;
+    // the last level of a rank waits for the rank trial (game.levelCap)
+    const cap = Math.min(max, this.game.levelCap());
     let gained = 0, ups = 0;
-    while (this.level < max && this.xp >= this.xpNeed()) {
+    while (this.level < cap && this.xp >= this.xpNeed()) {
       this.xp -= this.xpNeed();
       this.level++;
       ups++;
@@ -349,6 +351,8 @@ export class Player {
       this.points += pts;
       gained += pts;
     }
+    // at the cap the bar stays full until the trial is passed
+    if (this.level >= cap && this.xp > this.xpNeed()) this.xp = this.xpNeed();
     if (!ups) return;
     this.recalc();
     if (!this.dead) { this.hp = this.maxHp; this.mana = this.maxMana; }
@@ -362,6 +366,7 @@ export class Player {
     this.game.submitRecords();
     this.game.hud.toast(gained ? t('toast.levelUp', { level: this.level, points: gained }) : t('toast.levelUpNoPts', { level: this.level }));
     this.game.checkRank();
+    if (this.game.trialDue()) this.game.announceTrial();
   }
 
   spendPoint(stat) {

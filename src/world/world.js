@@ -104,6 +104,10 @@ export class World {
     // It comes last so the gates of saved worlds keep their numbers.
     const A = CONFIG.abyss;
     this.gates.push({ zone: this.zones.length - 1, diff: 2, level: A.unlockLevel, x: A.pos.x, z: A.pos.z, open: true, gen: 0, t: 0, abyss: true });
+    // The rank trial: a gate in the camp, open while a trial is due (its zone
+    // and level are set when it is entered, see Gates.enter).
+    const T = CONFIG.trial;
+    this.gates.push({ zone: 0, diff: 2, level: 1, x: T.pos.x, z: T.pos.z, open: false, gen: 0, t: 0, trial: true });
 
     this.buildGround();
     this.camp = buildCamp(scene, this);

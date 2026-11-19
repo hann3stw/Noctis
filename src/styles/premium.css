@@ -3107,7 +3107,7 @@ input.shake {
 /* ---- daily quests in the HUD (left, under the health bars) ---------------------------- */
 .qtrack {
   position: absolute;
-  top: calc(var(--st) + var(--u) * 18);
+  top: calc(var(--st) + var(--u) * 19.5);
   left: calc(var(--sl) + var(--u) * 3);
   max-width: min(calc(var(--u) * 52), 34vw);
   padding: calc(var(--u) * 0.8) calc(var(--u) * 1.6);
@@ -3610,4 +3610,155 @@ input.shake {
 }
 @keyframes shadow-step {
   to { box-shadow: 0 0 calc(var(--u) * 5.5) rgba(170, 110, 255, 1); }
+}
+
+/* ---- rank progress under the XP bar: up to the rank trial ---- */
+.rk {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1);
+  margin-top: calc(var(--u) * 0.5);
+}
+.rk .bar {
+  flex: 1;
+  height: calc(var(--u) * 1.3);
+  border-radius: calc(var(--u) * 0.6);
+}
+.rk .bar i {
+  background: linear-gradient(90deg, #5a2fc0, #9a6bff, #d8c4ff);
+}
+.rk span {
+  flex: none;
+  font-weight: 800;
+  font-size: calc(var(--u) * 2.6);
+  letter-spacing: 0.03em;
+  color: #c8b4ff;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+}
+.rk.due .bar i {
+  background: linear-gradient(90deg, #a87a2a, var(--gold), var(--gold-hi));
+}
+.rk.due span {
+  color: var(--gold-hi);
+  animation: rk-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rk-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* the rank trial in the gate panel */
+.gate-panel[data-d='trial'] {
+  border-color: #ffd24a;
+  box-shadow: 0 0 calc(var(--u) * 5) rgba(255, 210, 74, 0.45);
+}
+.gate-panel[data-d='trial'] .gp-text b {
+  color: #ffe08a;
+}
+
+/* a hunted monster uses the boss bar with its name */
+.boss-bar.hunt b {
+  color: #ffc2a0;
+  text-shadow: 0 0 calc(var(--u) * 2.5) #ff5020, 0 2px 2px #000;
+}
+
+/* ---- leaderboard: tap a hunter to see its look and gear ---- */
+.lb-row {
+  cursor: pointer;
+}
+.lb-row > i.lb-more {
+  flex: none;
+  width: calc(var(--u) * 1.6);
+  height: calc(var(--u) * 1.6);
+  border-right: 2px solid rgba(220, 200, 255, 0.6);
+  border-bottom: 2px solid rgba(220, 200, 255, 0.6);
+  transform: rotate(45deg) translateY(-25%);
+  transition: transform 0.15s;
+}
+.lb-row.open > i.lb-more {
+  transform: rotate(-135deg) translateY(-25%);
+}
+.lb-row.open {
+  border-color: rgba(200, 170, 255, 0.55);
+}
+.lb-det {
+  flex: none;
+  display: flex;
+  gap: calc(var(--u) * 2);
+  align-items: stretch;
+  padding: calc(var(--u) * 1.4);
+  margin: calc(var(--u) * -0.4) calc(var(--u) * 1) calc(var(--u) * 0.6);
+  border-radius: calc(var(--u) * 1.6);
+  background: rgba(10, 6, 20, 0.55);
+  border: 1px solid rgba(200, 170, 255, 0.18);
+}
+.lb-av {
+  flex: none;
+  width: calc(var(--u) * 26);
+  height: calc(var(--u) * 33.8);
+  object-fit: cover;
+  border-radius: calc(var(--u) * 1.2);
+  border: 1px solid rgba(200, 170, 255, 0.3);
+}
+.lb-gear {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--u) * 0.8);
+}
+.lb-it {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.4);
+  min-width: 0;
+}
+.lb-it > i {
+  flex: none;
+  width: calc(var(--u) * 5.4);
+  height: calc(var(--u) * 5.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--u) * 1);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--rc, rgba(255, 255, 255, 0.15));
+  color: var(--rc, #888);
+}
+.lb-it > i svg {
+  width: 80%;
+  height: 80%;
+}
+.lb-it > div {
+  min-width: 0;
+}
+.lb-it b {
+  display: block;
+  font-size: calc(var(--u) * 2.5);
+  color: var(--rc, #aaa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-it small {
+  display: block;
+  font-size: calc(var(--u) * 2);
+  opacity: 0.7;
+}
+.lb-it.empty b {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* narrower screens (16:9 phones, tablets): a centred boss bar would run into
+   the player panel, so it fills the room between the panel and the buttons */
+@media (max-aspect-ratio: 21/10) {
+  .boss-bar {
+    left: calc(var(--sl, 0px) + var(--u) * 63);
+    right: calc(var(--sr, 0px) + var(--u) * 44);
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
 }

@@ -622,6 +622,38 @@ export const CONFIG = {
     ariseBonus: 0.2, // souls inside a gate are easier to raise (+20 %)
   },
 
+  // Gate tiers: clearing the deadly gate of a zone makes the next deadly gate
+  // of that zone one tier harder (Deadly +1, +2 ... up to max). Per tier the
+  // gate's monsters and boss get hp / damage times stronger, the boss items
+  // more luck and a better chance for the rank's top rarity (topChance on top
+  // of items.bossTopChance), and the essence grows.
+  gateTiers: { max: 10, hp: 1.3, damage: 1.12, luck: 0.3, topChance: 0.03, essence: 0.25 },
+
+  // Rank trial: the last level of a rank is the gate to the next one. Its XP
+  // fills up but the level stays until the trial is passed: a golden gate in
+  // the camp with the boss of the next zone (at the last level of your rank)
+  // and two stages before it. Passing it gives the level, the new rank and its
+  // stat points. Dying costs nothing; you can try again. Same fields as a gate
+  // difficulty (see gates.difficulties).
+  trial: {
+    id: 'trial', pos: { x: -11.5, z: 11.5 },
+    hp: 2.6, damage: 1.5, items: 3, minRarity: 3, luck: 2.5, eliteAdds: true, color: 0xffd24a,
+    stages: ['wave', 'guard'], wave: 10, elite: 0.2, survive: 25, guards: 2,
+    essence: 60, // times (rank + 1)
+  },
+
+  // Hunted monsters: now and then a named champion shows up in the zone you
+  // are in, marked on the map (and with a beam) until it is slain or it
+  // leaves after ttl seconds. It is much tougher and drops good items.
+  hunts: {
+    first: 240, // seconds of play in the open before the first one
+    every: [420, 720], // seconds until the next one
+    ttl: 600, // it leaves after this long
+    dist: [60, 150], // how far from the hunter it shows up
+    hp: 5, damage: 1.25, xp: 6, // on top of a champion
+    items: 2, minRarity: 3, luck: 1.5, essence: 30, // essence times (zone + 1)
+  },
+
   minimap: {
     localRadius: 110, // world units shown around the player (tap for the big map)
     refresh: 0.1, // seconds between two redraws

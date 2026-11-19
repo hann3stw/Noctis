@@ -9,7 +9,7 @@ import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 import { readSaveText, listBackups } from '../core/storage.js';
-import { cloudList, cloudGet, cleanName, flushScore, submitScore, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
+import { cloudList, cloudGet, cleanName, flushScore, submitScore, publicLook, publicGear, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
 import { UI_ICONS } from './icons.js';
@@ -556,6 +556,7 @@ export class Screens {
       submitScore({
         floor: (x.abyss && x.abyss.best) || 0, level: x.player.level || 1, mastery: (x.player.mastery && x.player.mastery.lv) || 0,
         rank: RANKS[x.rankIndex || 0] || 'E', difficulty: x.difficulty || 'normal',
+        look: publicLook({ ...CONFIG.defaultAppearance, ...(x.appearance || {}) }), gear: publicGear(x.player.equip),
       }, settings.hunterName);
     }
   }

@@ -109,6 +109,28 @@ export function cleanName(s) {
 }
 
 // ---- leaderboard -------------------------------------------------------------------
+// What the leaderboard shows of a hunter: the look (appearance) and the worn
+// gear, without item ids or anything else of the save.
+export const LOOK_COLORS = ['skin', 'hair', 'eyes', 'clothes', 'capeColor', 'aura', 'accent', 'leather', 'pants'];
+const LOOK_KEYS = [...LOOK_COLORS, 'cape', 'hairStyle', 'build', 'height', 'facialHair', 'eyeShape', 'mark', 'accessory', 'outfit', 'capeStyle', 'auraStyle'];
+export function publicLook(app) {
+  const out = {};
+  for (const k of LOOK_KEYS) if (app && app[k] !== undefined) out[k] = app[k];
+  return out;
+}
+export function publicGear(equip) {
+  const out = {};
+  for (const slot of ['weapon', 'helmet', 'chest', 'gloves', 'boots']) {
+    const it = equip && equip[slot];
+    if (!it) continue;
+    const g = { kind: it.kind, type: it.type, rarity: it.rarity, level: it.level, up: it.up || 0 };
+    if (it.set) g.set = it.set;
+    if (it.uq) g.uq = it.uq;
+    out[slot] = g;
+  }
+  return out;
+}
+
 // Remembers the entry (the better one wins) and sends it when possible.
 // floor and level are separate records: each keeps the better one
 export function submitScore(entry, name) {
@@ -118,12 +140,16 @@ export function submitScore(entry, name) {
     if ((old.floor || 0) > (e.floor || 0)) { e.floor = old.floor; e.difficulty = old.difficulty; }
     if (old.level > e.level || (old.level === e.level && old.mastery > e.mastery)) {
       e.level = old.level; e.mastery = old.mastery; e.rank = old.rank;
+      // the stronger hunter keeps its look and gear on the board
+      if (old.look) e.look = old.look;
+      if (old.gear) e.gear = old.gear;
     }
   }
   lsSet(LS_SCORE, e);
   flushScore();
 }
-const sameScore = (a, b) => a && b && a.floor === b.floor && a.level === b.level && a.mastery === b.mastery && a.name === b.name;
+const sameScore = (a, b) => a && b && a.floor === b.floor && a.level === b.level && a.mastery === b.mastery && a.name === b.name
+  && JSON.stringify(a.look || null) === JSON.stringify(b.look || null) && JSON.stringify(a.gear || null) === JSON.stringify(b.gear || null);
 
 let flushT = 0;
 let flushing = false;
@@ -137,6 +163,8 @@ export async function flushScore() {
     const s = await ensureSession();
     if (!s) return;
     const row = { name: e.name, floor: e.floor, level: e.level, mastery: e.mastery, rank: e.rank, difficulty: e.difficulty };
+    if (e.look) row.look = e.look;
+    if (e.gear) row.gear = e.gear;
     const up = await rest('abyss_scores?user_id=eq.' + accountId(), { method: 'PATCH', body: row, prefer: 'return=representation' });
     if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: row, prefer: 'return=minimal' });
     const now = lsGet(LS_SCORE);
@@ -153,7 +181,7 @@ export async function flushScore() {
 // Top 50 and the own place of the 'abyss' board (deepest floor) or the
 // 'level' board (highest level, then mastery). { rows, me: { place, row } | null }
 export async function loadBoard(kind = 'abyss') {
-  const sel = 'user_id,name,floor,level,mastery,rank,difficulty';
+  const sel = 'user_id,name,floor,level,mastery,rank,difficulty,look,gear';
   const lv = kind === 'level';
   const order = lv ? 'level.desc,mastery.desc,updated_at.asc' : 'floor.desc,updated_at.asc';
   const top = await rest(`abyss_scores?select=${sel}${lv ? '' : '&floor=gt.0'}&order=${order}&limit=50`, { auth: false });
