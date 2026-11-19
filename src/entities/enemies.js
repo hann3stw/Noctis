@@ -4,7 +4,6 @@
 // it belongs to, which scale its stats. Gate bosses and their summoned helpers
 // use reserved slots that only come alive inside their arena.
 import * as THREE from 'three';
-import { play } from '../core/sfx.js';
 import { CONFIG } from '../config.js';
 import { enemyPower, levelAt, rankHp } from '../core/levels.js';
 import { gfx } from '../core/settings.js';
@@ -432,7 +431,6 @@ export class Enemies {
     fx.sparks(x, 0.8, z, 8 + t * 10, 0x9a6bff, 3.5 + t, 0.45, 1, 2.6);
     fx.ring(x, z, 0.3, 2 + t * 1.2, 0x8a4dff, 0.35);
     if (t >= 1 || src < 0) fx.light(x, 1.6, z, 0x9a6bff, 30 + t * 40, 7 + t * 3, 0.35 + t * 0.1);
-    if (src < 0) play(t >= 2 ? 'killBig' : 'kill');
     this.game.onEnemyKilled(i, src);
   }
 

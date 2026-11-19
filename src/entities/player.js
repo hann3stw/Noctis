@@ -342,8 +342,8 @@ export class Player {
     this.game.effects.burst(this.x, 1.5, this.z, 36, 0xffd24a, 8, 0.22, 0.9);
     this.game.effects.ring(this.x, this.z, 0.5, 5, 0xffd24a, 0.6);
     this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0b0, 0.5, 0.15);
-    this.game.effects.light(this.x, 2.5, this.z, 0xffd24a, 120, 16, 0.8);
-    this.game.effects.flare(this.x, 1.4, this.z, 6, 0xffd24a, 0.6, 1.8);
+    this.game.effects.light(this.x, 2.5, this.z, 0xffd24a, 90, 16, 0.7);
+    this.game.effects.flare(this.x, 1.4, this.z, 3.8, 0xffd24a, 0.5, 1.7);
     this.game.effects.sparks(this.x, 0.5, this.z, 40, 0xffe080, 4, 0.45, 1.4, 5);
     play('levelup');
     this.game.submitRecords();

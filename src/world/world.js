@@ -315,6 +315,7 @@ export class World {
     mesh.boundingSphere = new THREE.Sphere();
     mesh.matrixAutoUpdate = false;
     mesh.castShadow = !d.def.glow; // used when shadow maps are on
+    if (d.def.glow) mesh.userData.glow = true; // shines on "ultra" (render/bloom.js)
     return mesh;
   }
 

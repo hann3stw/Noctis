@@ -672,12 +672,24 @@ export const CONFIG = {
     // "Auto" measures the frame rate while playing and steps down when it
     // stays below lowFps, or up again when it stays above highFps.
     auto: { measure: 3, lowFps: 50, highFps: 58, upAfter: 5 },
+    bloom: 0.7, // strength of the glow on "ultra"
     presets: {
-      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: false },
-      medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34, shadows: true },
-      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true, realShadows: true },
+      // lights = flashes of real light at once; shadowMap / shadowRange = size
+      // and area of the sun's shadow map; bloom = glowing effects shine
+      low: { pixelRatio: 1, particles: 0.4, decorRadius: 44, renderRadius: 30, shadows: false, lights: 1 },
+      medium: { pixelRatio: 1.25, particles: 0.7, decorRadius: 56, renderRadius: 34, shadows: true, lights: 3 },
+      high: { pixelRatio: 1.75, particles: 1, decorRadius: 64, renderRadius: 38, shadows: true, realShadows: true, shadowMap: 1536, shadowRange: 26, lights: 4 },
+      ultra: { pixelRatio: 3, particles: 1.6, decorRadius: 76, renderRadius: 46, shadows: true, realShadows: true, shadowMap: 3072, shadowRange: 34, lights: 8, bloom: true },
     },
   },
+
+  // Kill streak: kills of the hunter within "window" seconds of each other.
+  // From "show" kills on it is shown; every tier gives more XP per kill.
+  streak: { window: 2.5, show: 3, tiers: [[10, 0.1], [25, 0.2], [50, 0.35], [100, 0.5]] },
+
+  // Automatic backups of every world (IndexedDB): one a day per slot, the
+  // newest "perWorld" of each world are kept, "max" per slot in total.
+  backups: { every: 20 * 3600 * 1000, perWorld: 2, max: 5 },
 
   save: {
     autosaveInterval: 60, // seconds of play between two autosaves

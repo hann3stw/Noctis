@@ -67,6 +67,7 @@ export class Hud {
         <div class="banner"><b></b><small></small></div>
         <div class="fps"></div>
         <div class="toast"></div>
+        <div class="streak"><b></b><span><small>${t('streak.label')}</small><em></em></span><i></i></div>
         <div class="top-right">
           <div class="saving">${t('hud.saving')}</div>
           <div id="btn-travel" class="btn pill">${UI_ICONS.travel}<span>${t('hud.travel')}</span></div>
@@ -170,6 +171,8 @@ export class Hud {
     this.lastZoneCard = '';
     this.menuBadge = $('#btn-menu i');
     this.toastEl = $('.toast');
+    this.streakEl = $('.streak');
+    this.vStreak = 0;
     this.toastT = 0;
     this.btnArise = $('#btn-arise');
     this.ariseCost = $('#btn-arise small');
@@ -517,8 +520,30 @@ export class Hud {
     }
   }
 
+  // the kill streak: number, XP bonus and the time left until it ends
+  updateStreak() {
+    const g = this.game, S = CONFIG.streak, n = g.streak > 0 && g.streakT > 0 ? g.streak : 0;
+    const on = n >= S.show;
+    if (n !== this.vStreak) {
+      const el = this.streakEl;
+      el.classList.toggle('on', on);
+      if (on) {
+        el.querySelector('b').textContent = n;
+        const pct = Math.round(g.streakBonus() * 100);
+        el.querySelector('em').textContent = pct ? t('streak.bonus', { pct }) : '';
+        el.classList.toggle('hot', pct > 0);
+        el.classList.remove('pop');
+        void el.offsetWidth; // restart the pop
+        el.classList.add('pop');
+      }
+      this.vStreak = n;
+    }
+    if (on) this.streakEl.style.setProperty('--left', String(Math.max(0, g.streakT / S.window)));
+  }
+
   update(dt) {
     const game = this.game, P = game.player;
+    this.updateStreak();
     this.updateArmy(dt);
     this.updateSkills();
     this.updateGates(dt);

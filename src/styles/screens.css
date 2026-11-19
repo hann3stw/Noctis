@@ -465,3 +465,39 @@ body.editing #ui {
     font-size: calc(var(--u) * 17);
   }
 }
+
+/* ---- automatic backups (Worlds) ------------------------------------------------- */
+.bk-box { width: min(92vw, calc(var(--u) * 110)); max-height: 92vh; }
+.bk-list {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.4);
+  overflow-y: auto;
+  max-height: 46vh;
+}
+.bk-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  text-align: left;
+}
+.bk-item small { opacity: 0.75; font-weight: 500; }
+
+/* ---- a new version is ready (title screen) --------------------------------------- */
+.upd-bar {
+  position: absolute;
+  top: calc(var(--st, 0px) + var(--u) * 3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 1.4) calc(var(--u) * 1.4) calc(var(--u) * 4);
+  background: rgba(30, 14, 56, 0.92);
+  border: 1px solid rgba(255, 210, 74, 0.55);
+  border-radius: calc(var(--u) * 3);
+  white-space: nowrap;
+  font-size: calc(var(--u) * 3.4);
+}

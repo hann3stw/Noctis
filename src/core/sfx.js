@@ -5,6 +5,7 @@
 // from the settings. Audio starts after the first touch or key press, as
 // browsers require. The music (core/music.js) uses the same audio graph.
 import { settings } from './settings.js';
+import { buzz } from './haptics.js';
 
 let ctx = null;
 let master = null; // sound effects
@@ -128,9 +129,11 @@ const vary = (f) => f * (0.94 + Math.random() * 0.12);
 // ---- kill streak: every kill rings one step higher on a pentatonic scale ------
 const PENTA = [0, 2, 4, 7, 9];
 let streak = 0, lastKill = -9;
-function streakNote() {
+// n: the kill streak of the game (1 = first kill); without it the sound counts itself
+function streakNote(n) {
   const now = ctx.currentTime;
-  streak = now - lastKill < 2.2 ? Math.min(streak + 1, 14) : 0;
+  if (typeof n === 'number') streak = Math.min(Math.max(0, n - 1), 14);
+  else streak = now - lastKill < 2.2 ? Math.min(streak + 1, 14) : 0;
   lastKill = now;
   const st = PENTA[streak % 5] + 12 * Math.floor(streak / 5);
   return 523.25 * Math.pow(2, st / 12);
@@ -216,16 +219,16 @@ const SOUNDS = {
     tone('triangle', 1760, 1720, 0.32, 0.1, 0.01, 0.5);
     tone('sine', 2637, 2600, 0.24, 0.05, 0.02, 0.6);
   },
-  kill: () => {
-    const f = streakNote();
+  kill: (n) => {
+    const f = streakNote(n);
     thump(170, 42, 0.2, 0.55);
     hiss(2600, 500, 0.14, 0.3, 0.9);
     tone('triangle', f, f, 0.4, 0.11, 0.025, 0.45);
     tone('sine', f * 2, f * 2, 0.3, 0.05, 0.035, 0.55);
     hiss(7000, 10000, 0.3, 0.05, 2, 0.03, 0.6, 'bandpass', 0.05);
   },
-  killBig: () => {
-    const f = streakNote();
+  killBig: (n) => {
+    const f = streakNote(n);
     thump(130, 30, 0.6, 0.9);
     hiss(5000, 250, 0.45, 0.45, 0.6, 0, 0.5, 'lowpass');
     warm('sawtooth', 82, 0.7, 0.15, 0, 0.4, 2000, 150);
@@ -260,8 +263,13 @@ const SOUNDS = {
 // minimum time between two plays of the same sound (seconds)
 const GAP = { hit: 0.045, crit: 0.06, swing: 0.05, pickup: 0.05, hurt: 0.08, kill: 0.05, killBig: 0.1 };
 
-// arg: the skill id for 'skill' and 'ult' (a sound family per power)
+// how each sound feels in the hand (ms, or a pattern)
+const HAPTIC = { crit: 12, kill: 14, killBig: 45, ult: [30, 40, 80], hurt: 30, levelup: [20, 60, 30], death: 160, unique: [40, 60, 40, 60, 90], arise: 40 };
+
+// arg: the skill id for 'skill' and 'ult' (a sound family per power), the
+// kill streak for 'kill' and 'killBig'
 export function play(name, arg) {
+  if (HAPTIC[name]) buzz(HAPTIC[name]);
   if (!ctx || ctx.state !== 'running' || settings.volume <= 0) return;
   const now = ctx.currentTime;
   const gap = GAP[name] || 0.02;

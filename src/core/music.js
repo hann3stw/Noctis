@@ -15,6 +15,11 @@ import { settings } from './settings.js';
 const AEOLIAN = [0, 2, 3, 5, 7, 8, 10];
 const DORIAN = [0, 2, 3, 5, 7, 9, 10];
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
+const LYDIAN = [0, 2, 4, 6, 7, 9, 11];
+const HARMONIC = [0, 2, 3, 5, 7, 8, 11];
+const LOCRIAN = [0, 1, 3, 5, 6, 8, 10];
+const HUNGARIAN = [0, 2, 3, 6, 7, 8, 11];
+const DOMINANT = [0, 1, 4, 5, 7, 8, 10];
 
 // prog: one chord (scale degree) per bar; layers: target volumes 0..1
 const MOODS = {
@@ -23,8 +28,28 @@ const MOODS = {
   combat: { bpm: 124, root: 45, scale: AEOLIAN, prog: [0, 5, 6, 4], layers: { pad: 0.5, bass: 1, arp: 0.6, drums: 1, bell: 0 }, bass: 'drive', arp: 1, drums: 'beat' },
   boss: { bpm: 136, root: 43, scale: PHRYGIAN, prog: [0, 1, 0, 6], layers: { pad: 0.8, bass: 1, arp: 0.7, drums: 1, bell: 0 }, bass: 'gallop', arp: 1, drums: 'war', stab: true },
   abyss: { bpm: 90, root: 47, scale: PHRYGIAN, prog: [0, 0, 1, 5], layers: { pad: 1, bass: 0.7, arp: 0.4, drums: 0.5, bell: 0.4 }, bass: 'long', arp: 2, drums: 'heart' },
+  camp: { bpm: 70, root: 50, scale: DORIAN, prog: [0, 3, 4, 0], layers: { pad: 0.8, bass: 0.45, arp: 0.5, drums: 0, bell: 0.65 }, bass: 'long', arp: 2, drums: null },
   calm: { bpm: 60, root: 50, scale: AEOLIAN, prog: [0, 5], layers: { pad: 0.5, bass: 0, arp: 0, drums: 0, bell: 0.25 }, bass: 'long', arp: 4, drums: null },
 };
+// Travel music of each zone (meadow, forest, swamp, ruins, ice, volcano,
+// shard waste, storm spire, bone field, void throne): key, scale and pace change.
+const EXPLORE = [
+  {},
+  { bpm: 78, root: 52, scale: AEOLIAN, prog: [0, 5, 2, 6], arp: 2 },
+  { bpm: 72, root: 48, scale: PHRYGIAN, prog: [0, 1, 0, 4], arp: 4, drums: 'heart' },
+  { bpm: 80, root: 45, scale: HARMONIC, prog: [0, 3, 4, 0], arp: 2 },
+  { bpm: 70, root: 54, scale: LYDIAN, prog: [0, 1, 5, 4], arp: 2, drums: null, layers: { pad: 0.85, bass: 0.5, arp: 0.6, drums: 0, bell: 0.8 } },
+  { bpm: 96, root: 43, scale: PHRYGIAN, prog: [0, 1, 6, 1], arp: 2, bass: 'drive', layers: { pad: 0.7, bass: 0.6, arp: 0.5, drums: 0.45, bell: 0.3 } },
+  { bpm: 88, root: 49, scale: HUNGARIAN, prog: [0, 4, 0, 5], arp: 2 },
+  { bpm: 100, root: 47, scale: AEOLIAN, prog: [0, 6, 5, 6], arp: 1, layers: { pad: 0.7, bass: 0.6, arp: 0.45, drums: 0.45, bell: 0.3 } },
+  { bpm: 66, root: 46, scale: LOCRIAN, prog: [0, 4, 0, 1], arp: 4, drums: 'heart' },
+  { bpm: 76, root: 44, scale: DOMINANT, prog: [0, 1, 0, 6], arp: 2, drums: 'heart', layers: { pad: 1, bass: 0.7, arp: 0.5, drums: 0.5, bell: 0.45 } },
+];
+for (let i = 0; i < EXPLORE.length; i++) {
+  const v = EXPLORE[i];
+  MOODS['explore' + i] = { ...MOODS.explore, ...v, layers: { ...MOODS.explore.layers, ...(v.layers || {}) } };
+}
+
 const SEND = { pad: 0.45, bass: 0, arp: 0.4, drums: 0.1, bell: 0.75 };
 
 let A = null; // { ctx, bus, verb, noise }
@@ -240,7 +265,12 @@ export function startMusic() {
   tick();
 }
 
-export function setMood(name) {
+// variant: the zone for 'explore' (each zone has its own tune)
+export function setMood(name, variant) {
+  if (name === 'explore' && typeof variant === 'number') {
+    const k = 'explore' + Math.max(0, Math.min(EXPLORE.length - 1, variant));
+    if (MOODS[k]) { want = k; return; }
+  }
   if (MOODS[name]) want = name;
 }
 

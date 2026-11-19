@@ -3,8 +3,9 @@
 import { Game } from './game.js';
 import { Screens } from './ui/screens.js';
 import { settings, loadSettings, saveSettings, setSetting, onGraphicsChange } from './core/settings.js';
-import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText } from './core/storage.js';
+import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText, backupSlot, readBackup } from './core/storage.js';
 import { unlockAudio } from './core/sfx.js';
+import { registerSW } from 'virtual:pwa-register';
 import { startMusic, setMood } from './core/music.js';
 import { initKeyboard, setEscapeHandler } from './input/keyboard.js';
 import { sizeRenderer } from './render/renderer.js';
@@ -42,6 +43,7 @@ export class App {
     sizeRenderer();
 
     keepStorage();
+    this.watchUpdates();
     this.slots = await listSlots();
     // online in the background: sign in, send a waiting leaderboard entry
     ensureSession().then(() => {
@@ -78,6 +80,7 @@ export class App {
 
   async removeSlot(slot) {
     const old = this.slots[slot];
+    if (old) await backupSlot(slot, old, true); // can be brought back (Worlds, Backups)
     // paired: the world goes on the other devices too
     if (isLinked() && old) cloudDelete(slot, old.seed).catch(() => {});
     await deleteSlot(slot);
@@ -221,6 +224,44 @@ export class App {
     await unlinkOthers();
   }
 
+  // ---- automatic backups (core/storage.js) ------------------------------------------
+  // Puts a copy back into its slot. A world in the slot now is backed up first.
+  async restoreBackup(slot, at) {
+    const save = await readBackup(slot, at);
+    if (!save) return null;
+    const cur = this.slots[slot];
+    if (cur) await backupSlot(slot, cur, true);
+    save.updated = Date.now();
+    await this.store(slot, save);
+    return save;
+  }
+
+  // ---- new version of the game --------------------------------------------------
+  // The new version waits until it is wanted (never in the middle of a fight):
+  // the title screen offers it, a tap reloads the page with it.
+  watchUpdates() {
+    this.updateReady = false;
+    try {
+      this.updateSW = registerSW({
+        onNeedRefresh: () => {
+          this.updateReady = true;
+          this.screens.updateReady();
+        },
+        onRegisteredSW: (url, reg) => {
+          if (!reg) return;
+          const check = () => reg.update().catch(() => {});
+          setInterval(check, 30 * 60 * 1000);
+          document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+        },
+      });
+    } catch (_) { /* no service worker here */ }
+  }
+
+  applyUpdate() {
+    if (this.game || !this.updateSW) return;
+    this.updateSW(true);
+  }
+
   // ---- backup: a world as a file -----------------------------------------------
   // Shares the file on phones and tablets, downloads it on a PC.
   exportSlot(slot) {
@@ -290,6 +331,7 @@ export class App {
   startNew(slot, name, appearance, difficulty, tutorial) {
     keepStorage();
     const old = this.slots[slot];
+    if (old) backupSlot(slot, old, true).catch(() => {}); // the replaced world stays restorable
     if (old && isLinked()) cloudDelete(slot, old.seed).catch(() => {});
     this.launch({ slot, name, seed: randomSeed(), appearance, difficulty, tutorial });
     this.game.save(); // the slot is taken (or overwritten) right away

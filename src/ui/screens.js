@@ -8,7 +8,7 @@ import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
-import { readSaveText } from '../core/storage.js';
+import { readSaveText, listBackups } from '../core/storage.js';
 import { cloudList, cloudGet, cleanName, flushScore, submitScore, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
@@ -71,6 +71,8 @@ export class Screens {
     this.current = null;
     this.params = null;
     this.confirmBox = null; // { text, yes, onYes }
+    this.bk = {}; // automatic backups per slot (Worlds page)
+    this.bkPick = -1; // slot whose backups are listed
     this.preview = null;
     this.ed = null; // skin editor state
     this.el.addEventListener('click', (e) => this.onClick(e));
@@ -121,12 +123,13 @@ export class Screens {
     this.current = name;
     this.params = params;
     this.confirmBox = null;
+    this.bkPick = -1;
     this.msg = '';
     document.body.classList.toggle('editing', name === 'editor');
     this.el.className = 'on scr-' + name;
     if (name === 'editor') this.openEditor(params);
     if (name !== 'load') { this.stages.stop(); this.stageKey = ''; }
-    if (name === 'load') this.fetchCloud();
+    if (name === 'load') { this.fetchCloud(); this.loadBackups(); }
     if (name === 'online') {
       this.pairCode = null;
       this.setMsg = '';
@@ -149,6 +152,32 @@ export class Screens {
     document.body.classList.remove('editing');
     this.el.className = '';
     this.el.innerHTML = '';
+  }
+
+  // a new version is ready (shown on the title screen)
+  updateReady() {
+    if (this.current === 'title') this.render();
+  }
+
+  async loadBackups() {
+    const bk = {};
+    for (let i = 0; i < 3; i++) bk[i] = await listBackups(i).catch(() => []);
+    this.bk = bk;
+    if (this.current === 'load') this.render();
+  }
+
+  bkButton(i) {
+    const n = (this.bk[i] || []).length;
+    return n ? `<button class="sbtn ghost small" data-act="backups" data-slot="${i}">${t('bk.btn')}</button>` : '';
+  }
+
+  backupBox() {
+    const i = this.bkPick, list = this.bk[i] || [];
+    const items = list.map((b) => `<button class="sbtn ghost bk-item" data-act="bkGo" data-slot="${i}" data-v="${b.at}">
+        <b>${esc(b.name)}</b><small>${t('bk.item', { level: b.level, date: formatDate(b.at) })}</small></button>`).join('');
+    return `<div class="scr-modal"><div class="scr-box bk-box"><h2>${t('bk.title', { n: i + 1 })}</h2><p>${t('bk.hint')}</p>
+      <div class="bk-list">${items}</div>
+      <div class="scr-row"><button class="sbtn ghost" data-act="bkClose">${t('bk.close')}</button></div></div></div>`;
   }
 
   confirm(text, yes, onYes) {
@@ -191,6 +220,21 @@ export class Screens {
       // load
       case 'load': app.loadSlot(slot); break;
       case 'export': app.exportSlot(slot); break;
+      case 'update': app.applyUpdate(); break;
+      case 'backups': this.bkPick = slot; this.render(); break;
+      case 'bkClose': this.bkPick = -1; this.render(); break;
+      case 'bkGo': {
+        const at = Number(v), b = (this.bk[slot] || []).find((x) => x.at === at);
+        if (!b) break;
+        this.bkPick = -1;
+        this.confirm(t('confirm.restore', { name: b.name, level: b.level, date: formatDate(b.at) }), t('confirm.restoreYes'), async () => {
+          const s = await app.restoreBackup(slot, at);
+          this.msg = s ? t('bk.done', { name: s.name }) : t('bk.failed');
+          await this.loadBackups();
+          this.render();
+        });
+        break;
+      }
       case 'import':
         app.importSlot(slot, (ok) => {
           if (this.current !== 'load') return;
@@ -253,6 +297,7 @@ export class Screens {
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
+      case 'vibrate': setSetting('vibrate', !settings.vibrate); this.render(); break;
       case 'cloud': if (!isLinked()) { setSetting('cloudSave', !settings.cloudSave); this.render(); } break;
       case 'hunterSave': {
         const inp = this.el.querySelector('.set-hunter input');
@@ -392,6 +437,7 @@ export class Screens {
     };
     const keepScroll = [...this.el.querySelectorAll('[data-scroll]')].map((x) => [x.dataset.scroll, x.scrollTop]);
     let html = views[this.current] ? views[this.current]() : '';
+    if (this.bkPick >= 0 && !this.confirmBox) html += this.backupBox();
     if (this.confirmBox) {
       html += `<div class="scr-modal confirm"><div class="scr-box"><p>${esc(this.confirmBox.text)}</p>
         <div class="scr-row"><button class="sbtn danger" data-act="yes">${esc(this.confirmBox.yes)}</button>
@@ -455,6 +501,7 @@ export class Screens {
     const sq = (act, icon, label, extra = '') => `<button class="tm-sq" data-act="${act}">${icon}<span>${label}</span>${extra}</button>`;
     const name = settings.hunterName ? `<small class="tm-who">${esc(settings.hunterName)}</small>` : '';
     return `<div class="title-bg"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      ${this.app.updateReady ? `<div class="upd-bar"><span>${t('upd.ready')}</span><button class="sbtn small" data-act="update">${t('upd.go')}</button></div>` : ''}
       <div class="title">
         <div class="logo"><svg class="moon" viewBox="0 0 64 64"><path d="M40 6a26 26 0 1 0 18 44A22 22 0 1 1 40 6z" fill="currentColor"/></svg><h1>NOCTIS</h1><p>${t('title.tagline')}</p></div>
         <div class="title-menu">${cont}
@@ -476,7 +523,7 @@ export class Screens {
       return `<div class="wcard empty"><div class="wc-empty"><b>${t('slot.title', { n: i + 1 })}</b><span>${t('slot.empty')}</span></div>
         ${this.cloudPart(i)}
         <button class="sbtn" data-act="newIn" data-slot="${i}">${t('wc.new')}</button>
-        <button class="sbtn ghost small" data-act="import" data-slot="${i}">${t('slot.import')}</button></div>`;
+        <button class="sbtn ghost small" data-act="import" data-slot="${i}">${t('slot.import')}</button>${this.bkButton(i)}</div>`;
     }
     const level = (s.player && s.player.level) || 1;
     const dk = CONFIG.difficulty.levels[s.difficulty] ? s.difficulty : CONFIG.difficulty.oldSaves;
@@ -492,7 +539,7 @@ export class Screens {
         <div class="wc-stats">${stat(t('wc.abyss'), best || '–')}${stat(t('wc.shadows'), army)}${stat(t('wc.kills'), fmt(s.kills || 0))}${stat(t('wc.played'), formatPlayTime(s.playTime || 0))}</div>
         ${this.cloudPart(i)}
         <button class="sbtn go" data-act="load" data-slot="${i}">${t('title.continue')}</button>
-        <div class="wc-more"><button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('wc.backup')}</button>
+        <div class="wc-more"><button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('wc.backup')}</button>${this.bkButton(i)}
           <button class="sbtn danger small" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>
       </div></div>`;
   }
@@ -580,7 +627,7 @@ export class Screens {
     return `<div class="scr-page">${this.header(t('title.settings'), 'setBack')}
       <div class="set-list" data-scroll="set">${diff}
         <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level) }) : t('set.graphicsHint')}</small></div>
-          <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], settings.graphics)}</div></div>
+          <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')], ['ultra', t('set.ultra')]], settings.graphics)}</div></div>
         <div class="set-row"><div><b>${t('set.volume')}</b></div>
           <div class="segs"><input type="range" min="0" max="100" step="5" value="${vol}" data-act="volume"><span class="vol-val">${vol}%</span></div></div>
         <div class="set-row"><div><b>${t('set.music')}</b></div>
@@ -588,6 +635,7 @@ export class Screens {
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
+        <div class="set-row"><div><b>${t('set.vibrate')}</b><small>${t('set.vibrateHint')}</small></div><div class="segs">${toggle('vibrate', settings.vibrate)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>
         <div class="set-row"><div><b>${t('set.online')}</b><small>${t('set.onlineHint')}</small></div>
           <div class="segs"><button class="seg wide" data-act="online">${t('set.onlineOpen')}</button></div></div>

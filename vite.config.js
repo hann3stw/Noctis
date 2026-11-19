@@ -10,9 +10,9 @@ export default defineConfig({
   },
   plugins: [
     VitePWA({
-      // the service worker updates itself when a new version is online
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // a new version is offered on the title screen (src/app.js watchUpdates)
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icons/favicon.svg', 'icons/apple-touch-icon-180.png'],
       manifest: {
         name: 'Noctis',

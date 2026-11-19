@@ -5,14 +5,14 @@ import * as THREE from 'three';
 import { sectorGeometry } from './geo.js';
 import { gfx } from '../core/settings.js';
 
-const MAX_PARTICLES = 320;
+const MAX_PARTICLES = 480;
 const MAX_BLOBS = 256;
 const MAX_BARS = 160;
 const MAX_NUMBERS = 24;
 const MAX_SLASHES = 10;
 const MAX_RINGS = 20;
-const MAX_SPARKS = 260;
-const MAX_FLARES = 48;
+const MAX_SPARKS = 520;
+const MAX_FLARES = 64;
 
 // soft round spot, white in the middle: flares, sparks and the blob shadows
 let glowTex = null;
@@ -214,15 +214,10 @@ export class Effects {
     this.fNext = 0;
 
     // --- flashes of real light (they light up the ground and the enemies)
+    this.scene = scene;
     this.lights = [];
-    const nLights = gfx.level === 'low' ? 1 : 3;
-    for (let i = 0; i < nLights; i++) {
-      const l = new THREE.PointLight(0xffffff, 0, 10, 1.6);
-      l.userData = { life: 0, max: 1, peak: 0 };
-      scene.add(l);
-      this.lights.push(l);
-    }
     this.lightNext = 0;
+    this.setLights(gfx.lights);
 
     // --- damage numbers (DOM)
     this.numbers = [];
@@ -289,6 +284,20 @@ export class Effects {
     d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = size; d[o + 4] = grow;
     d[o + 5] = d[o + 6] = dur;
     d[o + 7] = _c.r; d[o + 8] = _c.g; d[o + 9] = _c.b;
+  }
+
+  // how many flashes of light may shine at once (graphics preset; changing it
+  // rebuilds the lit materials once)
+  setLights(n) {
+    n = Math.max(1, n | 0);
+    while (this.lights.length < n) {
+      const l = new THREE.PointLight(0xffffff, 0, 10, 1.6);
+      l.userData = { life: 0, max: 1, peak: 0 };
+      this.scene.add(l);
+      this.lights.push(l);
+    }
+    while (this.lights.length > n) this.scene.remove(this.lights.pop());
+    this.lightNext = 0;
   }
 
   // a short burst of real light at a point

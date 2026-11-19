@@ -6,10 +6,11 @@ import { input } from '../input/input.js';
 const KEY = 'noctis.settings';
 
 export const settings = {
-  graphics: 'auto', // auto | low | medium | high
+  graphics: 'auto', // auto | low | medium | high | ultra
   autoLevel: '', // preset chosen by "auto" (remembered between sessions)
   volume: 0.7, // 0..1 sound effects
   music: 0.5, // 0..1 background music
+  vibrate: true, // short vibrations on hits, kills and ultimates (Android)
   buttonSize: 1, // 0.8 .. 1.3
   swap: false, // movement on the right, buttons on the left
   showFps: false,
@@ -19,10 +20,13 @@ export const settings = {
 };
 
 // Values of the current graphics preset, read by the game every frame.
-export const gfx = { pixelRatio: 1.5, particles: 1, decorRadius: 64, renderRadius: 36, shadows: true, realShadows: false, level: 'medium' };
+export const gfx = {
+  pixelRatio: 1.5, particles: 1, decorRadius: 64, renderRadius: 36, shadows: true, realShadows: false,
+  shadowMap: 1536, shadowRange: 26, lights: 3, bloom: false, level: 'medium',
+};
 
-const LEVELS = ['low', 'medium', 'high'];
-let ceiling = 2; // "auto" never climbs back above a level that was too slow
+const LEVELS = ['low', 'medium', 'high', 'ultra'];
+let ceiling = 3; // "auto" never climbs back above a level that was too slow
 let goodRuns = 0;
 
 // first guess for "auto": small touch screens start on medium
@@ -79,7 +83,11 @@ export function applySettings() {
   const p = CONFIG.graphics.presets[level] || CONFIG.graphics.presets.medium;
   gfx.level = CONFIG.graphics.presets[level] ? level : 'medium';
   gfx.shadows = p.shadows;
-  gfx.realShadows = !!p.realShadows; // shadow maps from the sun (only on high)
+  gfx.realShadows = !!p.realShadows; // shadow maps from the sun (high, ultra)
+  gfx.shadowMap = p.shadowMap || 1536;
+  gfx.shadowRange = p.shadowRange || 26;
+  gfx.lights = p.lights || 1;
+  gfx.bloom = !!p.bloom;
   gfx.pixelRatio = p.pixelRatio;
   gfx.particles = p.particles;
   gfx.decorRadius = p.decorRadius;
@@ -95,7 +103,7 @@ export function applySettings() {
 // Changes one setting, applies and stores it.
 export function setSetting(key, value) {
   settings[key] = value;
-  if (key === 'graphics') { ceiling = 2; goodRuns = 0; }
+  if (key === 'graphics') { ceiling = 3; goodRuns = 0; }
   applySettings();
   saveSettings();
 }

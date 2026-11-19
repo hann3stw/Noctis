@@ -10,6 +10,7 @@ import { FollowCamera } from './render/camera.js';
 import { Effects } from './render/effects.js';
 import { AimIndicator } from './render/aim.js';
 import { Xray } from './render/xray.js';
+import { Bloom } from './render/bloom.js';
 import { World } from './world/world.js';
 import { Player } from './entities/player.js';
 import { Enemies, ST_CHASE, ST_WINDUP, ST_CHARGE } from './entities/enemies.js';
@@ -283,6 +284,7 @@ export class Game {
     document.removeEventListener('visibilitychange', this.onHide);
     window.removeEventListener('pagehide', this.onPageHide);
     this.touchCleanup();
+    if (this.bloom) this.bloom.dispose();
     disposeScene(this.scene);
     this.uiRoot.innerHTML = '';
     resetInput();
@@ -334,6 +336,10 @@ export class Game {
     this.update(dt);
     this.renderer.render(this.scene, this.cam.camera);
     this.xray.render(this.player.model.root, this.scene, this.cam.camera);
+    if (gfx.bloom) {
+      if (!this.bloom) this.bloom = new Bloom(this.renderer, CONFIG.graphics.bloom);
+      this.bloom.render(this.scene, this.cam.camera, dt);
+    }
   }
 
   update(dt) {
@@ -376,7 +382,9 @@ export class Game {
     }
     this.updateLight(dt, zi);
     this.updateSun();
-    this.updateMusic(dt);
+    this.updateMusic(dt, zi);
+    // the kill streak ends when no kill follows in time
+    if (this.streakT > 0 && (this.streakT -= dt) <= 0) this.streak = 0;
     this.minimap.update(dt);
 
     this.updateAim();
@@ -475,21 +483,28 @@ export class Game {
   // shadows under every unit are used (render/effects.js).
   applyShadows() {
     const on = !!gfx.realShadows, r = this.renderer;
-    if (this.shadowsOn === on) return;
-    this.shadowsOn = on;
+    this.effects.setLights(gfx.lights);
+    const key = on ? gfx.shadowMap + ':' + gfx.shadowRange : 'off';
+    if (this.shadowsOn === key) return;
+    const was = !!this.shadowsOn && this.shadowsOn !== 'off';
+    this.shadowsOn = key;
     r.shadowMap.enabled = on;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.sun.castShadow = on;
     if (on) {
       const c = this.sun.shadow.camera;
-      c.left = -26; c.right = 26; c.top = 26; c.bottom = -26; c.near = 1; c.far = 90;
+      const R = gfx.shadowRange;
+      c.left = -R; c.right = R; c.top = R; c.bottom = -R; c.near = 1; c.far = 100;
       c.updateProjectionMatrix();
-      this.sun.shadow.mapSize.set(1536, 1536);
+      this.sun.shadow.mapSize.set(gfx.shadowMap, gfx.shadowMap);
+      if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+      this.sun.shadow.radius = gfx.shadowMap > 2048 ? 3 : 1;
       this.sun.shadow.bias = -0.0008;
       this.sun.shadow.normalBias = 0.05;
       this.markShadows(this.scene);
       this.world.ground.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
     }
+    if (was === on) return;
     // the materials are built again with (or without) shadows
     this.scene.traverse((o) => {
       if (!o.material) return;
@@ -510,7 +525,7 @@ export class Game {
   // The music follows what happens: enemies hunting the player (combat), a
   // boss (boss), the Abyss, or calm travel. Checked twice a second; a fight
   // keeps its music a few seconds after the last enemy gave up.
-  updateMusic(dt) {
+  updateMusic(dt, zi) {
     this.musicT = (this.musicT || 0) - dt;
     if (this.musicT > 0) return;
     this.musicT = 0.5;
@@ -530,12 +545,16 @@ export class Game {
     if (bi >= 0 && E.alive[bi]) boss = true;
     this.fightHold = fight ? 6 : Math.max(0, (this.fightHold || 0) - 0.5);
     this.bossHold = boss ? 4 : Math.max(0, (this.bossHold || 0) - 0.5);
-    setMood(this.bossHold > 0 ? 'boss' : this.fightHold > 0 ? 'combat' : this.abyss.on ? 'abyss' : 'explore');
+    if (this.bossHold > 0) setMood('boss');
+    else if (this.fightHold > 0) setMood('combat');
+    else if (this.abyss.on) setMood('abyss');
+    else if (P.inCamp) setMood('camp');
+    else setMood('explore', zi); // every zone has its own tune
   }
 
   // the sun (and its shadow area) moves with the player
   updateSun() {
-    if (!this.shadowsOn) return;
+    if (!gfx.realShadows) return;
     const P = this.player;
     this.sun.position.set(P.x - 14, 28, P.z + 12);
     this.sun.target.position.set(P.x, 0, P.z);
@@ -688,6 +707,13 @@ export class Game {
     this.hud.armyNote(t('toast.joinsArmy', { name: army.name(u) }), 'good');
   }
 
+  // XP bonus of the running kill streak (0 = none)
+  streakBonus() {
+    let b = 0;
+    for (const [n, v] of CONFIG.streak.tiers) if (this.streak >= n) b = v;
+    return b;
+  }
+
   setPaused(paused) {
     this.paused = paused;
     duckMusic(paused);
@@ -704,8 +730,19 @@ export class Game {
     const level = E.lvl[i] + tierLevels(zi, tier);
     this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]);
     this.army.grantXp(src, xp);
+    // kill streak of the hunter: more XP the longer it runs
+    let bonus = 0;
+    if (src < 0) {
+      const S = CONFIG.streak;
+      this.streak = this.streakT > 0 ? this.streak + 1 : 1;
+      this.streakT = S.window;
+      bonus = this.streakBonus();
+      const st = S.tiers.find((x) => x[0] === this.streak);
+      if (st) this.hud.toast(t('streak.milestone', { n: st[0], pct: Math.round(st[1] * 100) }));
+      play(tier >= 2 ? 'killBig' : 'kill', this.streak);
+    }
     // kills of the army count only partly for the hunter
-    this.player.addXp(src < 0 ? xp : xp * CONFIG.progression.armyKillXp);
+    this.player.addXp(src < 0 ? xp * (1 + bonus) : xp * CONFIG.progression.armyKillXp);
     if (src < 0) this.player.onKill();
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');
