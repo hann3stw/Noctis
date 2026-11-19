@@ -40,7 +40,7 @@ import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
 import { reportFps, settings, gfx } from './core/settings.js';
-import { submitScore, publicLook, publicGear } from './net/online.js';
+import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
 
 const _v = new THREE.Vector3();
 const _col = new THREE.Color();
@@ -195,18 +195,18 @@ export class Game {
   submitRecords() {
     if (this.slot < 0) return;
     const P = this.player;
-    const look = publicLook(this.appearance), gear = publicGear(P.equip);
-    this.shownKey = JSON.stringify([look, gear]);
+    const look = publicLook(this.appearance), gear = publicGear(P.equip), stats = publicStats(P, this.army);
+    this.shownKey = JSON.stringify([look, gear, stats]);
     submitScore({
       floor: this.abyss.best || 0, level: P.level, mastery: P.mastery.lv,
-      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty, look, gear,
+      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty, look, gear, stats,
     }, settings.hunterName);
   }
 
   // new gear or a new look: the leaderboard shows it too (checked on saving)
   submitLookIfChanged() {
     if (this.slot < 0) return;
-    const key = JSON.stringify([publicLook(this.appearance), publicGear(this.player.equip)]);
+    const key = JSON.stringify([publicLook(this.appearance), publicGear(this.player.equip), publicStats(this.player, this.army)]);
     if (key !== this.shownKey) this.submitRecords();
   }
 

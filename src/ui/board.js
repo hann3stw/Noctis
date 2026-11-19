@@ -28,6 +28,18 @@ function cleanLook(l) {
   return normLook(a);
 }
 
+// stat points and values of a hunter: numbers only
+const num = (v, hi) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, hi) : null);
+function cleanStats(s) {
+  if (!s || typeof s !== 'object') return null;
+  const out = {};
+  for (const k of ['str', 'agi', 'vit', 'int', 'per']) out[k] = num(s[k], 1e7);
+  for (const k of ['hp', 'dmg', 'def']) out[k] = num(s[k], 1e15);
+  out.crit = num(s.crit, 1);
+  out.slots = num(s.slots, 999);
+  return Object.values(out).some((v) => v !== null) ? out : null;
+}
+
 function cleanGear(g) {
   if (!g || typeof g !== 'object') return null;
   const out = {};
@@ -117,8 +129,8 @@ export class Board {
 
   // the hunter of a row: a picture of its look and the gear it wears
   details(r) {
-    const look = cleanLook(r.look), gear = cleanGear(r.gear);
-    if (!look && !gear) return `<div class="lb-det"><p class="lb-note">${t('lb.noLook')}</p></div>`;
+    const look = cleanLook(r.look), gear = cleanGear(r.gear), st = cleanStats(r.stats);
+    if (!look && !gear && !st) return `<div class="lb-det"><p class="lb-note">${t('lb.noLook')}</p></div>`;
     const equip = { ...(gear || {}) };
     if (!equip.weapon) equip.weapon = { kind: 'weapon', type: Object.keys(CONFIG.weapons)[0], rarity: 0, level: 1, up: 0 };
     let pic = '';
@@ -134,7 +146,11 @@ export class Board {
       if (!it) return `<div class="lb-it empty"><i></i><div><b>${t('slot.' + slot)}</b><small>${t('lb.emptySlot')}</small></div></div>`;
       return `<div class="lb-it" style="--rc:${RARITY_CSS[it.rarity]}"><i>${gearIcon(it)}</i><div><b>${esc(itemName(it))}</b><small>${t('rarity.' + it.rarity)} · ${t('lb.itemLevel', { n: it.level })}</small></div></div>`;
     }).join('');
-    return `<div class="lb-det">${pic ? `<img class="lb-av" src="${pic}" alt="">` : ''}<div class="lb-gear">${gear ? items : `<p class="lb-note">${t('lb.noLook')}</p>`}</div></div>`;
+    // stat points, then what they lead to
+    const chip = (k, v) => (v === null || v === undefined ? '' : `<span><small>${k}</small><b>${v}</b></span>`);
+    const stats = st ? `<div class="lb-st">${['str', 'agi', 'vit', 'int', 'per'].map((k) => chip(t('stat.' + k), st[k] === null ? null : fmt(st[k]))).join('')}
+      ${chip(t('derived.hp'), st.hp === null ? null : fmt(st.hp))}${chip(t('derived.damage'), st.dmg === null ? null : fmt(st.dmg))}${chip(t('derived.defense'), st.def === null ? null : fmt(st.def))}${chip(t('derived.crit'), st.crit === null ? null : Math.round(st.crit * 100) + '%')}${chip(t('derived.slots'), st.slots === null ? null : fmt(st.slots))}</div>` : '';
+    return `<div class="lb-det"><div class="lb-top">${pic ? `<img class="lb-av" src="${pic}" alt="">` : ''}<div class="lb-gear">${gear ? items : `<p class="lb-note">${t('lb.noLook')}</p>`}</div></div>${stats}</div>`;
   }
 
   // hasRecord: the player has a record for the board shown (for the note below the list)

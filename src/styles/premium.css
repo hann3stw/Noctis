@@ -3683,6 +3683,7 @@ input.shake {
   border-color: rgba(200, 170, 255, 0.55);
 }
 .lb-det {
+  flex-direction: column;
   flex: none;
   display: flex;
   gap: calc(var(--u) * 2);
@@ -3791,4 +3792,32 @@ input.shake {
 }
 .ap-canvas:active {
   cursor: grabbing;
+}
+
+.lb-top {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  align-items: stretch;
+}
+.lb-st {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 20), 1fr));
+  gap: calc(var(--u) * 0.8);
+}
+.lb-st span {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 1.2);
+  border-radius: calc(var(--u) * 1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 170, 255, 0.14);
+}
+.lb-st small {
+  font-size: calc(var(--u) * 1.9);
+  opacity: 0.65;
+  white-space: nowrap;
+}
+.lb-st b {
+  font-size: calc(var(--u) * 2.7);
+  color: #ffe08a;
 }

@@ -118,6 +118,19 @@ export function publicLook(app) {
   for (const k of LOOK_KEYS) if (app && app[k] !== undefined) out[k] = app[k];
   return out;
 }
+// stat points and the values they lead to (the derived ones only while playing)
+export function publicStats(P, army) {
+  const out = {};
+  for (const k of ['str', 'agi', 'vit', 'int', 'per']) out[k] = Math.max(0, Math.round((P.stats && P.stats[k]) || 0));
+  if (P.maxHp !== undefined && army) {
+    out.hp = Math.round(P.maxHp);
+    out.dmg = Math.round(P.power());
+    out.def = Math.round(P.defense);
+    out.crit = Math.round(P.crit * 1000) / 1000;
+    out.slots = army.maxDeployed();
+  }
+  return out;
+}
 export function publicGear(equip) {
   const out = {};
   for (const slot of ['weapon', 'helmet', 'chest', 'gloves', 'boots']) {
@@ -143,13 +156,14 @@ export function submitScore(entry, name) {
       // the stronger hunter keeps its look and gear on the board
       if (old.look) e.look = old.look;
       if (old.gear) e.gear = old.gear;
+      if (old.stats) e.stats = old.stats;
     }
   }
   lsSet(LS_SCORE, e);
   flushScore();
 }
 const sameScore = (a, b) => a && b && a.floor === b.floor && a.level === b.level && a.mastery === b.mastery && a.name === b.name
-  && JSON.stringify(a.look || null) === JSON.stringify(b.look || null) && JSON.stringify(a.gear || null) === JSON.stringify(b.gear || null);
+  && JSON.stringify(a.look || null) === JSON.stringify(b.look || null) && JSON.stringify(a.gear || null) === JSON.stringify(b.gear || null) && JSON.stringify(a.stats || null) === JSON.stringify(b.stats || null);
 
 let flushT = 0;
 let flushing = false;
@@ -165,6 +179,7 @@ export async function flushScore() {
     const row = { name: e.name, floor: e.floor, level: e.level, mastery: e.mastery, rank: e.rank, difficulty: e.difficulty };
     if (e.look) row.look = e.look;
     if (e.gear) row.gear = e.gear;
+    if (e.stats) row.stats = e.stats;
     const up = await rest('abyss_scores?user_id=eq.' + accountId(), { method: 'PATCH', body: row, prefer: 'return=representation' });
     if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: row, prefer: 'return=minimal' });
     const now = lsGet(LS_SCORE);
@@ -181,7 +196,7 @@ export async function flushScore() {
 // Top 50 and the own place of the 'abyss' board (deepest floor) or the
 // 'level' board (highest level, then mastery). { rows, me: { place, row } | null }
 export async function loadBoard(kind = 'abyss') {
-  const sel = 'user_id,name,floor,level,mastery,rank,difficulty,look,gear';
+  const sel = 'user_id,name,floor,level,mastery,rank,difficulty,look,gear,stats';
   const lv = kind === 'level';
   const order = lv ? 'level.desc,mastery.desc,updated_at.asc' : 'floor.desc,updated_at.asc';
   const top = await rest(`abyss_scores?select=${sel}${lv ? '' : '&floor=gt.0'}&order=${order}&limit=50`, { auth: false });
