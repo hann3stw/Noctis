@@ -708,7 +708,7 @@ export class Player {
     this.combo ^= 1;
     this.attackAnim = 1;
     this.counts.attack++;
-    play('swing');
+    play('swing', this.weapon);
     fireWeapon(this.game, this.weapon, this.pendingX, this.pendingZ, this.pendingP);
     // Echo of the Fallen: every few attacks a shadow wave as well
     const U = this.uq.echo;

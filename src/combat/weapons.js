@@ -15,7 +15,7 @@ export function playerHit(game, i, base, kx, kz) {
   const crit = Math.random() < P.crit;
   if (crit) dmg *= P.critDmg;
   P.onHit();
-  play(crit ? 'crit' : 'hit');
+  play(crit ? 'crit' : 'hit', P.weapon); // every weapon sounds its own way
   const fx = game.effects;
   if (crit) {
     fx.flare(E.x[i], 1.1, E.z[i], 3.2, 0xffc040, 0.26, 1.6);

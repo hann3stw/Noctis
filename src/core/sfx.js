@@ -206,19 +206,109 @@ function ult(fam) {
   tone('sine', 880, 1760, 1.2, 0.04, R + 0.05, 0.8, 0.3);
 }
 
-const SOUNDS = {
-  swing: () => { hiss(vary(3200), 800, 0.13, 0.32, 0.9); hiss(700, 300, 0.1, 0.1, 0.8, 0, 0, 'lowpass'); },
-  hit: () => {
+// ---- weapons: every weapon sounds its own way ------------------------------------
+// The attack (a swing, a thrust, a shot, a spell) ...
+const ATTACK = {
+  daggers: () => {
+    hiss(vary(5600), 2000, 0.07, 0.26, 1.4);
+    tone('triangle', vary(3200), 2800, 0.04, 0.02);
+  },
+  sword: () => {
+    hiss(vary(3200), 800, 0.14, 0.32, 0.9);
+    hiss(700, 300, 0.1, 0.1, 0.8, 0, 0, 'lowpass');
+    tone('triangle', vary(2100), 1950, 0.2, 0.022, 0.02, 0.3);
+  },
+  spear: () => {
+    hiss(vary(1100), 4600, 0.1, 0.32, 1.3);
+    thump(110, 60, 0.08, 0.14);
+    tone('sawtooth', 220, 330, 0.06, 0.02);
+  },
+  hammer: () => {
+    hiss(vary(600), 140, 0.3, 0.42, 0.7, 0, 0, 'lowpass');
+    tone('sine', 75, 45, 0.28, 0.14);
+    hiss(1800, 500, 0.2, 0.08, 0.8, 0.05);
+  },
+  scythe: () => {
+    hiss(vary(2600), 500, 0.34, 0.3, 0.7, 0, 0.3);
+    tone('sine', vary(660), 500, 0.38, 0.04, 0, 0.6);
+    tone('sine', 990, 760, 0.38, 0.02, 0.02, 0.6);
+  },
+  bow: () => {
+    // the string, then the arrow
+    tone('triangle', vary(330), 300, 0.2, 0.2, 0, 0.15, 0.002);
+    tone('sawtooth', 660, 590, 0.07, 0.035);
+    hiss(2500, 7000, 0.14, 0.16, 1.6, 0.02);
+  },
+  staff: () => {
+    tone('sine', 280, 1400, 0.24, 0.12, 0, 0.5);
+    hiss(1500, 6500, 0.22, 0.12, 2, 0, 0.4);
+    tone('triangle', 1760, 2637, 0.16, 0.03, 0.06, 0.6);
+  },
+  grimoire: () => {
+    // pages turn, then the bolt crackles out
+    for (let i = 0; i < 3; i++) hiss(vary(4200), 2500, 0.035, 0.12, 2, i * 0.028);
+    tone('sawtooth', 1300, 260, 0.13, 0.05, 0.08);
+    hiss(7000, 1800, 0.16, 0.16, 3, 0.08, 0.3);
+  },
+};
+
+// ... and the hit on an enemy
+const HIT = {
+  daggers: () => {
+    thump(vary(270), 120, 0.05, 0.32);
+    hiss(vary(3600), 1500, 0.045, 0.32, 1.5);
+    tone('square', 2300, 1400, 0.02, 0.03);
+  },
+  sword: () => {
     thump(vary(210), 70, 0.08, 0.42);
     hiss(vary(1900), 500, 0.07, 0.38, 1.2);
-    tone('square', 1300, 500, 0.025, 0.04);
+    tone('triangle', vary(1500), 1450, 0.13, 0.03, 0, 0.3);
   },
-  crit: () => {
-    thump(240, 55, 0.14, 0.6);
-    hiss(4200, 700, 0.12, 0.5, 0.9, 0, 0.2);
-    tone('triangle', 1760, 1720, 0.32, 0.1, 0.01, 0.5);
-    tone('sine', 2637, 2600, 0.24, 0.05, 0.02, 0.6);
+  spear: () => {
+    thump(vary(180), 60, 0.07, 0.45);
+    hiss(2600, 900, 0.05, 0.36, 2);
+    tone('square', 900, 300, 0.03, 0.05);
   },
+  hammer: () => {
+    thump(vary(120), 32, 0.32, 0.85);
+    hiss(1400, 200, 0.24, 0.45, 0.6, 0, 0.2, 'lowpass');
+    warm('sawtooth', 55, 0.28, 0.1, 0, 0.2, 800, 80);
+  },
+  scythe: () => {
+    hiss(vary(4600), 1200, 0.13, 0.36, 1);
+    thump(190, 70, 0.08, 0.35);
+    tone('sine', 520, 260, 0.26, 0.04, 0, 0.6);
+  },
+  bow: () => {
+    thump(vary(240), 90, 0.06, 0.5);
+    hiss(1300, 400, 0.05, 0.3, 2);
+    tone('triangle', vary(420), 380, 0.08, 0.06);
+  },
+  staff: () => {
+    thump(150, 45, 0.2, 0.6);
+    hiss(3200, 400, 0.26, 0.4, 0.7, 0, 0.4);
+    tone('sine', 880, 440, 0.22, 0.06, 0, 0.6);
+  },
+  grimoire: () => {
+    hiss(7000, 2000, 0.08, 0.36, 2.5, 0, 0.2);
+    tone('sawtooth', vary(900), 200, 0.1, 0.07);
+    thump(200, 80, 0.06, 0.3);
+  },
+};
+
+// a crit: the hit of the weapon with a bright ring and more weight
+function crit(w) {
+  (HIT[w] || HIT.sword)();
+  const heavy = w === 'hammer' || w === 'staff';
+  thump(heavy ? 160 : 240, 45, heavy ? 0.3 : 0.14, 0.5);
+  tone('triangle', 1760, 1720, 0.32, 0.09, 0.01, 0.5);
+  tone('sine', 2637, 2600, 0.24, 0.045, 0.02, 0.6);
+}
+
+const SOUNDS = {
+  swing: (w) => (ATTACK[w] || ATTACK.sword)(),
+  hit: (w) => (HIT[w] || HIT.sword)(),
+  crit: (w) => crit(w),
   kill: (n) => {
     const f = streakNote(n);
     thump(170, 42, 0.2, 0.55);
@@ -266,8 +356,8 @@ const GAP = { hit: 0.045, crit: 0.06, swing: 0.05, pickup: 0.05, hurt: 0.08, kil
 // how each sound feels in the hand (ms, or a pattern)
 const HAPTIC = { crit: 12, kill: 14, killBig: 45, ult: [30, 40, 80], hurt: 30, levelup: [20, 60, 30], death: 160, unique: [40, 60, 40, 60, 90], arise: 40 };
 
-// arg: the skill id for 'skill' and 'ult' (a sound family per power), the
-// kill streak for 'kill' and 'killBig'
+// arg: the weapon for 'swing', 'hit' and 'crit', the skill id for 'skill' and
+// 'ult' (a sound family per power), the kill streak for 'kill' and 'killBig'
 export function play(name, arg) {
   if (HAPTIC[name]) buzz(HAPTIC[name]);
   if (!ctx || ctx.state !== 'running' || settings.volume <= 0) return;

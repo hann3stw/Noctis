@@ -3,14 +3,17 @@
 import { settings } from './settings.js';
 
 let last = 0;
+// browsers allow vibration only after the screen was touched (not on a PC)
+let touched = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') touched = true; }, true);
+}
 
 // ms: one pulse, or a pattern [on, off, on, ...]
 export function buzz(ms) {
-  if (!settings.vibrate || typeof navigator === 'undefined' || !navigator.vibrate) return;
-  // only after the first tap (browsers refuse it before and log an error)
-  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  if (!settings.vibrate || !touched || !navigator.vibrate) return;
   const now = performance.now();
   if (now - last < 70) return; // never a constant buzz
   last = now;
-  try { navigator.vibrate(ms); } catch (_) { /* not allowed yet */ }
+  try { navigator.vibrate(ms); } catch (_) { /* not allowed here */ }
 }
