@@ -3597,3 +3597,17 @@ input.shake {
   border-color: #ffe9a8;
   color: #2a1a00;
 }
+
+/* Shadow Step on the dodge button: soft glow when it can start, strong while it runs */
+#btn-dodge.calm {
+  border-color: rgba(190, 150, 255, 0.85);
+}
+#btn-dodge.sprint {
+  border-color: #d8b8ff;
+  background: radial-gradient(circle at 50% 35%, rgba(120, 60, 220, 0.95), rgba(30, 10, 60, 0.95));
+  box-shadow: 0 0 calc(var(--u) * 3) rgba(150, 90, 255, 0.85);
+  animation: shadow-step 0.9s ease-in-out infinite alternate;
+}
+@keyframes shadow-step {
+  to { box-shadow: 0 0 calc(var(--u) * 5.5) rgba(170, 110, 255, 1); }
+}

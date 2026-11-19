@@ -609,6 +609,8 @@ export class Army {
     const S = CONFIG.shadows, roles = S.roles;
     const D = this.deployed;
     const tele2 = S.teleportDist * S.teleportDist;
+    // during Shadow Step the shadows run as fast as the hunter
+    const follow = P.sprint ? Math.max(S.followSpeed, P.speed * P.sprintMult() * 1.1) : S.followSpeed;
     const huntRange = this.huntRange();
     const variance = CONFIG.combat.damageVariance;
     if (this.buffT > 0) this.buffT -= dt;
@@ -792,7 +794,7 @@ export class Army {
         mvx = ax + u.ox - u.x;
         mvz = az + u.oz - u.z;
         const d2 = mvx * mvx + mvz * mvz;
-        speed = d2 > 0.16 ? Math.min(S.followSpeed, Math.sqrt(d2) * 4) : 0;
+        speed = d2 > 0.16 ? Math.min(follow, Math.sqrt(d2) * 4) : 0;
       }
 
       if (speed > 0) {

@@ -11,7 +11,7 @@ import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgrad
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 
-const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false };
+const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false, rate: 1 };
 // how fast the attack animation plays per weapon (1 / seconds)
 const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4, spear: 5, hammer: 2.8, grimoire: 4 };
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
@@ -92,6 +92,9 @@ export class Player {
     this.dodgeCd = 0;
     this.dodgeX = 0;
     this.dodgeZ = 0;
+    this.sprint = false; // Shadow Step on
+    this.calmT = 99; // seconds since the last hit, attack or skill
+    this.idleT = 0;
     this.invuln = 0;
 
     this.dead = false;
@@ -501,8 +504,20 @@ export class Player {
     this.chillT = CONFIG.traits.chill.time;
   }
 
+  // Shadow Step can start: out of combat for a moment and not in a gate
+  canSprint() {
+    return !this.dead && this.calmT >= CONFIG.player.shadowStep.calm && this.game.gates.active < 0;
+  }
+
+  // something happened in a fight: Shadow Step stops
+  fought() {
+    this.calmT = 0;
+    this.sprint = false;
+  }
+
   damage(amount) {
     if (this.dead || this.invuln > 0) return;
+    this.fought();
     const fx = this.game.effects;
     let d = amount * this.takenFactor();
     if (this.shield > 0) {
@@ -578,6 +593,7 @@ export class Player {
     if (this.castAnim > 0) this.castAnim -= dt * 3;
     if (this.invuln > 0) this.invuln -= dt;
     if (this.dodgeCd > 0) this.dodgeCd -= dt;
+    this.calmT += dt;
     if (this.cds[0] > 0) this.cds[0] -= dt;
     if (this.cds[1] > 0) this.cds[1] -= dt;
     if (this.eclipseT > 0) this.eclipseT -= dt;
@@ -602,6 +618,13 @@ export class Player {
 
     if (input.dodge) {
       input.dodge = false;
+      // out of combat the dodge also starts Shadow Step
+      if (!this.sprint && this.canSprint()) {
+        this.sprint = true;
+        this.idleT = 0;
+        play('skill');
+        game.effects.ring(this.x, this.z, 0.5, 3, 0x8a4dff, 0.35);
+      }
       if (this.dodgeCd <= 0 && this.dodgeT <= 0) {
         if (this.moving) { this.dodgeX = mx / Math.min(ml, 1); this.dodgeZ = mz / Math.min(ml, 1); }
         else { this.dodgeX = this.dirX; this.dodgeZ = this.dirZ; }
@@ -628,7 +651,8 @@ export class Player {
       this.dodgeT -= dt;
       this.moving = true;
     } else if (this.moving) {
-      const sp = this.speed * (this.rageT > 0 ? 1 + CONFIG.skills.bloodRage.speed : 1) * (this.chillT > 0 ? 1 - CONFIG.traits.chill.slow : 1);
+      let sp = this.speed * (this.rageT > 0 ? 1 + CONFIG.skills.bloodRage.speed : 1) * (this.chillT > 0 ? 1 - CONFIG.traits.chill.slow : 1);
+      if (this.sprint) sp = Math.max(sp, Math.min(CONFIG.player.shadowStep.maxSpeed, sp * this.sprintMult()));
       nx += mx * sp * dt;
       nz += mz * sp * dt;
     }
@@ -646,6 +670,15 @@ export class Player {
       this.x = game.world.rx;
       this.z = game.world.rz;
     }
+    // Shadow Step: ends in a gate or after standing still; leaves a shadow trail
+    if (this.sprint) {
+      if (!this.canSprint()) this.sprint = false;
+      else if (this.moving) {
+        this.idleT = 0;
+        if (Math.random() < dt * 70) game.effects.burst(this.x, 0.2 + Math.random() * 1.3, this.z, 1, Math.random() < 0.6 ? 0xb080ff : 0x6a3ad0, 0.8, 0.34, 0.7);
+      } else if ((this.idleT += dt) > CONFIG.player.shadowStep.idle) this.sprint = false;
+    }
+
     // camp or outpost: safe, heals, equipment can be changed
     this.safeIndex = game.gates.active >= 0 ? -1 : game.world.safeIndexAt(this.x, this.z);
     this.inCamp = this.safeIndex >= 0;
@@ -720,7 +753,14 @@ export class Player {
     this.pendingP = Math.min(1, d / range);
   }
 
+  // Shadow Step speed: x1.5, more with Agility
+  sprintMult() {
+    const S = CONFIG.player.shadowStep;
+    return S.speed + Math.min(S.maxBonus, this.stats.agi * S.perAgi);
+  }
+
   attack() {
+    this.fought();
     const w = CONFIG.weapons[this.weapon];
     if (this.pendingAuto) this.autoAim(w.range);
     this.dirX = this.pendingX;
@@ -760,6 +800,7 @@ export class Player {
     this.pendingP = power;
     if (def.aim === 'self') { this.pendingX = this.dirX; this.pendingZ = this.dirZ; }
     else if (auto) this.autoAim(def.range);
+    this.fought();
     if (slot === 2) this.ult = 0;
     else { this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
     this.counts.cast++;
@@ -788,6 +829,7 @@ export class Player {
     ANIM.weapon = this.weapon;
     ANIM.combo = this.combo;
     ANIM.dodging = this.dodgeT > 0;
+    ANIM.rate = this.sprint && this.moving ? 1.7 : 1;
     ANIM.dead = this.dead;
     this.model.animate(dt, ANIM);
     this.game.effects.blob(this.x, this.z, 0.75);

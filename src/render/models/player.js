@@ -902,10 +902,10 @@ export function createPlayerModel(appearance) {
     animate(dt, st) {
       fall += ((st.dead ? 1 : 0) - fall) * Math.min(1, dt * 8);
       const run = st.moving && !st.dead;
-      lean += ((run ? 0.13 : 0) - lean) * Math.min(1, dt * 10);
+      lean += ((run ? (st.rate > 1 ? 0.32 : 0.13) : 0) - lean) * Math.min(1, dt * 10);
       body.rotation.x = -fall * 1.45 + (st.dodging ? 0.55 : 0) + lean;
 
-      if (st.moving && !st.dead) walk += dt * 13;
+      if (st.moving && !st.dead) walk += dt * 13 * (st.rate || 1);
       const swing = st.moving && !st.dead ? Math.sin(walk) * 0.75 : 0;
       legL.rotation.x += (swing - legL.rotation.x) * 0.5;
       legR.rotation.x += (-swing - legR.rotation.x) * 0.5;

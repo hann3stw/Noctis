@@ -219,6 +219,7 @@ export class Hud {
     this.vShield = null;
     this.vZone = null;
     this.vDodge = -1;
+    this.vSprint = '';
     this.vAmmo = [-1, -1, -1, -1];
     this.vMaxCh = -1;
     this.vUltOn = null;
@@ -698,6 +699,14 @@ export class Hud {
       this.vDodge = dc;
       this.dodgeCd.style.setProperty('--p', (dc / 40) * 100 + '%');
       this.els.btnDodge.classList.toggle('cooling', dc > 0);
+    }
+
+    // Shadow Step: the dodge button glows while it runs, and softly when it can start
+    const sprint = P.sprint ? 'on' : P.canSprint() ? 'ready' : '';
+    if (sprint !== this.vSprint) {
+      this.vSprint = sprint;
+      this.els.btnDodge.classList.toggle('sprint', sprint === 'on');
+      this.els.btnDodge.classList.toggle('calm', sprint === 'ready');
     }
 
     // zone label

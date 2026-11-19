@@ -170,6 +170,16 @@ export const CONFIG = {
       invuln: 0.38,
       cooldown: 2.5,
     },
+    // Shadow Step: out of combat the dodge button also starts a sprint, for
+    // walking across the world. A hit, an attack or a skill ends it.
+    shadowStep: {
+      calm: 3, // seconds without a hit, attack or skill before it can start
+      speed: 1.5, // x the normal speed ...
+      perAgi: 0.004, // ... + this per Agility point (100 points: x1.9)
+      maxBonus: 1, // the Agility part stops at +1 (x2.5 in all)
+      maxSpeed: 42, // units per second at most
+      idle: 1.5, // ends after standing still this long
+    },
     autoAimExtraRange: 3, // quick tap targets enemies up to weapon range + this
   },
 
