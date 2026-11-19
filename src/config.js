@@ -826,7 +826,9 @@ export const CONFIG = {
     // the preset's resolution); a preset is only dropped once the lowest scale is
     // too slow too. The first 'warm' measurements are shorter, so a new device
     // finds its level quickly.
-    auto: { measure: 3, warmMeasure: 1.5, warmRuns: 4, lowFps: 50, highFps: 58, upAfter: 5, scales: [1, 0.85, 0.72, 0.6] },
+    auto: { measure: 3, warmMeasure: 1.5, warmRuns: 4, lowFps: 50, highFps: 58, upAfter: 5, scales: [1, 0.85, 0.72, 0.6],
+      scaleGain: 1.12, // a step down of the resolution must make it at least this much faster, else the processor is the limit
+    },
     bloom: 0.7, // strength of the glow on "ultra"
     presets: {
       // lights = flashes of real light at once; shadowMap / shadowRange = size

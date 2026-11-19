@@ -60,6 +60,7 @@ export class Game {
     this.saveT = 0;
     this.fpsT = 0;
     this.fpsN = 0;
+    this.fpsMax = 0;
     this.hitStopT = 0;
     this.defeatedGates = save ? [...(save.defeatedGates || [])] : []; // zones whose gate boss was beaten
     const DL = CONFIG.difficulty;
@@ -408,16 +409,19 @@ export class Game {
     if (this.paused || this.portrait || document.hidden) {
       // one-shot inputs must not pile up while the game stands still
       clearEvents();
-      this.fpsT = this.fpsN = 0;
+      this.fpsT = this.fpsN = this.fpsMax = 0;
       return;
     }
     // measure the real frame rate for the automatic graphics preset
     if (!fresh && dt < 0.5) {
       this.fpsT += dt;
       this.fpsN++;
+      if (dt > this.fpsMax) this.fpsMax = dt;
       if (this.fpsT >= measureEvery()) {
-        reportFps(this.fpsN / this.fpsT);
-        this.fpsT = this.fpsN = 0;
+        // one stall (shader compile, a piece of the world loading) says nothing about the frame rate
+        const stall = this.fpsMax > 0.1 && this.fpsMax > (6 * this.fpsT) / this.fpsN;
+        if (!stall) reportFps(this.fpsN / this.fpsT);
+        this.fpsT = this.fpsN = this.fpsMax = 0;
       }
     }
     if (dt > 0.05) dt = 0.05;

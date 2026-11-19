@@ -33,6 +33,9 @@ let goodRuns = 0;
 let scaleTop = 0; // "auto" never raises the resolution above this step again (one that was too slow)
 let justRaised = false; // the last change was a step up of the resolution
 let runs = 0; // measurements so far (the first ones are short)
+let skip = 1; // measurements to skip (after the start and after every change)
+let probeFps = 0; // frame rate before the last step down of the resolution (0 = none to judge)
+let scaleUseless = false; // lowering the resolution did not help this device
 
 // seconds the game measures the frame rate for before it calls reportFps
 export function measureEvery() {
@@ -54,29 +57,45 @@ function guessLevel() {
 
 // Called by the game every few seconds with the measured frame rate.
 // Too slow: first the render resolution steps down (a sharp picture costs the
-// most on phones), and only when it is at its lowest the preset drops. Fast
-// for a while: the resolution steps up again, then the preset.
+// most on phones), and only when it is at its lowest the preset drops. If a
+// step down does not make it noticeably faster, the device is slow in some
+// other way (processor): the step is undone and the preset drops instead.
+// Fast for a while: the resolution steps up again, then the preset.
 export function reportFps(fps) {
   if (settings.graphics !== 'auto') return;
+  // the first window after the start or a change holds shader compiles and the
+  // resize itself: not a fair measurement
+  if (skip > 0) { skip--; return; }
   runs++;
   const A = CONFIG.graphics.auto;
   const i = LEVELS.indexOf(gfx.level), s = scaleIdx(), last = scales().length - 1;
-  const raised = justRaised;
+  const raised = justRaised, probe = probeFps;
   justRaised = false;
+  probeFps = 0;
   let changed = false;
+  const dropPreset = () => {
+    ceiling = i - 1;
+    settings.autoLevel = LEVELS[i - 1];
+    settings.autoScale = 0;
+    scaleTop = 0;
+    changed = true;
+  };
   if (fps < A.lowFps) {
     goodRuns = 0;
-    if (s < last) {
+    if (probe > 0 && s > 0 && fps < probe * A.scaleGain) {
+      // the last step down did not help: not the resolution that is slow
+      scaleUseless = true;
+      settings.autoScale = 0;
+      changed = true;
+      if (i > 0) dropPreset();
+    } else if (!scaleUseless && s < last) {
       // a step up that did not hold is not tried again
       if (raised) scaleTop = s + 1;
       settings.autoScale = s + 1;
+      probeFps = fps;
       changed = true;
     } else if (i > 0) {
-      ceiling = i - 1;
-      settings.autoLevel = LEVELS[i - 1];
-      settings.autoScale = 0;
-      scaleTop = 0;
-      changed = true;
+      dropPreset();
     }
   } else if (fps >= A.highFps) {
     if (++goodRuns >= A.upAfter) {
@@ -87,7 +106,7 @@ export function reportFps(fps) {
         changed = true;
       } else if (i < ceiling) {
         settings.autoLevel = LEVELS[i + 1];
-        settings.autoScale = Math.min(1, last); // the next preset starts a little below its full resolution
+        settings.autoScale = scaleUseless ? 0 : Math.min(1, last); // the next preset starts a little below its full resolution
         scaleTop = 0;
         changed = true;
       }
@@ -103,6 +122,7 @@ export function loadSettings() {
     const s = JSON.parse(localStorage.getItem(KEY) || '{}');
     for (const k in settings) if (k in s && typeof s[k] === typeof settings[k]) settings[k] = s[k];
   } catch (_) { /* private mode or broken data: keep the defaults */ }
+  settings.autoScale = 0; // every session finds its resolution again (a device that was only slow once stays sharp)
   applySettings();
 }
 
@@ -137,13 +157,14 @@ export function applySettings() {
   input.swap = settings.swap;
   const hud = document.getElementById('hud');
   if (hud) hud.classList.toggle('swap', settings.swap);
+  skip = 1;
   if (onGraphics) onGraphics();
 }
 
 // Changes one setting, applies and stores it.
 export function setSetting(key, value) {
   settings[key] = value;
-  if (key === 'graphics') { ceiling = 3; goodRuns = 0; scaleTop = 0; justRaised = false; runs = 0; if (value === 'auto') settings.autoScale = 0; }
+  if (key === 'graphics') { ceiling = 3; goodRuns = 0; scaleTop = 0; justRaised = false; runs = 0; probeFps = 0; scaleUseless = false; if (value === 'auto') settings.autoScale = 0; }
   applySettings();
   saveSettings();
 }
