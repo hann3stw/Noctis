@@ -369,11 +369,11 @@ export class App {
   }
 
   // fast travel list (only opened from the camp or an outpost)
+  // travel happens on the big map: tap an outpost there
   openTravel() {
     const g = this.game;
     if (!g || g.paused || !g.player.inCamp) return;
-    g.setPaused(true);
-    this.screens.show('travel');
+    g.minimap.big.open(1);
   }
 
   travelTo(si) {

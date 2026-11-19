@@ -34,6 +34,7 @@ import { Tips, BASIC_TIPS } from './ui/tips.js';
 import { Fog } from './ui/fog.js';
 import { Quests } from './core/quests.js';
 import { Bestiary } from './core/bestiary.js';
+import { Waypoint } from './core/waypoint.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
@@ -138,6 +139,17 @@ export class Game {
     }
     // the fog of the map (older worlds: the zones they know are uncovered)
     this.fog = new Fog(this, save ? save.fog || 'legacy' : null);
+    // Worlds from before the outposts were turned: the outposts stand somewhere
+    // else now, so the hunter starts at the respawn point and the land around
+    // the captured outposts is uncovered on the map.
+    if (save && save.layout !== 2) {
+      const sp = this.respawnSpot();
+      this.player.x = sp.x;
+      this.player.z = sp.z;
+      this.army.relocate(sp.x, sp.z);
+      for (const si of this.discovered) { const o = this.world.safes[si]; this.fog.revealAround(o.x, o.z, CONFIG.minimap.fogReveal); }
+    }
+    this.waypoint = new Waypoint(this, save && save.mark);
     if (!this.quests.list.length || this.quests.day < 0) this.quests.make();
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
@@ -216,6 +228,8 @@ export class Game {
       quests: this.quests.serialize(),
       bestiary: this.bestiary.serialize(),
       fog: this.fog.serialize(),
+      mark: this.waypoint.serialize(),
+      layout: 2,
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
@@ -416,6 +430,7 @@ export class Game {
     if (this.tutorial) this.tutorial.update(dt);
     this.tips.update(dt);
     this.quests.update(dt);
+    this.waypoint.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point

@@ -97,6 +97,33 @@ export const ICON = {
     g.closePath(); g.fill(); g.stroke();
     g.restore();
   },
+  // the marked target: a gold pin with its tip at (x, y)
+  mark(g, x, y, s) {
+    g.fillStyle = '#ffd24a';
+    g.strokeStyle = '#2a1a00';
+    g.lineWidth = Math.max(1.2, s * 0.14);
+    g.beginPath();
+    g.moveTo(x, y);
+    g.arc(x, y - s * 1.1, s * 0.62, Math.PI * 0.8, Math.PI * 2.2);
+    g.closePath();
+    g.fill(); g.stroke();
+    g.fillStyle = '#2a1a00';
+    g.beginPath(); g.arc(x, y - s * 1.1, s * 0.24, 0, Math.PI * 2); g.fill();
+  },
+  // points from the edge of the minimap towards the target (a = angle)
+  arrow(g, x, y, a, s) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.fillStyle = '#ffd24a';
+    g.strokeStyle = '#2a1a00';
+    g.lineWidth = Math.max(1.2, s * 0.12);
+    g.beginPath();
+    g.moveTo(s * 0.7, 0); g.lineTo(-s * 0.5, -s * 0.55); g.lineTo(-s * 0.2, 0); g.lineTo(-s * 0.5, s * 0.55);
+    g.closePath();
+    g.fill(); g.stroke();
+    g.restore();
+  },
   quest(g, x, y, s) {
     g.strokeStyle = '#ffd24a';
     g.lineWidth = Math.max(1.5, s * 0.3);
@@ -309,13 +336,42 @@ export class Minimap {
       });
     }
 
+    // the marked target: a pin, or an arrow on the edge with the distance
+    const wp = game.waypoint.pos();
+    if (wp && arena < 0) {
+      let x = X(wp.x), y = Y(wp.z);
+      const dx = x - half, dy = y - half, d = Math.hypot(dx, dy), lim = half - S / 9;
+      // the distance sits next to the symbol, towards the middle
+      let tx, ty;
+      if (d > lim) {
+        const ux = dx / d, uy = dy / d;
+        ICON.arrow(g, half + ux * lim, half + uy * lim, Math.atan2(dy, dx), S / 13);
+        tx = half + ux * (lim - S / 5.5); ty = half + uy * (lim - S / 7);
+      } else {
+        ICON.mark(g, x, y, S / 15);
+        tx = x; ty = y + S / 12;
+      }
+      const m = Math.round(Math.hypot(wp.x - P.x, wp.z - P.z));
+      g.font = `800 ${Math.round(S / 11)}px sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineWidth = Math.max(2, S / 40);
+      g.strokeStyle = 'rgba(10, 6, 18, 0.9)';
+      g.strokeText(m + ' m', tx, ty);
+      g.fillStyle = '#ffd24a';
+      g.fillText(m + ' m', tx, ty);
+    }
+
     ICON.player(g, X(P.x), Y(P.z), Math.atan2(P.dirZ, P.dirX), S / 18);
   }
 }
 
 // ---- the big map ---------------------------------------------------------------------
 // Opens over the game (which pauses). Three zoom steps: around the hunter,
-// the known world, the whole world.
+// the known world, the whole world. A tap on the map picks what is there (an
+// outpost, a gate, the camp, or just the spot); the side panel then shows it
+// with its buttons: travel there (captured outposts and the camp, from a safe
+// place) and mark it as the target. Without a pick the side shows the legend.
 const LEGEND = [
   ['you', (g, s) => ICON.player(g, s / 2, s / 2, -Math.PI / 2, s * 0.4)],
   ['camp', (g, s) => ICON.camp(g, s / 2, s / 2, s * 0.38)],
@@ -323,7 +379,7 @@ const LEGEND = [
   ['outpostEnemy', (g, s) => ICON.outpost(g, s / 2, s / 2, s * 0.32, false, false)],
   ['respawn', (g, s) => ICON.outpost(g, s / 2, s / 2, s * 0.25, true, true)],
   ['gate', (g, s) => ICON.gate(g, s / 2, s / 2, s * 0.24, 0x8a4dff, 0xff3050)],
-  ['chest', (g, s) => ICON.chest(g, s / 2, s / 2, s * 0.28)],
+  ['mark', (g, s) => ICON.mark(g, s / 2, s * 0.86, s * 0.32)],
   ['quest', (g, s) => ICON.quest(g, s / 2, s / 2, s * 0.32)],
 ];
 
@@ -335,7 +391,7 @@ function tap(el, fn) {
     e.stopPropagation();
     if (e.pointerId !== id) return;
     id = -1;
-    fn();
+    fn(e);
   });
   el.addEventListener('pointercancel', () => { id = -1; });
 }
@@ -345,6 +401,9 @@ class BigMap {
     this.game = game;
     this.isOpen = false;
     this.zoom = 1; // 0 around the hunter, 1 known world, 2 whole world
+    this.sel = null; // what was tapped: { kind: 'outpost' | 'gate' | 'spot', si | gi | x, z }
+    this.hits = []; // tappable symbols of the last drawing (canvas pixels)
+    this.view = null;
     this.el = document.createElement('div');
     this.el.id = 'bigmap';
     this.el.innerHTML = `<div class="bm-map"><canvas></canvas></div>
@@ -352,6 +411,8 @@ class BigMap {
         <b class="bm-title">${t('map.title')}</b>
         <small class="bm-zone"></small>
         <div class="bm-zoom"><button class="ap-btn" data-z="-1">−</button><span></span><button class="ap-btn" data-z="1">+</button></div>
+        <small class="bm-hint"></small>
+        <div class="bm-sel"></div>
         <div class="bm-legend">${LEGEND.map(([id]) => `<div><canvas data-l="${id}"></canvas><span>${t('map.l.' + id)}</span></div>`).join('')}</div>
         <small class="bm-explored"></small>
         <button class="ap-btn ghost bm-close">${t('menu.close')}</button>
@@ -359,24 +420,37 @@ class BigMap {
     root.appendChild(this.el);
     this.canvas = this.el.querySelector('.bm-map canvas');
     this.ctx = this.canvas.getContext('2d');
+    this.selEl = this.el.querySelector('.bm-sel');
     // taps work like the other HUD buttons (pressed and released on the same
     // element); a plain click does not reach the HUD on phones
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     tap(this.el.querySelector('.bm-close'), () => this.close());
-    tap(this.el.querySelector('.bm-map'), () => this.close());
+    tap(this.canvas, (e) => this.pick(e));
     this.el.querySelectorAll('[data-z]').forEach((b) => tap(b, () => {
       this.zoom = Math.max(0, Math.min(2, this.zoom - Number(b.dataset.z)));
       play('ui');
       this.draw();
     }));
+    // the buttons of the picked thing (the panel is rebuilt, so one listener)
+    let selDown = -1;
+    this.selEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); selDown = e.pointerId; });
+    this.selEl.addEventListener('pointerup', (e) => {
+      e.stopPropagation();
+      if (e.pointerId !== selDown) return;
+      selDown = -1;
+      const b = e.target.closest('[data-act]');
+      if (b && !b.disabled) this.act(b.dataset.act);
+    });
     this.onKey = (e) => {
       if (e.code === 'KeyM' || e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.close(); }
     };
   }
 
-  open() {
+  open(zoom) {
     if (this.isOpen || this.game.menu.isOpen) return;
     this.isOpen = true;
+    if (zoom !== undefined) this.zoom = zoom;
+    this.sel = null;
     this.game.setPaused(true);
     this.el.classList.add('on');
     window.addEventListener('keydown', this.onKey, true);
@@ -400,6 +474,100 @@ class BigMap {
     play('ui');
   }
 
+  // ---- picking -------------------------------------------------------------------
+  pick(e) {
+    const v = this.view;
+    if (!v) return;
+    const b = this.canvas.getBoundingClientRect();
+    const f = v.S / b.width, px = (e.clientX - b.left) * f, py = (e.clientY - b.top) * f;
+    if (Math.hypot(px - v.S / 2, py - v.S / 2) > v.S / 2) return; // outside the round map
+    // the nearest symbol in reach of the finger, else the spot itself
+    const reach = 26 * f;
+    let best = null, bd = Infinity;
+    for (const h of this.hits) {
+      const d = Math.hypot(px - h.x, py - h.y);
+      if (d < Math.max(reach, h.r * 1.4) && d < bd) { bd = d; best = h; }
+    }
+    this.sel = best ? { ...best.sel } : { kind: 'spot', x: v.cx + (px - v.S / 2) / v.k, z: v.cz + (py - v.S / 2) / v.k };
+    play('ui');
+    this.draw();
+  }
+
+  // world position of the pick
+  selPos(s = this.sel) {
+    const game = this.game;
+    if (!s) return null;
+    if (s.kind === 'outpost') return game.world.safes[s.si];
+    if (s.kind === 'gate') return game.gates.list[s.gi];
+    return s;
+  }
+
+  act(a) {
+    const game = this.game, s = this.sel, W = game.waypoint;
+    if (!s) return;
+    if (a === 'back') { this.sel = null; play('ui'); }
+    else if (a === 'travel') {
+      if (!game.player.inCamp || s.kind !== 'outpost') return;
+      this.close();
+      game.travel(s.si);
+      return;
+    } else if (a === 'mark') {
+      const p = this.selPos();
+      if (s.kind === 'gate') W.set({ kind: 'gate', gi: s.gi, gen: game.gates.list[s.gi].gen, x: p.x, z: p.z });
+      else if (s.kind === 'outpost') W.set({ kind: 'outpost', si: s.si, x: p.x, z: p.z });
+      else W.set({ kind: 'spot', x: Math.round(p.x), z: Math.round(p.z) });
+      game.hud.toast(t('map.marked'));
+    } else if (a === 'unmark') {
+      W.clear();
+      play('ui');
+    }
+    this.draw();
+  }
+
+  // the side panel for the pick
+  selPanel() {
+    const game = this.game, s = this.sel, P = game.player, W = game.waypoint;
+    if (!s) return '';
+    const p = this.selPos();
+    const dist = Math.round(Math.hypot(p.x - P.x, p.z - P.z));
+    let title = '', sub = '', extra = '';
+    const btns = [];
+    let marked = false;
+    if (s.kind === 'outpost') {
+      const sf = game.world.safes[s.si];
+      title = game.safeName(s.si);
+      marked = W.is('outpost', s.si);
+      if (sf.captured) {
+        sub = s.si === game.respawnIndex ? t('travel.respawn') : t('map.yourOutpost');
+        if (s.si === P.safeIndex) extra = t('travel.here');
+        else {
+          btns.push(`<button class="ap-btn" data-act="travel"${P.inCamp ? '' : ' disabled'}>${t('travel.go')}</button>`);
+          if (!P.inCamp) extra = t('map.travelFrom');
+        }
+      } else {
+        sub = t('map.enemyOutpost');
+      }
+    } else if (s.kind === 'gate') {
+      const gt = game.gates.list[s.gi], zone = CONFIG.world.zones[gt.zone];
+      title = t('map.gateName', { zone: t('zone.' + zone.id), diff: t('gate.diff.' + CONFIG.gates.difficulties[gt.diff].id) });
+      sub = t('map.gateLevel', { level: gt.level });
+      marked = W.is('gate', s.gi);
+    } else {
+      title = t('map.spot');
+      const zi = game.world.zoneIndexAt(Math.hypot(p.x, p.z));
+      sub = zi >= 0 && game.knownZones.has(zi) ? t('zone.' + CONFIG.world.zones[zi].id) : '';
+      const m = W.m && W.m.kind === 'spot' ? W.m : null;
+      marked = !!m && Math.hypot(m.x - p.x, m.z - p.z) < 8;
+    }
+    btns.push(marked
+      ? `<button class="ap-btn ghost" data-act="unmark">${t('map.unmark')}</button>`
+      : `<button class="ap-btn gold" data-act="mark">${t('map.mark')}</button>`);
+    return `<div class="bm-card"><div class="bm-ch"><b>${title}</b><button class="bm-x" data-act="back" aria-label="${t('menu.close')}">×</button></div>
+      <small>${[sub, t('map.dist', { n: dist })].filter(Boolean).join(' · ')}</small>
+      ${extra ? `<em>${extra}</em>` : ''}<div class="bm-btns">${btns.join('')}</div></div>`;
+  }
+
+  // ---- drawing -------------------------------------------------------------------
   draw() {
     const game = this.game, P = game.player, cv = this.canvas, g = this.ctx;
     const box = cv.parentElement.getBoundingClientRect();
@@ -422,24 +590,44 @@ class BigMap {
     g.clip();
     const { X, Y, k } = paintWorld(game, g, S, cx, cz, R, true, this.zoom === 0);
     g.restore();
+    this.view = { S, cx, cz, k };
+    const hits = this.hits = [];
+    const inside = (x, y, r) => Math.hypot(x - S / 2, y - S / 2) <= S / 2 - r;
 
-    // outposts of known zones
+    // the camp can be picked too (travel back)
+    hits.push({ x: X(0), y: Y(0), r: Math.max(S / 45, CONFIG.world.campRadius * k), sel: { kind: 'outpost', si: 0 } });
+    // outposts of known zones (enemy ones once their land is explored)
     const r = Math.max(4, Math.min(S / 40, 30 * k));
     game.world.safes.forEach((s, si) => {
       if (si === 0 || !game.knownZones.has(s.zone)) return;
       if (!s.captured && !game.fog.explored(s.x, s.z)) return; // still in the fog
       const x = X(s.x), y = Y(s.z);
-      if (Math.hypot(x - S / 2, y - S / 2) > S / 2 - r) return;
+      if (!inside(x, y, r)) return;
       ICON.outpost(g, x, y, r, s.captured, si === game.respawnIndex);
+      hits.push({ x, y, r, sel: { kind: 'outpost', si } });
     });
-    // the open gates of the zone you are in
-    for (const gt of game.gates.list) {
-      if (!gt.open || gt.abyss || gt.zone !== game.curZone) continue;
-      const x = X(gt.x), y = Y(gt.z);
-      if (Math.hypot(x - S / 2, y - S / 2) > S / 2) continue;
-      ICON.gate(g, x, y, Math.max(4, S / 70) * (1 + gt.diff * 0.15), zones[gt.zone].gateColor, CONFIG.gates.difficulties[gt.diff].color);
-    }
+    // every open gate of the zones you know, so you can head for it
+    game.gates.list.forEach((gt, gi) => {
+      if (!gt.open || gt.abyss || !game.knownZones.has(gt.zone)) return;
+      const x = X(gt.x), y = Y(gt.z), s = Math.max(4, S / 70) * (1 + gt.diff * 0.15);
+      if (!inside(x, y, s)) return;
+      ICON.gate(g, x, y, s, zones[gt.zone].gateColor, CONFIG.gates.difficulties[gt.diff].color);
+      hits.push({ x, y, r: s * 1.3, sel: { kind: 'gate', gi } });
+    });
     paintLabels(game, g, S, X(0), Y(0), k);
+    // the target
+    const wp = game.waypoint.pos();
+    if (wp && inside(X(wp.x), Y(wp.z), 0)) ICON.mark(g, X(wp.x), Y(wp.z), Math.max(7, S / 40));
+    // what was tapped
+    const sp = this.selPos();
+    if (sp) {
+      const x = X(sp.x), y = Y(sp.z), rr = Math.max(10, S / 28);
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = Math.max(2, S / 260);
+      g.setLineDash([rr * 0.5, rr * 0.35]);
+      g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.stroke();
+      g.setLineDash([]);
+    }
     // the hunter, with a ring so it is easy to find
     const px = X(P.x), py = Y(P.z), pr = Math.max(7, S / 45);
     g.strokeStyle = 'rgba(255, 255, 255, 0.8)';
@@ -455,5 +643,8 @@ class BigMap {
     this.el.querySelector('.bm-zone').textContent = t('zone.' + z.id) + ' · ' + t('map.rank', { rank: z.rank });
     this.el.querySelector('.bm-zoom span').textContent = t('map.zoom' + this.zoom);
     this.el.querySelector('.bm-explored').textContent = t('map.explored', { pct: Math.round(game.fog.share() * 100) });
+    this.el.querySelector('.bm-hint').textContent = this.sel ? '' : t(P.inCamp ? 'map.hintTravel' : 'map.hint');
+    this.selEl.innerHTML = this.selPanel();
+    this.el.classList.toggle('picked', !!this.sel);
   }
 }

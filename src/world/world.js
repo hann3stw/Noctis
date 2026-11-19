@@ -57,16 +57,21 @@ export class World {
     this.lastCz = 1e9;
     this.pending = false;
 
-    // Safe places: the camp (index 0) and 4 outposts per zone at north, east,
-    // south and west, half way through the ring.
+    // Safe places: the camp (index 0) and 4 outposts per zone, 90 degrees
+    // apart. Every zone turns its four by its own random angle (up to 40
+    // degrees, so dir still names the nearest compass point: 0 north, 1 east,
+    // 2 south, 3 west) and each sits a little nearer or further than the middle
+    // of the ring, so the map does not look like a cross.
     // captured: outposts start in enemy hands and only count as safe once taken
     this.safes = [{ x: 0, z: 0, r: this.campRadius, zone: -1, dir: -1, captured: true }];
-    const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // north, east, south, west
+    const orng = mulberry32(hashSeed(seed, 4400, 1));
     this.zones.forEach((zone, zi) => {
-      const r = (zone.inner + zone.outer) / 2;
-      DIRS.forEach(([dx, dz], d) => {
-        this.safes.push({ x: dx * r, z: dz * r, r: CONFIG.outposts.radius, zone: zi, dir: d, captured: false });
-      });
+      const turn = (orng() * 2 - 1) * (Math.PI * 0.22);
+      for (let d = 0; d < 4; d++) {
+        const a = -Math.PI / 2 + d * (Math.PI / 2) + turn;
+        const r = (zone.inner + zone.outer) / 2 + (orng() * 2 - 1) * (zone.outer - zone.inner) * 0.18;
+        this.safes.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, r: CONFIG.outposts.radius, zone: zi, dir: d, captured: false });
+      }
     });
 
     // Gate sites: places in every zone where a gate can open. They are kept
