@@ -327,6 +327,19 @@ const LEGEND = [
   ['quest', (g, s) => ICON.quest(g, s / 2, s / 2, s * 0.32)],
 ];
 
+// pressed and released on the same element
+function tap(el, fn) {
+  let id = -1;
+  el.addEventListener('pointerdown', (e) => { e.stopPropagation(); id = e.pointerId; });
+  el.addEventListener('pointerup', (e) => {
+    e.stopPropagation();
+    if (e.pointerId !== id) return;
+    id = -1;
+    fn();
+  });
+  el.addEventListener('pointercancel', () => { id = -1; });
+}
+
 class BigMap {
   constructor(game, root) {
     this.game = game;
@@ -346,11 +359,12 @@ class BigMap {
     root.appendChild(this.el);
     this.canvas = this.el.querySelector('.bm-map canvas');
     this.ctx = this.canvas.getContext('2d');
+    // taps work like the other HUD buttons (pressed and released on the same
+    // element); a plain click does not reach the HUD on phones
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
-    this.el.querySelector('.bm-close').addEventListener('click', () => this.close());
-    this.el.querySelector('.bm-map').addEventListener('click', () => this.close());
-    this.el.querySelectorAll('[data-z]').forEach((b) => b.addEventListener('click', (e) => {
-      e.stopPropagation();
+    tap(this.el.querySelector('.bm-close'), () => this.close());
+    tap(this.el.querySelector('.bm-map'), () => this.close());
+    this.el.querySelectorAll('[data-z]').forEach((b) => tap(b, () => {
       this.zoom = Math.max(0, Math.min(2, this.zoom - Number(b.dataset.z)));
       play('ui');
       this.draw();
