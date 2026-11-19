@@ -486,6 +486,9 @@ export class Enemies {
     if (!this.alive[i]) return;
     const fx = this.game.effects;
     if (this.vuln[i] > 0) amount = Math.round(amount * (1 + CONFIG.skills.huntersMark.vuln));
+    // a monster mastered in the bestiary takes a little more
+    const bm = this.game.bestiary ? this.game.bestiary.mult[this.type[i]] : 1;
+    if (bm !== 1) amount = Math.round(amount * bm);
     // shield: hits from the front are blocked, unless it is attacking right now
     let blocked = false;
     const st = this.state[i];

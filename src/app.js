@@ -411,6 +411,7 @@ export class App {
     else if (cur === 'settings') this.screens.show('pause');
     else if (cur === 'editor') this.closeEditorInCamp(null);
     else if (g.menu.isOpen) g.menu.close();
+    else if (g.minimap && g.minimap.big.isOpen) g.minimap.big.close();
     else this.openPause();
   }
 

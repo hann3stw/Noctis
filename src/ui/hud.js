@@ -56,6 +56,7 @@ export class Hud {
             <div class="xp"><div class="bar"><i></i></div></div>
           </div>
         </div>
+        <div class="qtrack"></div>
         <div class="zone"><b></b><small></small></div>
         <div class="zone-card"><small></small><b></b><i></i></div>
         <div class="boss-bar"><b></b><div class="bar"><i></i><em class="ph"></em><em class="ph"></em><span></span></div></div>
@@ -118,6 +119,14 @@ export class Hud {
       ],
     };
     this.hud = $('#hud');
+    // the daily quests, small on the left; a tap opens them in the menu
+    this.qEl = $('.qtrack');
+    this.qKey = '';
+    this.qT = 0;
+    this.qEl.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      if (!game.menu.isOpen && game.gates.active < 0) { play('ui'); game.menu.open('quests'); }
+    });
     this.hpFill = $('.bar.hp i');
     this.hpText = $('.bar.hp span');
     this.zoneName = $('.zone b');
@@ -562,8 +571,25 @@ export class Hud {
     if (on) this.streakEl.style.setProperty('--left', String(Math.max(0, g.streakT / S.window)));
   }
 
+  updateQuests(dt) {
+    this.qEl.classList.toggle('low', this.streakEl.classList.contains('on'));
+    if ((this.qT -= dt) > 0) return;
+    this.qT = 0.4;
+    const game = this.game, Q = game.quests;
+    const hide = game.gates.active >= 0 || !!game.tutorial || !!game.tips.cur || game.player.dead;
+    const open = Q.list.filter((q) => !q.claimed);
+    let key = hide || !open.length ? '' : open.map((q) => q.kind + q.have + q.done).join();
+    if (key === this.qKey) return;
+    this.qKey = key;
+    this.qEl.classList.toggle('on', !!key);
+    if (!key) return;
+    this.qEl.innerHTML = `<small>${t('quest.track')}</small>` + open.map((q) =>
+      `<div class="d${q.d}${q.done ? ' done' : ''}"><span>${Q.text(q)}</span><b>${q.done ? t('quest.ready') : q.have + '/' + q.n}</b></div>`).join('');
+  }
+
   update(dt) {
     const game = this.game, P = game.player;
+    this.updateQuests(dt);
     this.updateStreak();
     this.updateArmy(dt);
     this.updateSkills();
@@ -622,7 +648,7 @@ export class Hud {
       this.rankLabel.textContent = t('hud.rankShort', { rank: RANKS[Math.min(RANKS.length - 1, game.rankIndex)] });
     }
     // "!" on the menu when there is something new (points, items, skills)
-    const news = P.hasNews();
+    const news = P.hasNews() || game.quests.ready() > 0 || game.bestiary.fresh.size > 0;
     if (news !== this.vPoints) {
       this.vPoints = news;
       this.menuBadge.textContent = news ? '!' : '';

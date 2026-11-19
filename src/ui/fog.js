@@ -1,0 +1,126 @@
+// Fog of the map: the world is cut into squares that are uncovered when the
+// hunter comes near. The map (minimap and big map) shows unexplored squares
+// dark. The uncovered squares are kept as a small picture (one pixel per
+// square, transparent = explored) that the maps lay over the land, smoothly
+// scaled, so the edge of the fog looks soft. Saved with the world as bits.
+import { CONFIG } from '../config.js';
+
+const DARK = [9, 6, 16, 238];
+
+export class Fog {
+  constructor(game, saved) {
+    this.game = game;
+    const zones = CONFIG.world.zones;
+    this.cell = CONFIG.minimap.fogCell;
+    this.R = zones[zones.length - 1].outer + CONFIG.world.voidWidth; // the map reaches this far
+    this.n = Math.ceil((this.R * 2) / this.cell);
+    this.bits = new Uint8Array(this.n * this.n);
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = this.canvas.height = this.n;
+    this.ctx = this.canvas.getContext('2d');
+    this.img = this.ctx.createImageData(this.n, this.n);
+    const d = this.img.data;
+    for (let i = 0; i < d.length; i += 4) { d[i] = DARK[0]; d[i + 1] = DARK[1]; d[i + 2] = DARK[2]; d[i + 3] = DARK[3]; }
+    this.t = 0;
+    this.dirty = true;
+    this.count = 0;
+    if (saved === 'legacy') this.revealKnown();
+    else if (typeof saved === 'string') this.load(saved);
+    this.revealAround(0, 0, CONFIG.world.campRadius + 30); // the camp is always known
+    this.flush();
+  }
+
+  idx(x, z) {
+    const cx = Math.floor((x + this.R) / this.cell), cz = Math.floor((z + this.R) / this.cell);
+    if (cx < 0 || cz < 0 || cx >= this.n || cz >= this.n) return -1;
+    return cz * this.n + cx;
+  }
+
+  explored(x, z) {
+    const i = this.idx(x, z);
+    return i >= 0 && this.bits[i] === 1;
+  }
+
+  set(i) {
+    if (this.bits[i]) return;
+    this.bits[i] = 1;
+    this.img.data[i * 4 + 3] = 0;
+    this.count++;
+    this.dirty = true;
+  }
+
+  revealAround(x, z, r) {
+    const c = this.cell, r2 = r * r;
+    const x0 = Math.floor((x - r + this.R) / c), x1 = Math.floor((x + r + this.R) / c);
+    const z0 = Math.floor((z - r + this.R) / c), z1 = Math.floor((z + r + this.R) / c);
+    for (let cz = Math.max(0, z0); cz <= Math.min(this.n - 1, z1); cz++) {
+      for (let cx = Math.max(0, x0); cx <= Math.min(this.n - 1, x1); cx++) {
+        const wx = (cx + 0.5) * c - this.R - x, wz = (cz + 0.5) * c - this.R - z;
+        if (wx * wx + wz * wz <= r2) this.set(cz * this.n + cx);
+      }
+    }
+  }
+
+  // worlds from before the fog: every zone they already know is uncovered
+  revealKnown() {
+    const zones = CONFIG.world.zones, known = this.game.knownZones, c = this.cell;
+    for (let cz = 0; cz < this.n; cz++) {
+      for (let cx = 0; cx < this.n; cx++) {
+        const r = Math.hypot((cx + 0.5) * c - this.R, (cz + 0.5) * c - this.R);
+        const zi = zones.findIndex((z) => r < z.outer);
+        if (zi >= 0 && known.has(zi)) this.set(cz * this.n + cx);
+      }
+    }
+  }
+
+  // share of the world (inside the last zone) that is explored
+  share() {
+    const zones = CONFIG.world.zones, outer = zones[zones.length - 1].outer;
+    return Math.min(1, (this.count * this.cell * this.cell) / (Math.PI * outer * outer));
+  }
+
+  flush() {
+    if (!this.dirty) return;
+    this.dirty = false;
+    this.ctx.putImageData(this.img, 0, 0);
+  }
+
+  update(dt) {
+    if ((this.t -= dt) > 0) return;
+    this.t = 0.25;
+    const P = this.game.player;
+    if (this.game.gates.active < 0 && !P.dead) this.revealAround(P.x, P.z, CONFIG.minimap.fogReveal);
+  }
+
+  // Draws the fog over a map: (cx, cz) world point in the middle, k pixels
+  // per world unit, size S.
+  draw(g, cx, cz, k, S) {
+    this.flush();
+    const c = this.cell, half = S / 2;
+    // the world square seen, in fog pixels
+    const sx = (cx - half / k + this.R) / c, sz = (cz - half / k + this.R) / c, sw = S / k / c;
+    g.save();
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(this.canvas, sx, sz, sw, sw, 0, 0, S, S);
+    g.restore();
+  }
+
+  serialize() {
+    // 8 squares per byte, as text
+    const out = new Uint8Array(Math.ceil(this.bits.length / 8));
+    for (let i = 0; i < this.bits.length; i++) if (this.bits[i]) out[i >> 3] |= 1 << (i & 7);
+    let s = '';
+    for (let i = 0; i < out.length; i += 4096) s += String.fromCharCode.apply(null, out.subarray(i, i + 4096));
+    return btoa(s);
+  }
+
+  load(text) {
+    try {
+      const s = atob(text);
+      for (let i = 0; i < this.bits.length && (i >> 3) < s.length; i++) {
+        if (s.charCodeAt(i >> 3) & (1 << (i & 7))) this.set(i);
+      }
+    } catch (_) { this.revealKnown(); }
+  }
+}

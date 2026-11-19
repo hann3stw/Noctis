@@ -595,8 +595,45 @@ export const CONFIG = {
   },
 
   minimap: {
-    localRadius: 110, // world units shown around the player (tap to see the whole world)
+    localRadius: 110, // world units shown around the player (tap for the big map)
     refresh: 0.1, // seconds between two redraws
+    fogCell: 24, // the map is uncovered in squares of this size ...
+    fogReveal: 48, // ... within this distance of the hunter
+  },
+
+  // Daily quests: three a day (easy, medium, hard), new ones at midnight. They
+  // are about the zone of your rank. n = how many, per difficulty.
+  //   essence   per difficulty, times (zone + 1)
+  //   rarity    the least rarity of the item, per difficulty
+  //   bonus     the least rarity of the extra item when all three are done
+  quests: {
+    essence: [20, 45, 90],
+    rarity: [1, 2, 3],
+    bonus: 3,
+    kinds: {
+      kill: { n: [25, 50, 100] }, // monsters of the zone
+      type: { n: [10, 20, 40] }, // one kind of monster of the zone
+      elite: { n: [3, 6, 12] }, // elites and champions anywhere
+      arise: { n: [3, 6, 12] }, // shadows raised
+      chest: { n: [2, 4, 6] }, // chests opened
+      stage: { n: [3, 6, 10] }, // gate stages cleared
+      gate: { n: [1, 1, 1] }, // a gate of the given difficulty or harder
+      outpost: { n: [1, 1, 1] }, // an outpost captured
+    },
+    pools: [
+      ['kill', 'type', 'arise', 'chest'],
+      ['type', 'elite', 'stage', 'outpost', 'gate'],
+      ['gate', 'elite', 'stage', 'kill'],
+    ],
+  },
+
+  // Bestiary: every kind of monster gets a page that fills with kills (yours
+  // and your army's). steps = kills for name, behaviour, mastered; a mastered
+  // kind takes bonus more damage from you and your army.
+  bestiary: {
+    steps: [1, 25, 100],
+    bossSteps: [1, 3, 5],
+    bonus: 0.03,
   },
 
   // ---- shadow army --------------------------------------------------------

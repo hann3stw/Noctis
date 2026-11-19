@@ -317,6 +317,7 @@ export class Gates {
     P.essence += ess;
     game.hud.toast(t('toast.essence', { n: ess }));
     if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
+    game.quests.add('gate', { diff: gate.diff });
     game.hud.banner(t('toast.gateCleared'), t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
     this.exitOpen = true;
     this.exit.visible = true;
@@ -413,6 +414,7 @@ export class Gates {
     P.essence += ess;
     game.hud.toast(t('gate.stageCleared', { n: this.stageI + 1 }) + ' · ' + t('toast.essence', { n: ess }));
     play('stage');
+    game.quests.add('stage');
     this.stagePause = CONFIG.gates.stagePause;
   }
 

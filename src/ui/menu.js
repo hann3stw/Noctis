@@ -7,6 +7,7 @@ import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
+import { msToMidnight } from '../core/quests.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
@@ -17,7 +18,7 @@ import {
   upgradeCost, dismantleValue, itemPower, slotOf,
 } from '../core/items.js';
 
-const TABS = ['gear', 'stats', 'skills', 'army', 'look'];
+const TABS = ['gear', 'stats', 'skills', 'army', 'quests', 'bestiary', 'look'];
 
 const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="currentColor"/></svg>`;
 const ICONS = {
@@ -63,6 +64,7 @@ export class Menu {
     this.bulkDone = '';
     this.flt = newFilter(); // stays while the game runs
     this.fpanel = false; // the filter panel is shown
+    this.selBeast = null; // monster shown in the bestiary
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
@@ -99,6 +101,7 @@ export class Menu {
     const P = this.game.player;
     if (tab === 'gear') for (const it of P.inventory) delete it.n;
     if (tab === 'skills') P.newSkills.length = 0;
+    if (tab === 'bestiary') this.game.bestiary.fresh.clear();
   }
 
   close() {
@@ -176,6 +179,10 @@ export class Menu {
         this.selItem = null;
         this.confirmId = 0;
       }
+    } else if (act === 'claim') {
+      this.game.quests.claim(Number(target.dataset.k));
+    } else if (act === 'beast') {
+      this.selBeast = target.dataset.id;
     } else if (act === 'stat') {
       P.spendPoint(target.dataset.stat);
     } else if (act === 'mastery') {
@@ -194,6 +201,8 @@ export class Menu {
       stats: P.points + P.mastery.pts > 0 ? P.points + P.mastery.pts : '',
       gear: P.inventory.some((it) => it.n) ? '!' : '',
       skills: P.newSkills.length ? '!' : '',
+      quests: this.game.quests.ready() || '',
+      bestiary: this.game.bestiary.fresh.size ? '!' : '',
     };
     const tabs = TABS.map((id) => {
       const badge = news[id] ? `<i>${news[id]}</i>` : '';
@@ -201,7 +210,7 @@ export class Menu {
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     this.el.innerHTML = `
-      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && this.tab !== 'army' ? t('menu.campOnly') : ''}</span>
+      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
         <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
       <div class="mn-body"></div>`;
     const body = this.el.querySelector('.mn-body');
@@ -209,7 +218,8 @@ export class Menu {
       body.appendChild(this.army.el);
       this.army.render();
     } else {
-      const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look() };
+      const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look(),
+        quests: () => this.questsView(), bestiary: () => this.bestiaryView() };
       body.innerHTML = views[this.tab]();
     }
     for (const [key, top] of scroll) {
@@ -444,6 +454,82 @@ export class Menu {
           <small class="s-rank">${rank}</small>
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
+  }
+
+  // ---- daily quests -------------------------------------------------------------
+  questsView() {
+    const Q = this.game.quests, C = CONFIG.quests;
+    const ms = msToMidnight(), h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    const cards = Q.list.map((q, k) => {
+      const w = Math.round((q.have / q.n) * 100);
+      const btn = q.claimed ? `<span class="q-got">${t('quest.claimed')}</span>`
+        : q.done ? `<button class="ap-btn" data-act="claim" data-k="${k}">${t('quest.claim')}</button>`
+          : `<span class="q-n">${q.have} / ${q.n}</span>`;
+      return `<div class="q-card d${q.d}${q.done ? ' done' : ''}${q.claimed ? ' got' : ''}">
+        <em>${t('quest.d' + q.d)}</em><b>${Q.text(q)}</b>
+        <div class="q-bar"><i style="width:${w}%"></i></div>
+        <div class="q-foot"><small>${t('quest.reward', { n: Q.essence(q), rarity: t('rarity.' + C.rarity[q.d]) })}</small>${btn}</div></div>`;
+    }).join('');
+    const all = Q.list.filter((q) => q.claimed).length;
+    return `<div class="quests" data-scroll="quests">
+      <div class="q-head"><b>${t('quest.title')}</b><small>${t('quest.renew', { h, m })}</small></div>
+      <div class="q-list">${cards}</div>
+      <div class="q-bonus${Q.bonus ? ' got' : ''}">${Q.bonus ? t('quest.bonusDone') : t('quest.bonus', { n: all, rarity: t('rarity.' + C.bonus) })}</div></div>`;
+  }
+
+  // ---- bestiary ----------------------------------------------------------------
+  // Left: every monster by zone (unknown ones as "???"). Right: the page of the
+  // monster picked: what it is, how it fights (from step 2), mastery.
+  bestiaryView() {
+    const B = this.game.bestiary, zones = CONFIG.world.zones, all = CONFIG.enemies.types;
+    const ids = Object.keys(all);
+    const zoneOf = (id) => zones.findIndex((z) => z.enemyTypes.includes(id) || z.boss === id);
+    if (!this.selBeast || !all[this.selBeast]) this.selBeast = ids.find((id) => B.step(id) > 0) || ids[0];
+    const card = (id) => {
+      const st = B.step(id), n = B.kills[id] || 0, nx = B.next(id);
+      const prev = st > 0 ? B.steps(id)[st - 1] : 0;
+      const w = nx ? Math.round(((n - prev) / (nx - prev)) * 100) : 100;
+      const stars = [1, 2, 3].map((k) => `<s class="${st >= k ? 'on' : ''}"></s>`).join('');
+      return `<div class="b-card st${st}${all[id].boss ? ' boss' : ''}${this.selBeast === id ? ' sel' : ''}" data-act="beast" data-id="${id}">
+        <b>${st ? t('enemy.' + id) : '???'}</b><span class="b-stars">${stars}</span>
+        <div class="b-bar"><i style="width:${w}%"></i></div>${B.fresh.has(id) ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
+    };
+    let list = '';
+    zones.forEach((z, zi) => {
+      const mine = ids.filter((id) => zoneOf(id) === zi);
+      if (!mine.length) return;
+      const known = this.game.knownZones.has(zi) || mine.some((id) => B.step(id) > 0);
+      list += `<div class="b-zone"><h4>${known ? t('zone.' + z.id) : t('best.unknownZone', { rank: z.rank })}</h4><div class="b-grid">${mine.map(card).join('')}</div></div>`;
+    });
+    const rest = ids.filter((id) => zoneOf(id) < 0);
+    if (rest.length) list += `<div class="b-zone"><h4>${t('best.other')}</h4><div class="b-grid">${rest.map(card).join('')}</div></div>`;
+    const c = B.counts();
+    return `<div class="bestiary">
+      <div class="b-left" data-scroll="bestiary"><div class="b-sum">${t('best.sum', { seen: c.seen, all: c.all, mastered: c.mastered })}</div>${list}</div>
+      <div class="b-right" data-scroll="beast">${this.beastPage(this.selBeast, zoneOf(this.selBeast))}</div></div>`;
+  }
+
+  beastPage(id, zi) {
+    const B = this.game.bestiary, def = CONFIG.enemies.types[id], st = B.step(id), n = B.kills[id] || 0;
+    if (!st) return `<div class="b-page locked"><b>???</b><p>${t('best.locked')}</p></div>`;
+    const zone = zi >= 0 ? t('zone.' + CONFIG.world.zones[zi].id) : t('best.other');
+    const kind = def.boss ? t('best.b.boss') : t('best.b.' + def.behavior);
+    const role = def.shadowRole ? t('best.role', { role: t('role.' + def.shadowRole) }) : '';
+    let how = '';
+    if (st >= 2) {
+      how = def.trait
+        ? `<h5>${t('tip.trait.' + def.trait)}</h5><p>${t('tip.trait.' + def.trait + '.text')}</p>`
+        : `<h5>${t('best.how')}</h5><p>${t('best.tip.' + (def.boss ? 'boss' : def.behavior))}</p>`;
+    } else {
+      how = `<p class="b-more">${t('best.moreAt', { n: B.next(id) - n })}</p>`;
+    }
+    const mast = st >= 3
+      ? `<div class="b-mast on">${t('best.masteredText', { pct: Math.round(CONFIG.bestiary.bonus * 100) })}</div>`
+      : `<div class="b-mast">${t('best.masterAt', { n: B.steps(id)[2], pct: Math.round(CONFIG.bestiary.bonus * 100) })}</div>`;
+    return `<div class="b-page${def.boss ? ' boss' : ''}"><b>${t('enemy.' + id)}</b>
+      <small>${zone} · ${kind}</small>
+      <div class="b-kills">${t('best.kills', { n })}</div>${role ? `<small>${role}</small>` : ''}
+      ${how}${mast}</div>`;
   }
 
   // ---- appearance ---------------------------------------------------------------

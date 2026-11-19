@@ -117,6 +117,7 @@ export class Loot {
 
   openChest(i) {
     const C = CONFIG.loot.chest, P = this.game.player;
+    this.game.quests.add('chest');
     this.cT[i] = C.respawn;
     this.chestDirty = true;
     const n = C.items[0] + ((Math.random() * (C.items[1] - C.items[0] + 1)) | 0);

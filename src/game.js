@@ -31,6 +31,9 @@ import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
 import { Tips, BASIC_TIPS } from './ui/tips.js';
+import { Fog } from './ui/fog.js';
+import { Quests } from './core/quests.js';
+import { Bestiary } from './core/bestiary.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { play } from './core/sfx.js';
@@ -113,6 +116,8 @@ export class Game {
     this.zones = new Zones(this);
     this.loot = new Loot(this);
     this.abyss = new Abyss(this, save && save.abyss);
+    this.quests = new Quests(this, save && save.quests);
+    this.bestiary = new Bestiary(this, save && save.bestiary);
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
@@ -131,6 +136,9 @@ export class Game {
       for (const si of this.discovered) this.knownZones.add(this.world.safes[si].zone);
       CONFIG.world.zones.forEach((z, i) => { if (this.defeatedGates.includes(z.id)) this.knownZones.add(i); });
     }
+    // the fog of the map (older worlds: the zones they know are uncovered)
+    this.fog = new Fog(this, save ? save.fog || 'legacy' : null);
+    if (!this.quests.list.length || this.quests.day < 0) this.quests.make();
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
     this.hud.syncSkills();
@@ -205,6 +213,9 @@ export class Game {
       tutorial: this.tutorial ? this.tutorial.step : -1,
       tutorialV: 2,
       tips: this.tips.serialize(),
+      quests: this.quests.serialize(),
+      bestiary: this.bestiary.serialize(),
+      fog: this.fog.serialize(),
       gates: this.gates.serialize(),
       respawnIndex: this.respawnIndex,
       kills: this.kills,
@@ -404,6 +415,7 @@ export class Game {
     this.hud.update(dt);
     if (this.tutorial) this.tutorial.update(dt);
     this.tips.update(dt);
+    this.quests.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point
@@ -452,6 +464,7 @@ export class Game {
     const zone = CONFIG.world.zones[s.zone];
     this.markCaptured(si);
     this.capture.si = -1;
+    this.quests.add('outpost');
     // the chest opens
     for (let k = 0; k < C.chestItems; k++) {
       const a = (k / C.chestItems) * Math.PI * 2;
@@ -711,6 +724,7 @@ export class Game {
     const u = army.add(this.enemies.types[souls.type[i]].id, souls.tier[i], souls.x[i], souls.z[i], undefined, souls.zone[i], souls.plv[i]);
     if (!u) return;
     souls.remove(i);
+    this.quests.add('arise');
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
     this.effects.ring(u.x, u.z, 0.5, 4, this.appearance.aura, 0.55);
@@ -738,6 +752,8 @@ export class Game {
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
     if (tier === 3) sting('victory'); // a boss falls
+    this.bestiary.add(E.type[i]);
+    this.quests.kill(E.types[E.type[i]].id, zi, tier);
     const level = E.lvl[i] + tierLevels(zi, tier);
     this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]);
     this.army.grantXp(src, xp);
