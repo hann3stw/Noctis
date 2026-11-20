@@ -545,7 +545,7 @@ export class Menu {
     const own = 'path.' + id + '.rule';
     if (n.rule) {
       if (t(own) !== own) out.push(`<li class="rule">${t(own)}</li>`);
-      else for (const k in n.rule) { if (t('path.r.' + k) !== 'path.r.' + k && !['slotCapMax', 'slotCapPlus'].includes(k)) out.push(`<li class="${['reviveCostMult', 'manaRegenMult', 'hpRegenMult'].includes(k) ? 'neg' : 'rule'}">${t('path.r.' + k)}</li>`); }
+      else for (const k in n.rule) { if (t('path.r.' + k) !== 'path.r.' + k && !['slotCapMax', 'slotCapPlus'].includes(k)) { const rv = n.rule[k], v = k === 'killMana' ? Math.round(rv * 100) : k === 'selfXp' || k === 'reviveCostMult' ? Math.round((rv - 1) * 100) : rv; out.push(`<li class="${['reviveCostMult', 'manaRegenMult', 'hpRegenMult'].includes(k) ? 'neg' : 'rule'}">${t('path.r.' + k, { v })}</li>`); } }
     }
     return out.join('');
   }

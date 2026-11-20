@@ -637,7 +637,7 @@ export const CONFIG = {
   // slotCapMax = the army can never be bigger than this; picking it needs an army that fits). stage 1 is offered from rank D (index 1).
   // Later stages build on the line of the nodes you already picked.
   paths: {
-    stages: [1, 3], // rank indexes (0 = E) at which a pick is due (stage 1 at D, stage 2 at B)
+    stages: [1, 3, 5], // rank indexes (0 = E) at which a pick is due (stage 1 at D, stage 2 at B, stage 3 at S)
     respec: 250, // essence x (rank + 1) to take every pick back
     lines: ['commander', 'blade', 'mage'],
     nodes: {
@@ -664,6 +664,22 @@ export const CONFIG = {
       lastStand: { line: 'mage', stage: 2, bonus: { damageTaken: -0.2, hp: 0.2, damage: -0.1 }, req: { deathsMin: 3 }, like: { deaths: 1 } },
       huntersCall: { line: 'blade', stage: 2, bonus: { damage: 0.25, crit: 0.06, hp: -0.1 }, req: { eliteMin: 0.05 }, like: { elite: 1 } },
       archmage: { line: 'mage', stage: 2, bonus: { mana: 0.5, skillDamage: 0.25, cooldown: 0.1, damage: -0.15 }, req: { castMin: 4 }, like: { caster: 1 } },
+      // Stage 3: specializations. req.lineMin = picks needed per line (a line picked twice, or two lines for the hybrids)
+      legion: { line: 'commander', stage: 3, bonus: { armySlots: 6, armyDamage: 0.25, damage: -0.25, speed: -0.1 }, req: { lineMin: { commander: 2 } }, like: { army: 1 } },
+      warlordCommand: { line: 'commander', stage: 3, bonus: { armyHp: 0.4, armyDamage: 0.2, hp: -0.2 }, req: { armyMin: 20 }, like: { officers: 1, army: 0.5 } },
+      eternalRanks: { line: 'commander', stage: 3, bonus: { armyHp: 0.2, armyDamage: -0.2 }, rule: { reviveCostMult: 0.5 }, like: { lossy: 1, army: 0.4 } },
+      thousandCuts: { line: 'blade', stage: 3, bonus: { reload: 0.3, crit: 0.15, damage: 0.2, hp: -0.25, damageTaken: 0.2 }, req: { lineMin: { blade: 2 } }, like: { critty: 1, dodger: 0.6, hunter: 0.4 } },
+      loneReaper: { line: 'blade', stage: 3, bonus: { damage: 0.5, crit: 0.1 }, rule: { slotCapMax: 8, selfXp: 1.5 }, req: { hunterMin: 0.5 }, like: { hunter: 1 } },
+      phantomStep: { line: 'blade', stage: 3, bonus: { speed: 0.2, reload: 0.1, killHeal: 0.04, mana: -0.3, skillDamage: -0.3 }, like: { sprint: 1, dodger: 0.5 } },
+      soulTempest: { line: 'mage', stage: 3, bonus: { skillDamage: 0.6, ultCharge: 0.4, cooldown: 0.2, hp: -0.2 }, rule: { manaRegenMult: 0.6 }, req: { lineMin: { mage: 2 } }, like: { caster: 1 } },
+      necroticAegis: { line: 'mage', stage: 3, bonus: { hp: 0.3, damageTaken: -0.2, armyHp: 0.2, skillDamage: -0.3, damage: -0.2 }, like: { deaths: 1, lossy: 0.5 } },
+      lichForm: { line: 'mage', stage: 3, bonus: { mana: 1.0, hp: -0.3 }, rule: { killMana: 0.06, hpRegenMult: 0.3 }, like: { caster: 0.5, deaths: -0.5 } },
+      spellblade: { line: 'blade', stage: 3, bonus: { damage: 0.25, skillDamage: 0.25, crit: 0.08, hp: -0.2, armyHp: -0.2 }, req: { lineMin: { blade: 1, mage: 1 } }, like: { caster: 0.7, hunter: 0.7 } },
+      necromancerKing: { line: 'commander', stage: 3, bonus: { armySlots: 3, armyHp: 0.2, skillDamage: 0.2, damage: -0.3 }, rule: { killMana: 0.03 }, req: { lineMin: { commander: 1, mage: 1 } }, like: { army: 0.7, caster: 0.7 } },
+      boneMarshal: { line: 'commander', stage: 3, bonus: { armyDamage: 0.15, damage: 0.15, armySlots: 2, hp: -0.15, speed: -0.05 }, req: { lineMin: { commander: 1, blade: 1 } }, like: { army: 0.5, hunter: 0.5, officers: 0.5 } },
+      // only for some ways to play
+      gatecrasher: { line: 'blade', stage: 3, bonus: { damage: 0.2, hp: 0.2, damageTaken: -0.1, speed: -0.1 }, req: { gateMin: 0.25 }, like: { gates: 1 } },
+      bossBane: { line: 'blade', stage: 3, bonus: { damage: 0.3, ultCharge: 0.3, armyDamage: -0.15 }, req: { eliteMin: 0.06 }, like: { elite: 1 } },
     },
   },
 

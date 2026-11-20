@@ -75,6 +75,11 @@ export class Paths {
     if (r.castMin && pf.castRate() < r.castMin) return false;
     if (r.gateMin && pf.gateShare() < r.gateMin) return false;
     if (r.eliteMin && pf.eliteShare() < r.eliteMin) return false;
+    if (r.lineMin) {
+      const n = {};
+      for (const c of this.chosen) { const l = CONFIG.paths.nodes[c].line; n[l] = (n[l] || 0) + 1; }
+      for (const l in r.lineMin) if ((n[l] || 0) < r.lineMin[l]) return false;
+    }
     return true;
   }
 
@@ -85,7 +90,7 @@ export class Paths {
     for (const k in like) {
       const v = like[k] * (m[k] - 0.5) * 2;
       s += v;
-      if (Math.abs(v) > Math.abs(bv)) { bv = v; best = k; }
+      if (v > bv) { bv = v; best = k; } // the reason is what fits best, not what fits badly
     }
     return { score: s, key: best, high: m[best] >= 0.5 };
   }
