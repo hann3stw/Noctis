@@ -3,6 +3,7 @@
 import { CONFIG } from '../config.js';
 import { hitArc, hitCircle, hitLine, playerHit } from './weapons.js';
 import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
+import { RUNE_KINDS } from '../core/runes.js';
 
 // The glow of every cast: colour ('aura' = the hunter's aura colour), where
 // (self, target, front of the hunter, or along a line) and how strong.
@@ -53,8 +54,32 @@ function castGlow(game, id, tx, tz, dx, dz) {
   fx.sparks(x, 0.8, z, G.sparks || (big ? 60 : 24), col, big ? 10 : 6, big ? 0.6 : 0.45, big ? 1.3 : 0.9, G.rise || 2);
 }
 
+// the runes the hunter wears (set by the game)
+let runes = null;
+export function setRunes(r) {
+  runes = r;
+}
+const runed = new Map(); // 'skill:rune' -> the skill with the rune's numbers
+
+// The numbers of a skill (with the rune worn for it, if any).
 export function skillDef(id) {
-  return CONFIG.skills[id] || CONFIG.ultimates[id];
+  const base = CONFIG.skills[id] || CONFIG.ultimates[id];
+  const r = runes && base ? runes.of(id) : '';
+  if (!r) return base;
+  const key = id + ':' + r;
+  let d = runed.get(key);
+  if (!d) {
+    d = { ...base };
+    const mods = RUNE_KINDS[r] || {};
+    for (const k in mods) {
+      if (typeof d[k] !== 'number') continue;
+      d[k] = d[k] * mods[k];
+      if (k === 'mana' || k === 'ticks') d[k] = Math.max(1, Math.round(d[k]));
+      else d[k] = Math.round(d[k] * 100) / 100;
+    }
+    runed.set(key, d);
+  }
+  return d;
 }
 
 // dx, dz = aim direction, power (0..1) = distance for skills aimed at a point

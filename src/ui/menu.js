@@ -10,6 +10,7 @@ import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 import { msToMidnight, today } from '../core/quests.js';
 import { TITLES } from '../core/titles.js';
+import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
@@ -212,6 +213,8 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(target.dataset.id);
+    } else if (act === 'runeWear') {
+      this.game.runes.wear(target.dataset.skill, target.dataset.r);
     } else if (act === 'titlePick') {
       this.game.titles.wear(target.dataset.id);
     } else if (act === 'pathRespec') {
@@ -567,7 +570,7 @@ export class Menu {
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-row">${mine}</div>
       ${Pa.chosen.length ? `<button class="ap-btn ghost" data-act="pathRespec"${P.essence >= cost ? '' : ' disabled'}>${t('path.respec', { n: fmt(cost) })}</button>` : ''}
       <div class="pa-sub">${t('title.heading')}</div><small class="pa-note">${t('title.hint')}</small>
-      <div class="ttl-list">${Object.keys(TITLES).map((id) => {
+      <div class="ttl-list">${Object.keys(TITLES).filter((id) => this.game.titles.has(id)).map((id) => {
         const has = this.game.titles.has(id), worn = this.game.titles.worn === id;
         return `<button class="ttl${has ? '' : ' lock'}${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}"${has ? '' : ' disabled'}><b>${has ? t('title.' + id) : '???'}</b><small>${has ? t('title.' + id + '.how') : t('title.secret')}</small></button>`;
       }).join('')}</div></div>`;
@@ -580,6 +583,7 @@ export class Menu {
     if (o.kind === 'stone') return t('quest.o.stone', { tier: t('quest.tier.' + o.tier) });
     if (o.kind === 'xp') return t('quest.o.xp', { min: Math.round(CONFIG.quests.xpBoost.time / 60) });
     if (o.kind === 'key') return t('quest.o.key');
+    if (o.kind === 'rune') return t('quest.o.rune');
     return t('quest.o.item', { rarity: t('rarity.' + o.rarity) });
   }
 
@@ -612,10 +616,10 @@ export class Menu {
     let body;
     if (shop) {
       body = `<div class="q-list">${C.shop.map((o) => {
-        const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive)) && !(o.id === 'xp' && Q.xpTokens >= C.xpBoost.max) && !(o.id === 'key' && Q.keys >= C.keyGate.max);
+        const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive)) && !(o.id === 'rune' && !this.game.runes.canFind()) && !(o.id === 'xp' && Q.xpTokens >= C.xpBoost.max) && !(o.id === 'key' && Q.keys >= C.keyGate.max);
         const desc = o.tier !== undefined ? t('quest.shop.stone', { tier: t('quest.tier.' + o.tier) })
           : o.id === 'essence' ? t('quest.shop.essence', { n: fmt(Q.shopEssence()) })
-            : o.id === 'xp' ? t('quest.o.xp', { min: Math.round(C.xpBoost.time / 60) }) : o.id === 'key' ? t('quest.shop.key') : t('quest.shop.revive');
+            : o.id === 'xp' ? t('quest.o.xp', { min: Math.round(C.xpBoost.time / 60) }) : o.id === 'key' ? t('quest.shop.key') : o.id === 'rune' ? t('quest.shop.rune') : t('quest.shop.revive');
         return `<div class="q-card shop${ok ? '' : ' off'}"><em>${t('quest.sealsN', { n: o.cost })}</em><b>${desc}</b>
           <div class="q-foot"><small>${o.max ? t('quest.shopLeft', { n: left, max: o.max }) : ''}</small>
           <button class="ap-btn" data-act="buy" data-id="${o.id}"${ok ? '' : ' disabled'}>${t('quest.buy')}</button></div></div>`;
@@ -757,6 +761,16 @@ export class Menu {
     return rows.join('');
   }
 
+  // the runes of a skill: the ones found can be worn, the others are unknown
+  runeRow(id) {
+    const R = this.game.runes, list = runesOf(id);
+    if (!list.length) return '';
+    const cards = list.map((r) => R.has(id, r)
+      ? `<button class="rune${R.of(id) === r ? ' on' : ''}" data-act="runeWear" data-skill="${id}" data-r="${r}"><b>${t('rune.' + r)}</b><small>${t('rune.' + r + '.desc')}</small></button>`
+      : `<div class="rune lock"><b>???</b></div>`).join('');
+    return `<h4 class="rune-h">${t('rune.heading', { n: R.count(id), max: list.length })}</h4><div class="rune-list">${cards}</div>`;
+  }
+
   skills() {
     const P = this.game.player;
     if (!this.selSkill) this.selSkill = P.slots[0] || P.known[0];
@@ -798,7 +812,7 @@ export class Menu {
       }
       detail = `<div class="k-head${ult ? ' ult' : ''}${known ? '' : ' locked'}"><i>${known ? SKILL_ICONS[id] : LOCK}</i>
           <div><h3>${t('skill.' + id)}</h3><small class="sub">${ult ? t('skills.typeUlt') : t('skills.typeSkill')}</small></div></div>
-        <div class="d-rows" data-scroll="kd"><p>${t('skill.' + id + '.desc')}</p>${this.skillStats(id)}</div>
+        <div class="d-rows" data-scroll="kd"><p>${t('skill.' + id + '.desc')}</p>${this.skillStats(id)}${known ? this.runeRow(id) : ''}</div>
         <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">

@@ -26,7 +26,7 @@ import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
 import { Abyss } from './world/abyss.js';
 import { AbyssPanel } from './ui/abyssPanel.js';
-import { skillDef } from './combat/skills.js';
+import { skillDef, setRunes } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
@@ -37,6 +37,7 @@ import { Bestiary } from './core/bestiary.js';
 import { Paths } from './core/paths.js';
 import { Profile } from './core/profile.js';
 import { Titles } from './core/titles.js';
+import { Runes } from './core/runes.js';
 import { Waypoint } from './core/waypoint.js';
 import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
@@ -115,6 +116,8 @@ export class Game {
     this.world = new World(this.scene, this.seed);
     this.gates = new Gates(this, save && save.gates);
     setNextItemId(save ? save.nextItemId || 1 : 1);
+    this.runes = new Runes(this, save && save.runes); // skill runes
+    setRunes(this.runes);
     this.profile = new Profile(save && save.profile); // how the hunter plays (the Path uses it)
     this.path = new Paths(this, save && save.path); // the class tree (before the player: it adds bonuses)
     this.player = new Player(this, this.appearance);
@@ -241,6 +244,7 @@ export class Game {
       path: this.path.serialize(),
       profile: this.profile.serialize(),
       titles: this.titles.serialize(),
+      runes: this.runes.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],

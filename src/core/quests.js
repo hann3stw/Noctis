@@ -152,6 +152,7 @@ export class Quests {
       { kind: 'stone', tier: Q.stoneTier[q.d] },
     ];
     if (q.d >= 1) all.push({ kind: 'xp' });
+    if (q.d >= 1 && this.game.runes.canFind()) all.push({ kind: 'rune' });
     if (q.d === 2) all.push({ kind: 'key' });
     // three of them; the item stays most of the time, so gear is always an option
     const keepItem = rng() < 0.7;
@@ -193,6 +194,8 @@ export class Quests {
     } else if (o.kind === 'stone') {
       this.stones.push(o.tier);
       this.game.hud.toast(t('quest.stoneGot', { tier: t('quest.tier.' + o.tier) }));
+    } else if (o.kind === 'rune') {
+      if (!this.game.runes.find()) { P.essence += this.essence(this.list[0]); this.game.hud.toast(t('toast.essence', { n: this.essence(this.list[0]) })); }
     } else if (o.kind === 'xp') {
       this.addXpToken(1);
     } else if (o.kind === 'key') {
@@ -296,12 +299,14 @@ export class Quests {
     const o = Q.shop.find((x) => x.id === id), g = this.game, P = g.player;
     if (!o || this.seals < o.cost || this.shopLeft(o) <= 0) return false;
     if (id === 'revive' && !g.army.deployed.some((u) => !u.alive)) return false;
+    if (id === 'rune' && !g.runes.canFind()) return false;
     if ((id === 'xp' && this.xpTokens >= Q.xpBoost.max) || (id === 'key' && this.keys >= Q.keyGate.max)) return false;
     this.seals -= o.cost;
     this.bought[id] = (this.bought[id] || 0) + 1;
     if (o.tier !== undefined) this.stones.push(o.tier);
     else if (id === 'essence') P.essence += this.shopEssence();
     else if (id === 'revive') g.army.reviveAll();
+    else if (id === 'rune') g.runes.find();
     else if (id === 'xp') this.xpTokens++;
     else if (id === 'key') this.keys++;
     play('chest');

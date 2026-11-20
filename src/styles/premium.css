@@ -4089,3 +4089,26 @@ input.shake {
 .ttl.on { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); }
 .lb-title { color: #ffd870; font-style: normal; font-weight: 700; }
 .pa-why { color: #ffe08a; font-size: calc(var(--u) * 2.2); font-style: italic; }
+
+/* skill runes */
+.rune-h { margin: calc(var(--u) * 1.2) 0 calc(var(--u) * 0.6); color: #d8c4ff; font-size: calc(var(--u) * 2.6); }
+.rune-list { display: flex; flex-direction: column; gap: calc(var(--u) * 0.8); }
+.rune {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--u) * 0.2);
+  padding: calc(var(--u) * 1) calc(var(--u) * 1.6);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  border-radius: calc(var(--u) * 1.4);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 170, 255, 0.25);
+  cursor: pointer;
+}
+.rune b { font-size: calc(var(--u) * 2.7); color: #ffe08a; }
+.rune small { font-size: calc(var(--u) * 2.1); color: #b9add6; }
+.rune.on { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); }
+.rune.lock { opacity: 0.45; cursor: default; }
+.rune.lock b { color: #8d82ad; }

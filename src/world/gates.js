@@ -356,6 +356,10 @@ export class Gates {
     }
     game.shots.clear();
     game.hazards.clear();
+    // runes: a gate boss may carry one (deadly: always)
+    const rc = gate.trial ? 1 : { normal: 0.25, hard: 0.6, deadly: 1 }[D.id] || 0;
+    if (Math.random() < rc) game.runes.find();
+    if (gate.keyRun) game.runes.find();
     this.exitOpen = true;
     if (gate.trial) {
       const ess = CONFIG.trial.essence * (game.rankIndex + 1);

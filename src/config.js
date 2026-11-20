@@ -752,6 +752,7 @@ export const CONFIG = {
       { id: 'revive', cost: 3, max: 0 }, // every fallen shadow stands up
       { id: 'xp', cost: 10, max: 2 }, // a Double XP Token
       { id: 'key', cost: 25, max: 1 }, // a Gate Key
+      { id: 'rune', cost: 12, max: 2 }, // a skill rune (one you have not found)
     ],
     kinds: {
       kill: { n: [25, 50, 100] }, // monsters of the zone
