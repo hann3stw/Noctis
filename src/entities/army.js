@@ -459,7 +459,7 @@ export class Army {
 
   reviveCost(u) {
     const R = CONFIG.shadows.revive;
-    return Math.round((R.cost + R.costPerLevel * u.level) * CONFIG.shadows.tierFactor[u.tier]);
+    return Math.round((R.cost + R.costPerLevel * u.level) * CONFIG.shadows.tierFactor[u.tier] * this.game.path.mult('reviveCostMult'));
   }
 
   // Revives every fallen shadow that is ready, as far as the mana lasts.

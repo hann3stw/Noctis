@@ -4088,3 +4088,4 @@ input.shake {
 .ttl.lock b { color: #8d82ad; }
 .ttl.on { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); }
 .lb-title { color: #ffd870; font-style: normal; font-weight: 700; }
+.pa-why { color: #ffe08a; font-size: calc(var(--u) * 2.2); font-style: italic; }

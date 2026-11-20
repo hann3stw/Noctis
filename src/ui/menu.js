@@ -538,9 +538,15 @@ export class Menu {
     const out = [];
     for (const k in n.bonus) {
       const v = n.bonus[k], flat = k === 'armySlots';
-      out.push(`<li class="${v < 0 ? 'neg' : ''}">${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + (flat ? Math.abs(v) : Math.round(Math.abs(v) * 100)) })}</li>`);
+      const bad = k === 'damageTaken' ? v > 0 : v < 0;
+      out.push(`<li class="${bad ? 'neg' : ''}">${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + (flat ? Math.abs(v) : Math.round(Math.abs(v) * 100)) })}</li>`);
     }
-    if (n.rule) out.push(`<li class="rule">${t('path.' + id + '.rule')}</li>`);
+    // rules: a text of its own for the node, else one text per rule
+    const own = 'path.' + id + '.rule';
+    if (n.rule) {
+      if (t(own) !== own) out.push(`<li class="rule">${t(own)}</li>`);
+      else for (const k in n.rule) { if (t('path.r.' + k) !== 'path.r.' + k && !['slotCapMax', 'slotCapPlus'].includes(k)) out.push(`<li class="${['reviveCostMult', 'manaRegenMult', 'hpRegenMult'].includes(k) ? 'neg' : 'rule'}">${t('path.r.' + k)}</li>`); }
+    }
     return out.join('');
   }
 
@@ -549,7 +555,8 @@ export class Menu {
     const Pa = this.game.path, P = this.game.player, due = Pa.due();
     const card = (id, pick) => {
       const n = CONFIG.paths.nodes[id];
-      return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p><ul>${this.pathLines(id)}</ul>
+      const why = pick ? this.game.path.why(id) : '';
+      return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p>${why ? `<small class="pa-why">${why}</small>` : ''}<ul>${this.pathLines(id)}</ul>
         ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}"${this.game.path.canPick(id) ? '' : ' disabled'}>${this.game.path.canPick(id) ? t('path.choose') : t('path.armyTooBig', { n: n.rule.slotCapMax })}</button>` : ''}</div>`;
     };
     const cost = Pa.respecCost();

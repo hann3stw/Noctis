@@ -637,13 +637,33 @@ export const CONFIG = {
   // slotCapMax = the army can never be bigger than this; picking it needs an army that fits). stage 1 is offered from rank D (index 1).
   // Later stages build on the line of the nodes you already picked.
   paths: {
-    stages: [1], // rank indexes (0 = E) at which a pick is due
+    stages: [1, 3], // rank indexes (0 = E) at which a pick is due (stage 1 at D, stage 2 at B)
     respec: 250, // essence x (rank + 1) to take every pick back
     lines: ['commander', 'blade', 'mage'],
     nodes: {
-      commander1: { line: 'commander', stage: 1, bonus: { armySlots: 3, armyHp: 0.2, armyDamage: 0.1 }, rule: { armyKillXp: 2, slotCapPlus: 10 } },
-      blade1: { line: 'blade', stage: 1, bonus: { damage: 0.3, crit: 0.08, speed: 0.06, killHeal: 0.02, armyDamage: -0.1 }, rule: { slotCapMax: 12 } },
-      mage1: { line: 'mage', stage: 1, bonus: { mana: 0.4, skillDamage: 0.25, cooldown: 0.15 }, rule: { killMana: 0.02 } },
+      commander1: { line: 'commander', stage: 1, bonus: { armySlots: 3, armyHp: 0.2, armyDamage: 0.1 }, rule: { armyKillXp: 2, slotCapPlus: 10 }, like: { army: 1 } },
+      blade1: { line: 'blade', stage: 1, bonus: { damage: 0.3, crit: 0.08, speed: 0.06, killHeal: 0.02, armyDamage: -0.1 }, rule: { slotCapMax: 12 }, like: { hunter: 1 } },
+      mage1: { line: 'mage', stage: 1, bonus: { mana: 0.4, skillDamage: 0.25, cooldown: 0.15 }, rule: { killMana: 0.02 }, like: { caster: 1 } },
+      // Stage 2. Which of these are offered depends on how you play (see Paths.options):
+      //   req   all must hold: armyMin / armyMax (shadows), hunterMin / hunterMax (share of kills made by you),
+      //         killsMin, deathsMin (per hour), castMin (per minute), gateMin (share of time in gates), eliteMin (share of elite kills)
+      //   like  how well it fits a style, -1 .. 1 per measure (army, hunter, caster, dodger, deaths, lossy, elite, gates, sprint, officers, critty)
+      // More rules: reviveCostMult, manaRegenMult, hpRegenMult, selfXp (x XP from your own kills)
+      warBanner: { line: 'commander', stage: 2, bonus: { armyDamage: 0.25, armyHp: 0.1, damage: -0.15, damageTaken: 0.1 }, req: { armyMin: 8 }, like: { army: 1, hunter: -0.6 } },
+      graveLegion: { line: 'commander', stage: 2, bonus: { armySlots: 4, armyHp: 0.15 }, rule: { reviveCostMult: 1.5, manaRegenMult: 0.8 }, req: { armyMin: 15 }, like: { army: 1, lossy: 0.5, officers: 0.4 } },
+      officerCorps: { line: 'commander', stage: 2, bonus: { armyHp: 0.3, armyDamage: 0.15, speed: -0.08 }, req: { armyMin: 6 }, like: { officers: 1, army: 0.5 } },
+      duelist: { line: 'blade', stage: 2, bonus: { crit: 0.12, damage: 0.2, reload: 0.1, armyHp: -0.2, armyDamage: -0.15 }, req: { armyMax: 30 }, like: { hunter: 1, critty: 0.7, dodger: 0.5 } },
+      bladeDance: { line: 'blade', stage: 2, bonus: { speed: 0.12, reload: 0.15, killHeal: 0.03, hp: -0.12, damageTaken: 0.1 }, like: { sprint: 1, dodger: 0.8, deaths: -0.5 } },
+      executioner: { line: 'blade', stage: 2, bonus: { damage: 0.35, skillDamage: -0.2, mana: -0.25 }, like: { elite: 1, hunter: 0.5 } },
+      soulFurnace: { line: 'mage', stage: 2, bonus: { skillDamage: 0.35, ultCharge: 0.3, hp: -0.1 }, rule: { manaRegenMult: 0.7 }, like: { caster: 1 } },
+      graveWard: { line: 'mage', stage: 2, bonus: { armyHp: 0.35, hp: 0.15, damage: -0.2, skillDamage: -0.1 }, like: { deaths: 0.8, lossy: 1, army: 0.4 } },
+      soulSiphon: { line: 'mage', stage: 2, bonus: { cooldown: -0.2, armySlots: -2 }, rule: { killMana: 0.04, hpRegenMult: 0.5 }, like: { caster: 0.5, army: 0.5 } },
+      // only for some ways to play
+      bloodlust: { line: 'blade', stage: 2, bonus: { damage: 0.1, armyDamage: -0.2 }, rule: { selfXp: 1.5 }, req: { hunterMin: 0.6, killsMin: 1500 }, like: { hunter: 1 } },
+      reapersToll: { line: 'commander', stage: 2, bonus: { armyDamage: 0.1, damage: -0.1 }, rule: { armyKillXp: 3 }, req: { hunterMax: 0.3, killsMin: 1500 }, like: { army: 1 } },
+      lastStand: { line: 'mage', stage: 2, bonus: { damageTaken: -0.2, hp: 0.2, damage: -0.1 }, req: { deathsMin: 3 }, like: { deaths: 1 } },
+      huntersCall: { line: 'blade', stage: 2, bonus: { damage: 0.25, crit: 0.06, hp: -0.1 }, req: { eliteMin: 0.05 }, like: { elite: 1 } },
+      archmage: { line: 'mage', stage: 2, bonus: { mana: 0.5, skillDamage: 0.25, cooldown: 0.1, damage: -0.15 }, req: { castMin: 4 }, like: { caster: 1 } },
     },
   },
 

@@ -877,7 +877,7 @@ export class Game {
     let hxp = over > 1 ? xp * Math.pow(over, CONFIG.progression.xpAbove - 1) : xp;
     if (this.xpBoostT > 0) hxp *= CONFIG.quests.xpBoost.mult; // Double XP Token
     // kills of the army count only partly for the hunter
-    this.player.addXp(src < 0 ? hxp * (1 + bonus) : hxp * CONFIG.progression.armyKillXp * (this.path.rule('armyKillXp') || 1));
+    this.player.addXp(src < 0 ? hxp * (1 + bonus) * this.path.mult('selfXp') : hxp * CONFIG.progression.armyKillXp * (this.path.rule('armyKillXp') || 1));
     // Path rule of the Soul Mage: kills (also by shadows) give mana back
     const km = this.path.rule('killMana');
     if (km && !this.player.dead) this.player.mana = Math.min(this.player.maxMana, this.player.mana + this.player.maxMana * km);

@@ -217,12 +217,12 @@ export class Player {
     // levels multiply health and damage, Vitality and Strength add to them
     this.levelMult = playerPower(this.level);
     this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp) * (1 + M.hp * ms.hp));
-    this.hpRegen = st.vit * S.vit.regen * this.maxHp;
+    this.hpRegen = st.vit * S.vit.regen * this.maxHp * (this.game.path ? this.game.path.mult('hpRegenMult') : 1);
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     this.maxMana = Math.round((c.baseMana + st.int * S.int.mana) * (1 + b.mana));
     if (this.mana > this.maxMana) this.mana = this.maxMana;
-    this.manaRegen = c.manaRegen + st.int * S.int.manaRegen;
+    this.manaRegen = (c.manaRegen + st.int * S.int.manaRegen) * (this.game.path ? this.game.path.mult('manaRegenMult') : 1);
     this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
     this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit);
