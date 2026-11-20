@@ -704,6 +704,7 @@ const STRINGS = {
     'title.heading': 'Titles',
     'title.hint': 'Tap an earned title to wear it. It shows on the leaderboards.',
     'title.new': 'New title earned',
+    'title.secret': 'Not earned yet',
     'title.shadow_monarch': 'Shadow Monarch',
     'title.shadow_monarch.how': 'Have 40 shadows in your army',
     'title.lone_blade': 'Lone Blade',

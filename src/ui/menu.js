@@ -569,7 +569,7 @@ export class Menu {
       <div class="pa-sub">${t('title.heading')}</div><small class="pa-note">${t('title.hint')}</small>
       <div class="ttl-list">${Object.keys(TITLES).map((id) => {
         const has = this.game.titles.has(id), worn = this.game.titles.worn === id;
-        return `<button class="ttl${has ? '' : ' lock'}${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}"${has ? '' : ' disabled'}><b>${has ? t('title.' + id) : '???'}</b><small>${t('title.' + id + '.how')}</small></button>`;
+        return `<button class="ttl${has ? '' : ' lock'}${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}"${has ? '' : ' disabled'}><b>${has ? t('title.' + id) : '???'}</b><small>${has ? t('title.' + id + '.how') : t('title.secret')}</small></button>`;
       }).join('')}</div></div>`;
   }
 
