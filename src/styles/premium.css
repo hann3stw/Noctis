@@ -3860,3 +3860,127 @@ input.shake {
 .bestiary .b-left {
   flex: 1.5;
 }
+
+/* ---- daily quests: Soul Seals, streak, the choice of a reward, Seal Shop ---- */
+.q-head .q-seals {
+  margin-left: auto;
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 1.8);
+  border-radius: 99px;
+  background: rgba(125, 82, 240, 0.3);
+  border: 1px solid rgba(200, 170, 255, 0.5);
+  color: #e8dcff;
+  font-weight: 800;
+  font-size: calc(var(--u) * 2.6);
+  white-space: nowrap;
+}
+.q-streak {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 0.4) calc(var(--u) * 2);
+}
+.q-streak b {
+  color: #ffd870;
+  font-size: calc(var(--u) * 3);
+}
+.q-streak small {
+  color: #b9add6;
+  font-size: calc(var(--u) * 2.3);
+}
+.q-tabs {
+  display: flex;
+  gap: calc(var(--u) * 1);
+  align-items: center;
+}
+.q-tabs .seg {
+  min-height: calc(var(--u) * 6.4);
+  padding: 0 calc(var(--u) * 2.4);
+}
+.q-tabs .ap-btn {
+  margin-left: auto;
+  min-height: calc(var(--u) * 6.4);
+  padding: 0 calc(var(--u) * 2.4);
+  font-size: calc(var(--u) * 2.4);
+}
+.q-card.shop em {
+  font-size: calc(var(--u) * 2.6);
+  color: #d8c4ff;
+}
+.q-card.shop.off { opacity: 0.55; }
+.q-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 2, 10, 0.78);
+  padding: calc(var(--u) * 3);
+}
+.q-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  max-width: 100%;
+  padding: calc(var(--u) * 3);
+  border-radius: calc(var(--u) * 2.4);
+  background: linear-gradient(180deg, rgba(40, 26, 74, 0.98), rgba(14, 8, 28, 0.98));
+  border: 1px solid rgba(233, 199, 123, 0.6);
+  box-shadow: 0 0 calc(var(--u) * 6) rgba(125, 82, 240, 0.4);
+}
+.q-box > b {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: calc(var(--u) * 3.8);
+}
+.q-box > small {
+  color: #b9add6;
+  font-size: calc(var(--u) * 2.4);
+  text-align: center;
+  max-width: calc(var(--u) * 80);
+}
+.q-opts {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.q-opt {
+  --oc: #7fd6ff;
+  width: calc(var(--u) * 26);
+  min-height: calc(var(--u) * 24);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 1.4);
+  padding: calc(var(--u) * 2);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: calc(var(--u) * 2.7);
+  text-align: center;
+  border-radius: calc(var(--u) * 2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--oc) 22%, rgba(20, 12, 38, 0.95)), rgba(12, 7, 24, 0.95));
+  border: 1px solid color-mix(in srgb, var(--oc) 60%, transparent);
+  cursor: pointer;
+}
+.q-opt:active { transform: scale(0.97); }
+.q-opt i {
+  width: calc(var(--u) * 7);
+  height: calc(var(--u) * 7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--oc) 55%, transparent 75%);
+  box-shadow: 0 0 calc(var(--u) * 3) var(--oc);
+}
+.q-opt small {
+  display: block;
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: calc(var(--u) * 2.2);
+}
+.q-opt.o-item { --oc: #ffb02e; }
+.q-opt.o-essence { --oc: #7fd6ff; }
+.q-opt.o-seals { --oc: #c58bff; }
+.q-opt.o-stone { --oc: #7dffa8; }

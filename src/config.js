@@ -670,6 +670,28 @@ export const CONFIG = {
     essence: [20, 45, 90],
     rarity: [1, 2, 3],
     bonus: 3,
+    // Every claimed quest gives Soul Seals and a choice of one of three rewards:
+    // essence, an item, Soul Seals, or a Soul Stone (raises a shadow of a monster
+    // kind you pick: tier 0 = normal, 1 = elite, 2 = champion). Per difficulty.
+    seals: [1, 2, 3], // always, per quest
+    sealBonus: [4, 8, 14], // the Soul Seals option
+    stoneTier: [0, 1, 2],
+    bonusSeals: 5, // for all three
+    // Day streak (a day with a claimed quest; one missed day is forgiven):
+    // the reward comes the day the streak reaches the number
+    streak: [
+      { days: 3, seals: 6 },
+      { days: 7, seals: 15, item: 3 },
+      { days: 14, seals: 30, stone: 2 },
+      { days: 30, seals: 60, item: 5, stone: 2 },
+    ],
+    // The Soul Seal shop: seals cost, max per day (0 = unlimited)
+    shop: [
+      { id: 'stone1', cost: 8, max: 2, tier: 1 },
+      { id: 'stone2', cost: 20, max: 1, tier: 2 },
+      { id: 'essence', cost: 5, max: 3 }, // essence = 100 x (zone + 1)
+      { id: 'revive', cost: 3, max: 0 }, // every fallen shadow stands up
+    ],
     kinds: {
       kill: { n: [25, 50, 100] }, // monsters of the zone
       type: { n: [10, 20, 40] }, // one kind of monster of the zone

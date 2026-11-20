@@ -8,7 +8,7 @@ import { ArmyPanel } from './armyPanel.js';
 import { ShadowStage } from './shadowStage.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
-import { msToMidnight } from '../core/quests.js';
+import { msToMidnight, today } from '../core/quests.js';
 import { play } from '../core/sfx.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
@@ -71,6 +71,9 @@ export class Menu {
     this.flt = newFilter(); // stays while the game runs
     this.fpanel = false; // the filter panel is shown
     this.selBeast = null; // monster shown in the bestiary
+    this.qMode = 'quests'; // quests | shop
+    this.qPick = -1; // quest whose reward is being picked
+    this.qStone = -1; // Soul Stone whose monster kind is being picked
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     window.addEventListener('resize', () => { if (this.isOpen && this.el.isConnected) this.fitHead(); });
@@ -85,6 +88,7 @@ export class Menu {
     this.locked = !P.inCamp;
     this.army.locked = false; // the army can be changed anywhere
     this.army.reset();
+    this.qPick = this.qStone = -1;
     this.army.hint = hint || '';
     // open where something new waits
     if (tab) this.tab = tab;
@@ -193,7 +197,20 @@ export class Menu {
         this.confirmId = 0;
       }
     } else if (act === 'claim') {
-      this.game.quests.claim(Number(target.dataset.k));
+      this.qPick = Number(target.dataset.k); // the choice of one of three rewards
+    } else if (act === 'pick') {
+      this.game.quests.claim(this.qPick, Number(target.dataset.i));
+      this.qPick = -1;
+    } else if (act === 'qcancel') {
+      this.qPick = this.qStone = -1;
+    } else if (act === 'qmode') {
+      this.qMode = target.dataset.v;
+    } else if (act === 'stoneOpen') {
+      this.qStone = Number(target.dataset.i);
+    } else if (act === 'stoneUse') {
+      if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
+    } else if (act === 'buy') {
+      this.game.quests.buy(target.dataset.id);
     } else if (act === 'beast') {
       this.selBeast = target.dataset.id;
     } else if (act === 'stat') {
@@ -503,9 +520,18 @@ export class Menu {
   }
 
   // ---- daily quests -------------------------------------------------------------
+  // text of one reward of a daily quest
+  rewardText(o) {
+    if (o.kind === 'essence') return t('quest.o.essence', { n: o.n });
+    if (o.kind === 'seals') return t('quest.o.seals', { n: o.n });
+    if (o.kind === 'stone') return t('quest.o.stone', { tier: t('quest.tier.' + o.tier) });
+    return t('quest.o.item', { rarity: t('rarity.' + o.rarity) });
+  }
+
   questsView() {
     const Q = this.game.quests, C = CONFIG.quests;
     const ms = msToMidnight(), h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    const shop = this.qMode === 'shop';
     const cards = Q.list.map((q, k) => {
       const w = Math.round((q.have / q.n) * 100);
       const btn = q.claimed ? `<span class="q-got">${t('quest.claimed')}</span>`
@@ -514,13 +540,46 @@ export class Menu {
       return `<div class="q-card d${q.d}${q.done ? ' done' : ''}${q.claimed ? ' got' : ''}">
         <em>${t('quest.d' + q.d)}</em><b>${Q.text(q)}</b>
         <div class="q-bar"><i style="width:${w}%"></i></div>
-        <div class="q-foot"><small>${t('quest.reward', { n: Q.essence(q), rarity: t('rarity.' + C.rarity[q.d]) })}</small>${btn}</div></div>`;
+        <div class="q-foot"><small>${t('quest.reward', { n: C.seals[q.d] })}</small>${btn}</div></div>`;
     }).join('');
     const all = Q.list.filter((q) => q.claimed).length;
-    return `<div class="quests" data-scroll="quests">
-      <div class="q-head"><b>${t('quest.title')}</b><small>${t('quest.renew', { h, m })}</small></div>
-      <div class="q-list">${cards}</div>
-      <div class="q-bonus${Q.bonus ? ' got' : ''}">${Q.bonus ? t('quest.bonusDone') : t('quest.bonus', { n: all, rarity: t('rarity.' + C.bonus) })}</div></div>`;
+    const next = Q.nextStreak();
+    const nextTxt = next ? t('quest.streakNext', { days: next.days, what: [next.seals ? t('quest.o.seals', { n: next.seals }) : '', next.item ? t('quest.o.item', { rarity: t('rarity.' + next.item) }) : '', next.stone !== undefined ? t('quest.o.stone', { tier: t('quest.tier.' + next.stone) }) : ''].filter(Boolean).join(' + ') }) : '';
+    const claimedToday = Q.streakDay === today();
+    const head = `<div class="q-head"><b>${t('quest.title')}</b><small>${t('quest.renew', { h, m })}</small>
+        <span class="q-seals" title="${t('quest.sealsHint')}">${t('quest.sealsN', { n: Q.seals })}</span></div>
+      <div class="q-streak"><b>${t('quest.streak', { n: Q.streak })}</b><small>${claimedToday ? t('quest.streakDone') : t('quest.streakOpen')}${nextTxt ? ' · ' + nextTxt : ''}</small></div>
+      <div class="q-tabs"><button class="seg${shop ? '' : ' on'}" data-act="qmode" data-v="quests">${t('quest.tabQuests')}</button>
+        <button class="seg${shop ? ' on' : ''}" data-act="qmode" data-v="shop">${t('quest.tabShop')}</button>
+        ${Q.stones.length ? `<button class="ap-btn gold" data-act="stoneOpen" data-i="0">${t('quest.useStone', { n: Q.stones.length })}</button>` : ''}</div>`;
+    let body;
+    if (shop) {
+      body = `<div class="q-list">${C.shop.map((o) => {
+        const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive));
+        const desc = o.tier !== undefined ? t('quest.shop.stone', { tier: t('quest.tier.' + o.tier) })
+          : o.id === 'essence' ? t('quest.shop.essence', { n: fmt(Q.shopEssence()) }) : t('quest.shop.revive');
+        return `<div class="q-card shop${ok ? '' : ' off'}"><em>${t('quest.sealsN', { n: o.cost })}</em><b>${desc}</b>
+          <div class="q-foot"><small>${o.max ? t('quest.shopLeft', { n: left, max: o.max }) : ''}</small>
+          <button class="ap-btn" data-act="buy" data-id="${o.id}"${ok ? '' : ' disabled'}>${t('quest.buy')}</button></div></div>`;
+      }).join('')}</div>`;
+    } else {
+      body = `<div class="q-list">${cards}</div>
+        <div class="q-bonus${Q.bonus ? ' got' : ''}">${Q.bonus ? t('quest.bonusDone') : t('quest.bonus', { n: all, seals: C.bonusSeals, rarity: t('rarity.' + C.bonus) })}</div>`;
+    }
+    // the choice of one of three rewards, or the kind of monster for a Soul Stone
+    let modal = '';
+    if (this.qPick >= 0 && Q.list[this.qPick] && Q.list[this.qPick].done && !Q.list[this.qPick].claimed) {
+      const opts = Q.options(this.qPick);
+      modal = `<div class="q-modal"><div class="q-box"><b>${t('quest.pick')}</b>
+        <div class="q-opts">${opts.map((o, i) => `<button class="q-opt o-${o.kind}" data-act="pick" data-i="${i}"><i></i><span>${this.rewardText(o)}</span></button>`).join('')}</div>
+        <button class="ap-btn ghost" data-act="qcancel">${t('quest.later')}</button></div></div>`;
+    } else if (this.qStone >= 0 && Q.stones[this.qStone] !== undefined) {
+      const tier = Q.stones[this.qStone];
+      modal = `<div class="q-modal"><div class="q-box"><b>${t('quest.stoneTitle', { tier: t('quest.tier.' + tier) })}</b><small>${t('quest.stoneHint')}</small>
+        <div class="q-opts">${Q.stoneTypes().map((id) => `<button class="q-opt o-stone" data-act="stoneUse" data-t="${id}"><i></i><span>${t('enemy.' + id)}<small>${t('role.' + CONFIG.enemies.types[id].shadowRole)}</small></span></button>`).join('')}</div>
+        <button class="ap-btn ghost" data-act="qcancel">${t('quest.later')}</button></div></div>`;
+    }
+    return `<div class="quests" data-scroll="quests">${head}${body}${modal}</div>`;
   }
 
   // ---- bestiary ----------------------------------------------------------------

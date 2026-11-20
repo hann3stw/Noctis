@@ -31,15 +31,25 @@ export class Quests {
     this.list = [];
     this.bonus = false; // the bonus for all three was given
     this.checkT = 0;
+    // what lasts over the days: Soul Seals, the day streak, unused Soul Stones (tiers)
+    this.seals = (saved && saved.seals | 0) || 0;
+    this.streak = (saved && saved.streak | 0) || 0;
+    this.streakDay = saved && typeof saved.streakDay === 'number' ? saved.streakDay : -9;
+    this.stones = saved && Array.isArray(saved.stones) ? saved.stones.filter((n) => n >= 0 && n <= 2).slice(0, 50) : [];
+    this.bought = {}; // shop purchases of today
     if (saved && saved.day === today() && Array.isArray(saved.list)) {
       this.day = saved.day;
       this.list = saved.list;
       this.bonus = !!saved.bonus;
+      if (saved.bought && typeof saved.bought === 'object') this.bought = { ...saved.bought };
     }
   }
 
   serialize() {
-    return { day: this.day, list: this.list, bonus: this.bonus };
+    return {
+      day: this.day, list: this.list, bonus: this.bonus, bought: this.bought,
+      seals: this.seals, streak: this.streak, streakDay: this.streakDay, stones: this.stones,
+    };
   }
 
   // the zone the quests are about: the one of the hunter's rank
@@ -63,6 +73,7 @@ export class Quests {
     });
     this.day = today();
     this.bonus = false;
+    this.bought = {};
   }
 
   // a new day: new quests (also checked while playing past midnight)
@@ -123,20 +134,122 @@ export class Quests {
     if (!P.addItem(item)) this.game.loot.drop(P.x, P.z, item); // full bag: at your feet
   }
 
-  claim(k) {
+  // The three rewards to pick from for quest k: the same ones every time the
+  // quest is looked at (picked from the world seed, the day and the quest).
+  options(k) {
+    const q = this.list[k];
+    if (!q) return [];
+    const rng = mulberry32(hashSeed(this.game.seed, 7400 + k, today()));
+    const all = [
+      { kind: 'item', rarity: Q.rarity[q.d] },
+      { kind: 'essence', n: this.essence(q) },
+      { kind: 'seals', n: Q.sealBonus[q.d] },
+      { kind: 'stone', tier: Q.stoneTier[q.d] },
+    ];
+    // one is left out (the item stays most of the time, so gear is always an option)
+    const out = rng() < 0.7 ? all.splice((1 + rng() * 3) | 0, 1) : all.splice(0, 1);
+    return all;
+  }
+
+  // quest k, reward number i of its options
+  claim(k, i = 0) {
     const q = this.list[k], P = this.game.player;
     if (!q || !q.done || q.claimed) return;
+    const o = this.options(k)[i];
+    if (!o) return;
     q.claimed = true;
-    const ess = this.essence(q);
-    P.essence += ess;
-    this.give(Q.rarity[q.d]);
-    this.game.hud.toast(t('toast.essence', { n: ess }));
+    this.seals += Q.seals[q.d];
+    this.game.hud.toast(t('quest.sealsGot', { n: Q.seals[q.d] }));
+    this.apply(o);
+    this.updateStreak();
     if (!this.bonus && this.list.every((x) => x.claimed)) {
       this.bonus = true;
+      this.seals += Q.bonusSeals;
       this.give(Q.bonus);
-      this.game.hud.toast(t('quest.bonusGot'));
+      this.game.hud.toast(t('quest.bonusGot', { n: Q.bonusSeals }));
     }
     play('chest');
     this.game.save();
+  }
+
+  // gives a reward option
+  apply(o) {
+    const P = this.game.player;
+    if (o.kind === 'essence') {
+      P.essence += o.n;
+      this.game.hud.toast(t('toast.essence', { n: o.n }));
+    } else if (o.kind === 'seals') {
+      this.seals += o.n;
+      this.game.hud.toast(t('quest.sealsGot', { n: o.n }));
+    } else if (o.kind === 'stone') {
+      this.stones.push(o.tier);
+      this.game.hud.toast(t('quest.stoneGot', { tier: t('quest.tier.' + o.tier) }));
+    } else {
+      this.give(o.rarity);
+    }
+  }
+
+  // the day streak counts days with a claimed quest; one missed day is forgiven
+  updateStreak() {
+    const d = today();
+    if (this.streakDay === d) return;
+    this.streak = d - this.streakDay <= 2 ? this.streak + 1 : 1;
+    this.streakDay = d;
+    const m = Q.streak.find((x) => x.days === this.streak);
+    if (!m) return;
+    this.game.hud.banner(t('quest.streakBanner', { n: this.streak }), t('quest.streakSub'));
+    if (m.seals) this.seals += m.seals;
+    if (m.item) this.give(m.item);
+    if (m.stone !== undefined) this.stones.push(m.stone);
+  }
+
+  // the next streak reward: { days, seals, item, stone } or null
+  nextStreak() {
+    return Q.streak.find((x) => x.days > this.streak) || null;
+  }
+
+  // ---- Soul Stones: raise a shadow of a monster kind of the current zone ----------------
+  // kinds a stone can raise: the ones of the hunter's zone
+  stoneTypes() {
+    return CONFIG.world.zones[this.zone()].enemyTypes;
+  }
+
+  useStone(index, type) {
+    const g = this.game, P = g.player, tier = this.stones[index];
+    if (tier === undefined || !this.stoneTypes().includes(type)) return false;
+    if (!g.army.hasRoom()) { g.hud.toast(t('arise.full')); return false; }
+    // as strong as a shadow raised from a monster of the hunter's level
+    const u = g.army.add(type, tier, P.x, P.z, undefined, this.zone(), P.level);
+    if (!u) return false;
+    this.stones.splice(index, 1);
+    g.effects.burst(u.x, 0.2, u.z, 22, g.appearance.aura, 6, 0.24, 0.8);
+    g.effects.ring(u.x, u.z, 0.5, 4, g.appearance.aura, 0.55);
+    g.hud.toast(t('toast.joinsArmy', { name: g.army.name(u) }));
+    play('arise');
+    g.save();
+    return true;
+  }
+
+  // ---- the Soul Seal shop ---------------------------------------------------------------
+  shopLeft(o) {
+    return o.max ? Math.max(0, o.max - (this.bought[o.id] || 0)) : Infinity;
+  }
+
+  shopEssence() {
+    return 100 * (this.zone() + 1);
+  }
+
+  buy(id) {
+    const o = Q.shop.find((x) => x.id === id), g = this.game, P = g.player;
+    if (!o || this.seals < o.cost || this.shopLeft(o) <= 0) return false;
+    if (id === 'revive' && !g.army.deployed.some((u) => !u.alive)) return false;
+    this.seals -= o.cost;
+    this.bought[id] = (this.bought[id] || 0) + 1;
+    if (o.tier !== undefined) this.stones.push(o.tier);
+    else if (id === 'essence') P.essence += this.shopEssence();
+    else if (id === 'revive') g.army.reviveAll();
+    play('chest');
+    g.save();
+    return true;
   }
 }
