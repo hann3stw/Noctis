@@ -42,6 +42,7 @@ export class Paths {
 
   pick(id) {
     if (!this.due() || !this.options().includes(id)) return false;
+    if (!this.canPick(id)) { this.game.hud.toast(t('path.armyTooBig', { n: CONFIG.paths.nodes[id].rule.slotCapMax })); return false; }
     this.chosen.push(id);
     this.game.player.recalc();
     this.game.hud.banner(t('path.picked'), t('path.' + id));
@@ -81,6 +82,24 @@ export class Paths {
       if (r && r[name]) v = Math.max(v, r[name]);
     }
     return v;
+  }
+
+  // the most army slots there can be: the Commander raises the limit, the Blade Master lowers it
+  slotCap() {
+    let cap = CONFIG.shadows.maxSlots, min = Infinity;
+    for (const id of this.chosen) {
+      const r = CONFIG.paths.nodes[id].rule;
+      if (!r) continue;
+      if (r.slotCapPlus) cap += r.slotCapPlus;
+      if (r.slotCapMax) min = Math.min(min, r.slotCapMax);
+    }
+    return Math.min(cap, min);
+  }
+
+  // a node can be picked: one that limits the army needs an army that fits
+  canPick(id) {
+    const r = CONFIG.paths.nodes[id].rule;
+    return !(r && r.slotCapMax && this.game.army.deployed.length > r.slotCapMax);
   }
 
   // the line with most picked nodes ('' = none)

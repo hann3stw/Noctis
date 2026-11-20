@@ -138,7 +138,7 @@ export class Army {
     // Intelligence decides how big the army can be
     const P = this.game.player, S = CONFIG.shadows;
     const n = S.baseSlots + Math.floor(P.stats.int * CONFIG.progression.stats.int.slots) + P.armySlots;
-    return Math.min(S.maxSlots, n);
+    return Math.min(this.game.path ? this.game.path.slotCap() : S.maxSlots, n);
   }
 
   totalCount() {

@@ -547,7 +547,7 @@ export class Menu {
     const card = (id, pick) => {
       const n = CONFIG.paths.nodes[id];
       return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p><ul>${this.pathLines(id)}</ul>
-        ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}">${t('path.choose')}</button>` : ''}</div>`;
+        ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}"${this.game.path.canPick(id) ? '' : ' disabled'}>${this.game.path.canPick(id) ? t('path.choose') : t('path.armyTooBig', { n: n.rule.slotCapMax })}</button>` : ''}</div>`;
     };
     const cost = Pa.respecCost();
     const mine = Pa.chosen.length ? Pa.chosen.map((id) => card(id, false)).join('') : `<p class="pa-none">${t('path.none')}</p>`;
