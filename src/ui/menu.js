@@ -209,6 +209,10 @@ export class Menu {
       this.qStone = Number(target.dataset.i);
     } else if (act === 'stoneUse') {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
+    } else if (act === 'useXp') {
+      this.game.quests.useXp();
+    } else if (act === 'useKey') {
+      if (this.game.quests.useKey()) this.close();
     } else if (act === 'buy') {
       this.game.quests.buy(target.dataset.id);
     } else if (act === 'beast') {
@@ -525,6 +529,8 @@ export class Menu {
     if (o.kind === 'essence') return t('quest.o.essence', { n: o.n });
     if (o.kind === 'seals') return t('quest.o.seals', { n: o.n });
     if (o.kind === 'stone') return t('quest.o.stone', { tier: t('quest.tier.' + o.tier) });
+    if (o.kind === 'xp') return t('quest.o.xp', { min: Math.round(CONFIG.quests.xpBoost.time / 60) });
+    if (o.kind === 'key') return t('quest.o.key');
     return t('quest.o.item', { rarity: t('rarity.' + o.rarity) });
   }
 
@@ -551,13 +557,16 @@ export class Menu {
       <div class="q-streak"><b>${t('quest.streak', { n: Q.streak })}</b><small>${claimedToday ? t('quest.streakDone') : t('quest.streakOpen')}${nextTxt ? ' · ' + nextTxt : ''}</small></div>
       <div class="q-tabs"><button class="seg${shop ? '' : ' on'}" data-act="qmode" data-v="quests">${t('quest.tabQuests')}</button>
         <button class="seg${shop ? ' on' : ''}" data-act="qmode" data-v="shop">${t('quest.tabShop')}</button>
-        ${Q.stones.length ? `<button class="ap-btn gold" data-act="stoneOpen" data-i="0">${t('quest.useStone', { n: Q.stones.length })}</button>` : ''}</div>`;
+        ${Q.stones.length ? `<button class="ap-btn gold" data-act="stoneOpen" data-i="0">${t('quest.useStone', { n: Q.stones.length })}</button>` : ''}
+        ${Q.xpTokens ? `<button class="ap-btn gold" data-act="useXp">${t('quest.useXp', { n: Q.xpTokens })}</button>` : ''}
+        ${Q.keys ? `<button class="ap-btn gold" data-act="useKey"${this.game.gates.active >= 0 ? ' disabled' : ''}>${t('quest.useKey', { n: Q.keys })}</button>` : ''}</div>${this.game.xpBoostT > 0 ? `<div class="q-streak"><b>${t('quest.xpActive', { t: Math.floor(this.game.xpBoostT / 60) + ':' + String(Math.floor(this.game.xpBoostT % 60)).padStart(2, '0') })}</b></div>` : ''}`;
     let body;
     if (shop) {
       body = `<div class="q-list">${C.shop.map((o) => {
-        const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive));
+        const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive)) && !(o.id === 'xp' && Q.xpTokens >= C.xpBoost.max) && !(o.id === 'key' && Q.keys >= C.keyGate.max);
         const desc = o.tier !== undefined ? t('quest.shop.stone', { tier: t('quest.tier.' + o.tier) })
-          : o.id === 'essence' ? t('quest.shop.essence', { n: fmt(Q.shopEssence()) }) : t('quest.shop.revive');
+          : o.id === 'essence' ? t('quest.shop.essence', { n: fmt(Q.shopEssence()) })
+            : o.id === 'xp' ? t('quest.o.xp', { min: Math.round(C.xpBoost.time / 60) }) : o.id === 'key' ? t('quest.shop.key') : t('quest.shop.revive');
         return `<div class="q-card shop${ok ? '' : ' off'}"><em>${t('quest.sealsN', { n: o.cost })}</em><b>${desc}</b>
           <div class="q-foot"><small>${o.max ? t('quest.shopLeft', { n: left, max: o.max }) : ''}</small>
           <button class="ap-btn" data-act="buy" data-id="${o.id}"${ok ? '' : ' disabled'}>${t('quest.buy')}</button></div></div>`;

@@ -297,7 +297,7 @@ export class Hud {
         const gate = gates.list[near], zone = CONFIG.world.zones[gate.zone];
         const diff = CONFIG.gates.difficulties[gate.diff];
         const tier = diff.id === 'deadly' ? game.gateTier(gate.zone) : 0;
-        this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id) + (tier ? ' +' + tier : ''), rank: zone.rank });
+        this.gateTitle.textContent = t('gate.title', { diff: t('gate.diff.' + diff.id) + (tier ? ' +' + tier : ''), rank: zone.rank }) + (gate.keyed ? ' · ' + t('quest.keyTag') : '');
         this.gateInfo.textContent = t('gate.info', { boss: t('enemy.' + zone.boss), level: gate.level, n: diff.stages.length + 1 }) + (nm ? ' · ' + t('mods.active', { n: nm }) : '');
         this.gatePanel.dataset.d = diff.id;
         this.gateBtn2.style.display = game.modsOpen() ? '' : 'none';

@@ -681,16 +681,23 @@ export const CONFIG = {
     // the reward comes the day the streak reaches the number
     streak: [
       { days: 3, seals: 6 },
-      { days: 7, seals: 15, item: 3 },
-      { days: 14, seals: 30, stone: 2 },
-      { days: 30, seals: 60, item: 5, stone: 2 },
+      { days: 7, seals: 15, item: 3, xp: 1 },
+      { days: 14, seals: 30, stone: 2, key: 1 },
+      { days: 30, seals: 60, item: 5, stone: 2, key: 1, xp: 2 },
     ],
+    // Double XP Token: for xpBoost.time seconds of play the hunter gets xpBoost.mult times the XP
+    // from kills. A Gate Key opens the deadly gate of your zone at keyGate.tier tiers harder
+    // than it is now, with keyGate.items more items. At most `max` of each are kept.
+    xpBoost: { time: 1800, mult: 2, max: 5 },
+    keyGate: { tier: 2, items: 2, max: 5 },
     // The Soul Seal shop: seals cost, max per day (0 = unlimited)
     shop: [
       { id: 'stone1', cost: 8, max: 2, tier: 1 },
       { id: 'stone2', cost: 20, max: 1, tier: 2 },
       { id: 'essence', cost: 5, max: 3 }, // essence = 100 x (zone + 1)
       { id: 'revive', cost: 3, max: 0 }, // every fallen shadow stands up
+      { id: 'xp', cost: 10, max: 2 }, // a Double XP Token
+      { id: 'key', cost: 25, max: 1 }, // a Gate Key
     ],
     kinds: {
       kill: { n: [25, 50, 100] }, // monsters of the zone

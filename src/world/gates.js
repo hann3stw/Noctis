@@ -87,7 +87,7 @@ export class Gates {
     });
     this.list.forEach((g, gi) => {
       const s = saved && saved[gi];
-      if (s) { g.open = !!s.open; g.gen = s.gen || 0; g.t = s.t || 0; }
+      if (s) { g.open = !!s.open; g.gen = s.gen || 0; g.t = s.t || 0; g.keyed = !!s.keyed; }
       this.place(gi);
     });
 
@@ -134,7 +134,7 @@ export class Gates {
   }
 
   serialize() {
-    return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t) }));
+    return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t), keyed: !!g.keyed }));
   }
 
   get inAbyss() {
@@ -245,6 +245,10 @@ export class Gates {
     else if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
     // deadly gates: the tier of their zone (Deadly +1, +2 ...)
     g.tier = !g.abyss && !g.trial && CONFIG.gates.difficulties[g.diff].id === 'deadly' ? game.gateTier(g.zone) : 0;
+    // a Gate Key was used on this gate: harder and richer, once
+    g.keyRun = !!g.keyed && !g.abyss && !g.trial;
+    g.keyed = false;
+    if (g.keyRun) g.tier += CONFIG.quests.keyGate.tier;
     this.runMods = game.modsOpen() ? [...game.mods] : [];
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
     this.timeLeft = 0;
@@ -337,9 +341,10 @@ export class Gates {
     const GT = CONFIG.gateTiers, tier = gate.tier || 0;
     const luck = P.luck + D.luck + modLuck + tier * GT.luck, top = Math.min(1, CONFIG.items.bossTopChance + tier * GT.topChance);
     this.timeLeft = 0;
-    for (let k = 0; k < D.items; k++) {
-      const a = (k / D.items) * Math.PI * 2;
-      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, luck, P.known, D.minRarity, k < D.items - 1, top));
+    const items = D.items + (gate.keyRun ? CONFIG.quests.keyGate.items : 0);
+    for (let k = 0; k < items; k++) {
+      const a = (k / items) * Math.PI * 2;
+      game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, luck, P.known, D.minRarity, k < items - 1, top));
     }
     // the helpers fade away
     for (const a of E.arenaAdds[gi]) {
@@ -361,7 +366,7 @@ export class Gates {
       game.hud.toast(t('toast.essence', { n: ess }));
       if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
       game.quests.add('gate', { diff: gate.diff });
-      const up = D.id === 'deadly' && game.gateTierUp(gate.zone);
+      const up = D.id === 'deadly' && !gate.keyRun && game.gateTierUp(gate.zone);
       if (up && game.tips) game.tips.show('gateTier');
       game.hud.banner(t('toast.gateCleared'), up ? t('gate.tierUp', { n: game.gateTier(gate.zone) }) : t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
     }

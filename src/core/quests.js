@@ -36,6 +36,8 @@ export class Quests {
     this.streak = (saved && saved.streak | 0) || 0;
     this.streakDay = saved && typeof saved.streakDay === 'number' ? saved.streakDay : -9;
     this.stones = saved && Array.isArray(saved.stones) ? saved.stones.filter((n) => n >= 0 && n <= 2).slice(0, 50) : [];
+    this.xpTokens = (saved && saved.xpTokens | 0) || 0; // Double XP Tokens
+    this.keys = (saved && saved.keys | 0) || 0; // Gate Keys
     this.bought = {}; // shop purchases of today
     if (saved && saved.day === today() && Array.isArray(saved.list)) {
       this.day = saved.day;
@@ -49,6 +51,7 @@ export class Quests {
     return {
       day: this.day, list: this.list, bonus: this.bonus, bought: this.bought,
       seals: this.seals, streak: this.streak, streakDay: this.streakDay, stones: this.stones,
+      xpTokens: this.xpTokens, keys: this.keys,
     };
   }
 
@@ -146,9 +149,13 @@ export class Quests {
       { kind: 'seals', n: Q.sealBonus[q.d] },
       { kind: 'stone', tier: Q.stoneTier[q.d] },
     ];
-    // one is left out (the item stays most of the time, so gear is always an option)
-    const out = rng() < 0.7 ? all.splice((1 + rng() * 3) | 0, 1) : all.splice(0, 1);
-    return all;
+    if (q.d >= 1) all.push({ kind: 'xp' });
+    if (q.d === 2) all.push({ kind: 'key' });
+    // three of them; the item stays most of the time, so gear is always an option
+    const keepItem = rng() < 0.7;
+    const rest = all.slice(1);
+    for (let i = rest.length - 1; i > 0; i--) { const j = (rng() * (i + 1)) | 0; [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    return keepItem ? [all[0], rest[0], rest[1]] : [rest[0], rest[1], rest[2]];
   }
 
   // quest k, reward number i of its options
@@ -184,6 +191,10 @@ export class Quests {
     } else if (o.kind === 'stone') {
       this.stones.push(o.tier);
       this.game.hud.toast(t('quest.stoneGot', { tier: t('quest.tier.' + o.tier) }));
+    } else if (o.kind === 'xp') {
+      this.addXpToken(1);
+    } else if (o.kind === 'key') {
+      this.addKey(1);
     } else {
       this.give(o.rarity);
     }
@@ -201,6 +212,46 @@ export class Quests {
     if (m.seals) this.seals += m.seals;
     if (m.item) this.give(m.item);
     if (m.stone !== undefined) this.stones.push(m.stone);
+    if (m.xp) this.addXpToken(m.xp);
+    if (m.key) this.addKey(m.key);
+  }
+
+  addXpToken(n) {
+    this.xpTokens = Math.min(Q.xpBoost.max, this.xpTokens + n);
+    this.game.hud.toast(t('quest.xpGot'));
+  }
+
+  addKey(n) {
+    this.keys = Math.min(Q.keyGate.max, this.keys + n);
+    this.game.hud.toast(t('quest.keyGot'));
+  }
+
+  // uses a Double XP Token: more time on the clock (stacks)
+  useXp() {
+    if (this.xpTokens <= 0) return false;
+    this.xpTokens--;
+    this.game.xpBoostT += Q.xpBoost.time;
+    this.game.hud.toast(t('quest.xpOn', { min: Math.round(Q.xpBoost.time / 60) }));
+    play('levelup');
+    this.game.save();
+    return true;
+  }
+
+  // uses a Gate Key: the deadly gate of the hunter's zone opens, harder and richer
+  useKey() {
+    const g = this.game, gates = g.gates;
+    if (this.keys <= 0 || gates.active >= 0) return false;
+    const gi = gates.list.findIndex((x) => !x.abyss && !x.trial && x.zone === this.zone() && x.diff === 2);
+    if (gi < 0) return false;
+    this.keys--;
+    const gt = gates.list[gi];
+    gt.keyed = true;
+    if (!gt.open) { gt.open = true; gt.gen++; gates.place(gi); }
+    g.waypoint.set({ kind: 'gate', gi, gen: gt.gen, x: gt.x, z: gt.z });
+    g.hud.banner(t('quest.keyOpen'), t('quest.keyOpenSub', { zone: t('zone.' + CONFIG.world.zones[gt.zone].id) }));
+    play('arise');
+    g.save();
+    return true;
   }
 
   // the next streak reward: { days, seals, item, stone } or null
@@ -243,11 +294,14 @@ export class Quests {
     const o = Q.shop.find((x) => x.id === id), g = this.game, P = g.player;
     if (!o || this.seals < o.cost || this.shopLeft(o) <= 0) return false;
     if (id === 'revive' && !g.army.deployed.some((u) => !u.alive)) return false;
+    if ((id === 'xp' && this.xpTokens >= Q.xpBoost.max) || (id === 'key' && this.keys >= Q.keyGate.max)) return false;
     this.seals -= o.cost;
     this.bought[id] = (this.bought[id] || 0) + 1;
     if (o.tier !== undefined) this.stones.push(o.tier);
     else if (id === 'essence') P.essence += this.shopEssence();
     else if (id === 'revive') g.army.reviveAll();
+    else if (id === 'xp') this.xpTokens++;
+    else if (id === 'key') this.keys++;
     play('chest');
     g.save();
     return true;

@@ -85,6 +85,7 @@ export class Game {
     this.zoneRank = 'E';
     this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S (from the level)
     this.trialRank = save ? save.trialRank || 0 : 0; // highest rank whose trial was passed
+    this.xpBoostT = save ? Math.max(0, save.xpBoostT || 0) : 0; // seconds of Double XP left
     this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
     this.soulNear = -1; // soul in reach of the Arise button
@@ -231,6 +232,7 @@ export class Game {
       playTime: Math.round(this.playTime),
       rankIndex: this.rankIndex,
       trialRank: this.trialRank,
+      xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
       discovered: [...this.discovered],
@@ -442,6 +444,7 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
+    if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;
     if (this.saveT >= CONFIG.save.autosaveInterval) this.save();
     this.updateCapture(dt);
@@ -848,7 +851,8 @@ export class Game {
     }
     // enemies above your level: more XP, but less than their power (progression.xpAbove)
     const over = enemyPower(E.lvl[i]) / enemyPower(this.player.level);
-    const hxp = over > 1 ? xp * Math.pow(over, CONFIG.progression.xpAbove - 1) : xp;
+    let hxp = over > 1 ? xp * Math.pow(over, CONFIG.progression.xpAbove - 1) : xp;
+    if (this.xpBoostT > 0) hxp *= CONFIG.quests.xpBoost.mult; // Double XP Token
     // kills of the army count only partly for the hunter
     this.player.addXp(src < 0 ? hxp * (1 + bonus) : hxp * CONFIG.progression.armyKillXp);
     if (src < 0) this.player.onKill();
