@@ -555,7 +555,7 @@ export class Menu {
     const Pa = this.game.path, P = this.game.player, due = Pa.due();
     const card = (id, pick) => {
       const n = CONFIG.paths.nodes[id];
-      const why = pick ? this.game.path.why(id) : '';
+      const why = ''; // the offers come without comment: no reason, no hint what else would be offered
       return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p>${why ? `<small class="pa-why">${why}</small>` : ''}<ul>${this.pathLines(id)}</ul>
         ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}"${this.game.path.canPick(id) ? '' : ' disabled'}>${this.game.path.canPick(id) ? t('path.choose') : t('path.armyTooBig', { n: n.rule.slotCapMax })}</button>` : ''}</div>`;
     };
