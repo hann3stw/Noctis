@@ -34,6 +34,7 @@ import { Tips, BASIC_TIPS } from './ui/tips.js';
 import { Fog } from './ui/fog.js';
 import { Quests } from './core/quests.js';
 import { Bestiary } from './core/bestiary.js';
+import { Paths } from './core/paths.js';
 import { Waypoint } from './core/waypoint.js';
 import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
@@ -112,6 +113,7 @@ export class Game {
     this.world = new World(this.scene, this.seed);
     this.gates = new Gates(this, save && save.gates);
     setNextItemId(save ? save.nextItemId || 1 : 1);
+    this.path = new Paths(this, save && save.path); // the class tree (before the player: it adds bonuses)
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
     this.army = new Army(this);
@@ -232,6 +234,7 @@ export class Game {
       playTime: Math.round(this.playTime),
       rankIndex: this.rankIndex,
       trialRank: this.trialRank,
+      path: this.path.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
@@ -349,6 +352,9 @@ export class Game {
     P.points += pts;
     this.hud.banner(t('toast.rankUp', { rank: RANKS[r] }), t('toast.rankUpSub', { n: pts }));
     this.effects.ring(P.x, P.z, 0.5, 8, 0xffd24a, 0.8);
+    // a new pick of the Path: the window opens (in the arena of the trial it waits for the Leave button)
+    if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
+    else this.path.check();
     this.save();
   }
 
@@ -444,6 +450,7 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
+    if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;
     if (this.saveT >= CONFIG.save.autosaveInterval) this.save();
@@ -854,7 +861,10 @@ export class Game {
     let hxp = over > 1 ? xp * Math.pow(over, CONFIG.progression.xpAbove - 1) : xp;
     if (this.xpBoostT > 0) hxp *= CONFIG.quests.xpBoost.mult; // Double XP Token
     // kills of the army count only partly for the hunter
-    this.player.addXp(src < 0 ? hxp * (1 + bonus) : hxp * CONFIG.progression.armyKillXp);
+    this.player.addXp(src < 0 ? hxp * (1 + bonus) : hxp * CONFIG.progression.armyKillXp * (this.path.rule('armyKillXp') || 1));
+    // Path rule of the Soul Mage: kills (also by shadows) give mana back
+    const km = this.path.rule('killMana');
+    if (km && !this.player.dead) this.player.mana = Math.min(this.player.maxMana, this.player.mana + this.player.maxMana * km);
     if (src < 0) this.player.onKill();
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');

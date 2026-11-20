@@ -3984,3 +3984,79 @@ input.shake {
 .q-opt.o-essence { --oc: #7fd6ff; }
 .q-opt.o-seals { --oc: #c58bff; }
 .q-opt.o-stone { --oc: #7dffa8; }
+
+/* ---- Path of the Necromancer ---- */
+.path {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.6);
+  padding: calc(var(--u) * 1);
+}
+.pa-head {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.4);
+}
+.pa-head b {
+  font-family: var(--font-ui);
+  color: var(--gold);
+  font-size: calc(var(--u) * 3.6);
+  letter-spacing: 0.06em;
+}
+.pa-head small, .pa-none {
+  color: #b9add6;
+  font-size: calc(var(--u) * 2.5);
+}
+.pa-sub {
+  color: #d8c4ff;
+  font-weight: 700;
+  font-size: calc(var(--u) * 2.6);
+}
+.pa-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(var(--u) * 46), 1fr));
+  gap: calc(var(--u) * 2);
+}
+.pa-card {
+  --lc: #7fd6ff;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1);
+  padding: calc(var(--u) * 2);
+  border-radius: calc(var(--u) * 2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lc) 14%, rgba(20, 12, 38, 0.95)), rgba(12, 7, 24, 0.95));
+  border: 1px solid color-mix(in srgb, var(--lc) 45%, transparent);
+  box-shadow: var(--bevel);
+}
+.pa-card.pick {
+  border-color: var(--lc);
+  box-shadow: 0 0 calc(var(--u) * 3) color-mix(in srgb, var(--lc) 40%, transparent);
+}
+.pa-card.l-commander { --lc: #ffd24a; }
+.pa-card.l-blade { --lc: #ff6a7a; }
+.pa-card.l-mage { --lc: #8aa8ff; }
+.pa-card em {
+  font-style: normal;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: calc(var(--u) * 2.1);
+  color: var(--lc);
+}
+.pa-card b {
+  font-size: calc(var(--u) * 3.6);
+}
+.pa-card p {
+  margin: 0;
+  color: #cfc4ea;
+  font-size: calc(var(--u) * 2.4);
+}
+.pa-card ul {
+  margin: 0;
+  padding-left: calc(var(--u) * 2.6);
+  font-size: calc(var(--u) * 2.5);
+  color: #9dffb8;
+}
+.pa-card li.neg { color: #ff9a9a; }
+.pa-card li.rule { color: #ffe08a; }
+.pa-card .ap-btn { margin-top: auto; min-height: calc(var(--u) * 7.5); }

@@ -20,7 +20,7 @@ import {
   upgradeCost, dismantleValue, itemPower, slotOf, attuneLevel, attuneCost,
 } from '../core/items.js';
 
-const TABS = ['gear', 'stats', 'skills', 'army', 'quests', 'bestiary', 'look'];
+const TABS = ['gear', 'stats', 'skills', 'path', 'army', 'quests', 'bestiary', 'look'];
 
 const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="currentColor"/></svg>`;
 const ICONS = {
@@ -209,6 +209,10 @@ export class Menu {
       this.qStone = Number(target.dataset.i);
     } else if (act === 'stoneUse') {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
+    } else if (act === 'pathPick') {
+      this.game.path.pick(target.dataset.id);
+    } else if (act === 'pathRespec') {
+      this.game.path.respec();
     } else if (act === 'useXp') {
       this.game.quests.useXp();
     } else if (act === 'useKey') {
@@ -237,6 +241,7 @@ export class Menu {
       skills: P.newSkills.length ? '!' : '',
       quests: this.game.quests.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
+      path: this.game.path.due() ? '!' : '',
     };
     const tabs = TABS.map((id) => {
       const badge = news[id] ? `<i>${news[id]}</i>` : '';
@@ -244,7 +249,7 @@ export class Menu {
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     this.el.innerHTML = `
-      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
+      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
         <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
       <div class="mn-body"></div>`;
     this.fitHead();
@@ -254,7 +259,7 @@ export class Menu {
       this.army.render();
     } else {
       const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look(),
-        quests: () => this.questsView(), bestiary: () => this.bestiaryView() };
+        quests: () => this.questsView(), bestiary: () => this.bestiaryView(), path: () => this.pathView() };
       body.innerHTML = views[this.tab]();
       if (this.tab === 'bestiary') this.showBeast(body);
     }
@@ -524,6 +529,35 @@ export class Menu {
   }
 
   // ---- daily quests -------------------------------------------------------------
+  // bonuses and rule of a path node, as lines of text
+  pathLines(id) {
+    const n = CONFIG.paths.nodes[id];
+    const out = [];
+    for (const k in n.bonus) {
+      const v = n.bonus[k], flat = k === 'armySlots';
+      out.push(`<li class="${v < 0 ? 'neg' : ''}">${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + (flat ? Math.abs(v) : Math.round(Math.abs(v) * 100)) })}</li>`);
+    }
+    if (n.rule) out.push(`<li class="rule">${t('path.' + id + '.rule')}</li>`);
+    return out.join('');
+  }
+
+  // The Path of the Necromancer: the pick that is due (cards), and what was picked
+  pathView() {
+    const Pa = this.game.path, P = this.game.player, due = Pa.due();
+    const card = (id, pick) => {
+      const n = CONFIG.paths.nodes[id];
+      return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p><ul>${this.pathLines(id)}</ul>
+        ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}">${t('path.choose')}</button>` : ''}</div>`;
+    };
+    const cost = Pa.respecCost();
+    const mine = Pa.chosen.length ? Pa.chosen.map((id) => card(id, false)).join('') : `<p class="pa-none">${t('path.none')}</p>`;
+    return `<div class="path" data-scroll="path">
+      <div class="pa-head"><b>${t('path.title')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
+      ${due ? `<div class="pa-row">${Pa.options().map((id) => card(id, true)).join('')}</div>` : ''}
+      <div class="pa-sub">${t('path.yours')}</div><div class="pa-row">${mine}</div>
+      ${Pa.chosen.length ? `<button class="ap-btn ghost" data-act="pathRespec"${P.essence >= cost ? '' : ' disabled'}>${t('path.respec', { n: fmt(cost) })}</button>` : ''}</div>`;
+  }
+
   // text of one reward of a daily quest
   rewardText(o) {
     if (o.kind === 'essence') return t('quest.o.essence', { n: o.n });

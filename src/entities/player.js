@@ -204,6 +204,7 @@ export class Player {
         if (this.setCount[set] >= Number(need)) for (const k in tiers[need]) b[k] += tiers[need][k];
       }
     }
+    if (this.game.path) this.game.path.apply(b); // the Path of the Necromancer
     // mastery points (after the last level)
     const M = CONFIG.mastery.perPoint, ms = this.mastery.s;
     // effects of unique items

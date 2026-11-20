@@ -331,6 +331,8 @@ export class Gates {
     }
     game.army.relocate(P.x, P.z);
     game.save();
+    // a pick of the Path that came with the rank trial
+    if (!toCamp && game.path.due()) { game.path.announced = true; game.menu.open('path'); }
   }
 
   onBossKilled(gi, x, z) {

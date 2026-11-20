@@ -629,6 +629,23 @@ export const CONFIG = {
   // of items.bossTopChance), and the essence grows.
   gateTiers: { max: 10, hp: 1.3, damage: 1.12, luck: 0.3, topChance: 0.03, essence: 0.25 },
 
+  // Paths (the class tree of the Necromancer): at certain ranks you pick one of
+  // a few path nodes. Every node belongs to a line (commander, blade, mage) and
+  // gives bonuses (the same names as item bonuses) and sometimes a rule
+  // (armyKillXp = x times your share of the XP of kills by your shadows,
+  // killMana = share of your mana per kill). stage 1 is offered from rank D (index 1).
+  // Later stages build on the line of the nodes you already picked.
+  paths: {
+    stages: [1], // rank indexes (0 = E) at which a pick is due
+    respec: 250, // essence x (rank + 1) to take every pick back
+    lines: ['commander', 'blade', 'mage'],
+    nodes: {
+      commander1: { line: 'commander', stage: 1, bonus: { armySlots: 3, armyHp: 0.2, armyDamage: 0.1 }, rule: { armyKillXp: 2 } },
+      blade1: { line: 'blade', stage: 1, bonus: { damage: 0.3, crit: 0.08, speed: 0.06, killHeal: 0.02, armyDamage: -0.1 } },
+      mage1: { line: 'mage', stage: 1, bonus: { mana: 0.4, skillDamage: 0.25, cooldown: 0.15 }, rule: { killMana: 0.02 } },
+    },
+  },
+
   // Rank trial: the last level of a rank is the gate to the next one. Its XP
   // fills up but the level stays until the trial is passed: a golden gate in
   // the camp with the boss of the next zone (at the last level of your rank)
