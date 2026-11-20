@@ -637,7 +637,7 @@ export const CONFIG = {
   // slotCapMax = the army can never be bigger than this; picking it needs an army that fits). stage 1 is offered from rank D (index 1).
   // Later stages build on the line of the nodes you already picked.
   paths: {
-    stages: [1, 3, 5], // rank indexes (0 = E) at which a pick is due (stage 1 at D, stage 2 at B, stage 3 at S)
+    stages: [1, 3, 5, 8], // rank indexes (0 = E) at which a pick is due (stage 1 at D, 2 at B, 3 at S, 4 at L)
     respec: 250, // essence x (rank + 1) to take every pick back
     lines: ['commander', 'blade', 'mage'],
     nodes: {
@@ -680,6 +680,19 @@ export const CONFIG = {
       // only for some ways to play
       gatecrasher: { line: 'blade', stage: 3, bonus: { damage: 0.2, hp: 0.2, damageTaken: -0.1, speed: -0.1 }, req: { gateMin: 0.25 }, like: { gates: 1 } },
       bossBane: { line: 'blade', stage: 3, bonus: { damage: 0.3, ultCharge: 0.3, armyDamage: -0.15 }, req: { eliteMin: 0.06 }, like: { elite: 1 } },
+      // Stage 4: the crowning of a path. The strongest nodes, with the heaviest drawbacks.
+      shadowEmperor: { line: 'commander', stage: 4, bonus: { armySlots: 8, armyHp: 0.3, armyDamage: 0.3, damage: -0.4, hp: -0.25 }, rule: { slotCapPlus: 10, reviveCostMult: 1.5 }, req: { lineMin: { commander: 3 } }, like: { army: 1, officers: 0.5 } },
+      undyingHost: { line: 'commander', stage: 4, bonus: { armyHp: 0.5, armyDamage: -0.25, speed: -0.1 }, rule: { reviveCostMult: 0.3 }, req: { lineMin: { commander: 2 } }, like: { lossy: 1, army: 0.5 } },
+      deathIncarnate: { line: 'blade', stage: 4, bonus: { damage: 0.7, crit: 0.2, reload: 0.2, speed: 0.1, hp: -0.4, damageTaken: 0.3 }, rule: { slotCapMax: 6 }, req: { lineMin: { blade: 3 } }, like: { hunter: 1, critty: 0.6 } },
+      perfectForm: { line: 'blade', stage: 4, bonus: { reload: 0.25, crit: 0.15, killHeal: 0.05, damage: 0.3, mana: -0.4, skillDamage: -0.4 }, req: { lineMin: { blade: 2 } }, like: { dodger: 0.7, critty: 0.7, hunter: 0.5 } },
+      arcaneSovereign: { line: 'mage', stage: 4, bonus: { skillDamage: 0.9, ultCharge: 0.5, cooldown: 0.3, mana: 0.5, hp: -0.3, armyHp: -0.3 }, rule: { manaRegenMult: 0.5 }, req: { lineMin: { mage: 3 } }, like: { caster: 1 } },
+      soulLord: { line: 'mage', stage: 4, bonus: { mana: 0.6, skillDamage: 0.4, damage: -0.3 }, rule: { killMana: 0.1, hpRegenMult: 0.2 }, req: { lineMin: { mage: 2 } }, like: { caster: 0.7, army: 0.4 } },
+      lichKing: { line: 'commander', stage: 4, bonus: { armySlots: 5, skillDamage: 0.4, armyDamage: 0.3, hp: -0.35, damage: -0.4 }, rule: { killMana: 0.05 }, req: { lineMin: { commander: 1, mage: 1 } }, like: { army: 0.7, caster: 0.7 } },
+      shadowMonarch: { line: 'commander', stage: 4, bonus: { damage: 0.3, skillDamage: 0.3, armyDamage: 0.3, armyHp: 0.2, armySlots: 3, hp: -0.2, speed: -0.1, damageTaken: 0.15 }, rule: { manaRegenMult: 0.8 }, req: { lineMin: { commander: 1, blade: 1, mage: 1 } }, like: { army: 0.5, caster: 0.5, hunter: 0.5 } },
+      // only for some ways to play
+      abyssTouched: { line: 'blade', stage: 4, bonus: { hp: 0.3, damage: 0.3, damageTaken: -0.2, armyHp: 0.3, speed: -0.15, mana: -0.3 }, req: { gateMin: 0.4 }, like: { gates: 1 } },
+      apexPredator: { line: 'blade', stage: 4, bonus: { damage: 0.6, ultCharge: 0.4, armyDamage: -0.3, armyHp: -0.3 }, req: { eliteMin: 0.08, hunterMin: 0.5 }, like: { elite: 1, hunter: 0.6 } },
+      grimHarvest: { line: 'mage', stage: 4, bonus: { damage: 0.2, hp: -0.2 }, rule: { selfXp: 2, armyKillXp: 2 }, req: { killsMin: 8000 }, like: { hunter: 0.3, army: 0.3 } },
     },
   },
 
