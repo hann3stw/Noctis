@@ -802,6 +802,7 @@ export class Player {
   cast(slot, auto, dx, dz, power) {
     const id = this.slots[slot];
     if (!id || this.dodgeT > 0) return;
+    this.game.profile.casts++;
     const def = skillDef(id);
     const hud = this.game.hud;
     if (slot === 2) {

@@ -35,6 +35,7 @@ import { Fog } from './ui/fog.js';
 import { Quests } from './core/quests.js';
 import { Bestiary } from './core/bestiary.js';
 import { Paths } from './core/paths.js';
+import { Profile } from './core/profile.js';
 import { Waypoint } from './core/waypoint.js';
 import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
@@ -113,6 +114,7 @@ export class Game {
     this.world = new World(this.scene, this.seed);
     this.gates = new Gates(this, save && save.gates);
     setNextItemId(save ? save.nextItemId || 1 : 1);
+    this.profile = new Profile(save && save.profile); // how the hunter plays (the Path uses it)
     this.path = new Paths(this, save && save.path); // the class tree (before the player: it adds bonuses)
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
@@ -235,6 +237,7 @@ export class Game {
       rankIndex: this.rankIndex,
       trialRank: this.trialRank,
       path: this.path.serialize(),
+      profile: this.profile.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
@@ -450,6 +453,8 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
+    this.profile.time += dt;
+    if (this.gates.active >= 0) this.profile.gateTime += dt;
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;
@@ -837,6 +842,7 @@ export class Game {
   // src: -1 = killed by the player, otherwise the slot of the shadow
   onEnemyKilled(i, src) {
     this.kills++;
+    if (src < 0) this.profile.hunterKills++; else this.profile.armyKills++;
     const E = this.enemies;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
     if (tier === 3) sting('victory'); // a boss falls
@@ -882,6 +888,7 @@ export class Game {
   }
 
   onPlayerRespawn() {
+    this.profile.deaths++;
     if (this.gates.active >= 0) this.gates.leave(true);
     this.enemies.calmAll();
     this.cam.snap(this.player.x, this.player.z);
