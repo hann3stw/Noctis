@@ -109,6 +109,7 @@ export class Hunts {
   // called by Game.onEnemyKilled after the usual drops
   onKill(i) {
     if (i !== this.i) return;
+    this.game.profile.huntsSlain++;
     const game = this.game, E = game.enemies, P = game.player, H = CONFIG.hunts;
     const x = E.x[i], z = E.z[i], level = E.lvl[i];
     for (let k = 0; k < H.items; k++) {

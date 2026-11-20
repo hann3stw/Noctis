@@ -4060,3 +4060,31 @@ input.shake {
 .pa-card li.neg { color: #ff9a9a; }
 .pa-card li.rule { color: #ffe08a; }
 .pa-card .ap-btn { margin-top: auto; min-height: calc(var(--u) * 7.5); }
+
+/* titles */
+.pa-note { color: #b9add6; font-size: calc(var(--u) * 2.3); }
+.ttl-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 38), 1fr));
+  gap: calc(var(--u) * 1.2);
+}
+.ttl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 1.8);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  border-radius: calc(var(--u) * 1.6);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 170, 255, 0.25);
+  cursor: pointer;
+}
+.ttl b { font-size: calc(var(--u) * 2.8); color: #ffe08a; }
+.ttl small { font-size: calc(var(--u) * 2.1); color: #b9add6; }
+.ttl.lock { opacity: 0.5; cursor: default; }
+.ttl.lock b { color: #8d82ad; }
+.ttl.on { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); }
+.lb-title { color: #ffd870; font-style: normal; font-weight: 700; }

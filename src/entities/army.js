@@ -476,6 +476,7 @@ export class Army {
       u.alive = true;
       u.hp = u.maxHp;
       if (this.out) this.placeAtHome(u, true);
+      this.game.profile.revived++;
       n++;
     }
     if (n) this.version++;
@@ -520,6 +521,7 @@ export class Army {
       const R = CONFIG.shadows.revive;
       u.hp = 0;
       u.alive = false;
+      this.game.profile.shadowsLost++;
       u.target = -1;
       u.windup = 0;
       u.reviveT = R.cooldown + R.cooldownPerLevel * u.level;

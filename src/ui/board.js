@@ -172,8 +172,10 @@ export class Board {
     const id = myId(), D = CONFIG.difficulty.levels, lv = this.kind === 'level';
     const dif = (r) => (D[r.difficulty] ? ` · <i class="dif-${r.difficulty}">${t('diff.' + r.difficulty)}</i>` : '');
     const mas = (r) => (r.mastery ? ' · ' + t('lb.mastery', { n: fmt(r.mastery) }) : '');
+    // a title of another hunter: only the ones this version knows
+    const ttl = (r) => { const k = 'title.' + r.title; return r.title && /^[a-z0-9_]{1,24}$/.test(r.title) && t(k) !== k ? `<i class="lb-title">${esc(t(k))}</i> · ` : ''; };
     const row = (r, place) => `<div class="lb-row${r.user_id === id ? ' me' : ''}${place <= 3 ? ' top' + place : ''}${r.user_id === this.openId ? ' open' : ''}" data-act="lbShow" data-v="${esc(r.user_id)}"><em>${place}</em>
-      <div><b>${esc(r.name)}</b><small>${lv
+      <div><b>${esc(r.name)}</b><small>${ttl(r)}${lv
     ? t('lb.subRank', { rank: esc(r.rank) }) + mas(r) + (r.floor > 0 ? ' · ' + t('lb.floor', { n: r.floor }) : '')
     : t('lb.sub', { level: r.level, rank: esc(r.rank) }) + mas(r) + dif(r)}</small></div>
       <span>${lv ? t('lb.level', { n: r.level }) : t('lb.floor', { n: r.floor })}</span><i class="lb-more"></i></div>${r.user_id === this.openId ? this.details(r) : ''}`;

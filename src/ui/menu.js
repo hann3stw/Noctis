@@ -9,6 +9,7 @@ import { ShadowStage } from './shadowStage.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 import { msToMidnight, today } from '../core/quests.js';
+import { TITLES } from '../core/titles.js';
 import { play } from '../core/sfx.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
@@ -211,6 +212,8 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(target.dataset.id);
+    } else if (act === 'titlePick') {
+      this.game.titles.wear(target.dataset.id);
     } else if (act === 'pathRespec') {
       this.game.path.respec();
     } else if (act === 'useXp') {
@@ -555,7 +558,12 @@ export class Menu {
       <div class="pa-head"><b>${t('path.title')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
       ${due ? `<div class="pa-row">${Pa.options().map((id) => card(id, true)).join('')}</div>` : ''}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-row">${mine}</div>
-      ${Pa.chosen.length ? `<button class="ap-btn ghost" data-act="pathRespec"${P.essence >= cost ? '' : ' disabled'}>${t('path.respec', { n: fmt(cost) })}</button>` : ''}</div>`;
+      ${Pa.chosen.length ? `<button class="ap-btn ghost" data-act="pathRespec"${P.essence >= cost ? '' : ' disabled'}>${t('path.respec', { n: fmt(cost) })}</button>` : ''}
+      <div class="pa-sub">${t('title.heading')}</div><small class="pa-note">${t('title.hint')}</small>
+      <div class="ttl-list">${Object.keys(TITLES).map((id) => {
+        const has = this.game.titles.has(id), worn = this.game.titles.worn === id;
+        return `<button class="ttl${has ? '' : ' lock'}${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}"${has ? '' : ' disabled'}><b>${has ? t('title.' + id) : '???'}</b><small>${t('title.' + id + '.how')}</small></button>`;
+      }).join('')}</div></div>`;
   }
 
   // text of one reward of a daily quest

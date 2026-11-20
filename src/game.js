@@ -36,6 +36,7 @@ import { Quests } from './core/quests.js';
 import { Bestiary } from './core/bestiary.js';
 import { Paths } from './core/paths.js';
 import { Profile } from './core/profile.js';
+import { Titles } from './core/titles.js';
 import { Waypoint } from './core/waypoint.js';
 import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
@@ -127,6 +128,7 @@ export class Game {
     this.loot = new Loot(this);
     this.abyss = new Abyss(this, save && save.abyss);
     this.quests = new Quests(this, save && save.quests);
+    this.titles = new Titles(this, save && save.titles);
     this.bestiary = new Bestiary(this, save && save.bestiary);
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
@@ -201,18 +203,18 @@ export class Game {
   submitRecords() {
     if (this.slot < 0) return;
     const P = this.player;
-    const look = publicLook(this.appearance), gear = publicGear(P.equip), stats = publicStats(P, this.army);
-    this.shownKey = JSON.stringify([look, gear, stats]);
+    const look = publicLook(this.appearance), gear = publicGear(P.equip), stats = publicStats(P, this.army), title = this.titles.worn;
+    this.shownKey = JSON.stringify([look, gear, stats, title]);
     submitScore({
       floor: this.abyss.best || 0, level: P.level, mastery: P.mastery.lv,
-      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty, look, gear, stats,
+      rank: RANKS[this.rankIndex] || 'E', difficulty: this.difficulty, look, gear, stats, title,
     }, settings.hunterName);
   }
 
   // new gear or a new look: the leaderboard shows it too (checked on saving)
   submitLookIfChanged() {
     if (this.slot < 0) return;
-    const key = JSON.stringify([publicLook(this.appearance), publicGear(this.player.equip), publicStats(this.player, this.army)]);
+    const key = JSON.stringify([publicLook(this.appearance), publicGear(this.player.equip), publicStats(this.player, this.army), this.titles.worn]);
     if (key !== this.shownKey) this.submitRecords();
   }
 
@@ -238,6 +240,7 @@ export class Game {
       trialRank: this.trialRank,
       path: this.path.serialize(),
       profile: this.profile.serialize(),
+      titles: this.titles.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
@@ -453,8 +456,12 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
-    this.profile.time += dt;
-    if (this.gates.active >= 0) this.profile.gateTime += dt;
+    const pf = this.profile;
+    pf.time += dt;
+    if (this.abyss.on) pf.timeAbyss += dt;
+    else if (this.gates.active >= 0) pf.timeGate += dt;
+    else if (this.player.inCamp) pf.timeCamp += dt;
+    if (this.player.sprint) pf.sprintTime += dt;
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;
@@ -507,6 +514,7 @@ export class Game {
     if (this.tutorial) this.tutorial.update(dt);
     this.tips.update(dt);
     this.quests.update(dt);
+    this.titles.update(dt);
     this.waypoint.update(dt);
     this.hunts.update(dt);
   }
@@ -818,6 +826,7 @@ export class Game {
     if (!u) return;
     souls.remove(i);
     this.quests.add('arise');
+    this.profile.raised++;
     play('arise');
     this.effects.burst(u.x, 0.2, u.z, 22, this.appearance.aura, 6, 0.24, 0.8);
     this.effects.ring(u.x, u.z, 0.5, 4, this.appearance.aura, 0.55);
@@ -844,6 +853,7 @@ export class Game {
     this.kills++;
     if (src < 0) this.profile.hunterKills++; else this.profile.armyKills++;
     const E = this.enemies;
+    if (E.tier[i] === 3) this.profile.bossKills++; else if (E.tier[i] >= 1) this.profile.eliteKills++;
     const xp = E.xpv[i], tier = E.tier[i], zi = E.zone[i];
     if (tier === 3) sting('victory'); // a boss falls
     this.bestiary.add(E.type[i]);

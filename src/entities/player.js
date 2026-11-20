@@ -533,6 +533,7 @@ export class Player {
   damage(amount) {
     if (this.dead || this.invuln > 0) return;
     this.fought();
+    this.game.profile.dmgTaken += amount;
     const fx = this.game.effects;
     let d = amount * this.takenFactor();
     if (this.shield > 0) {
@@ -647,6 +648,7 @@ export class Player {
         this.dirZ = this.dodgeZ;
         this.dodgeT = c.dodge.duration;
         this.counts.dodge++;
+        game.profile.dodges++;
         // Voidstep Treads: an explosion where the dodge started
         const V = this.uq.voidstep;
         if (V) game.zones.add(this.x, this.z, V.radius, V.delay, 1, 0, this.skillPower() * V.power, 0, 0xb070ff);
@@ -818,7 +820,7 @@ export class Player {
     else if (auto) this.autoAim(def.range);
     this.fought();
     if (slot === 2) this.ult = 0;
-    else { this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
+    else { this.game.profile.manaSpent += this.manaCost(def); this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
     this.counts.cast++;
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;

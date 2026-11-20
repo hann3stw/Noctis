@@ -526,6 +526,8 @@ export class Enemies {
   // src: -1 = the player, otherwise the slot of the shadow that dealt the hit
   damage(i, amount, kx, kz, src = -1, crit = false) {
     if (!this.alive[i]) return;
+    const pf = this.game.profile;
+    if (src < 0) { pf.dmgHunter += amount; pf.hits++; if (crit) pf.crits++; } else pf.dmgArmy += amount;
     const fx = this.game.effects;
     if (this.vuln[i] > 0) amount = Math.round(amount * (1 + CONFIG.skills.huntersMark.vuln));
     // a monster mastered in the bestiary takes a little more

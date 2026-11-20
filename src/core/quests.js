@@ -92,6 +92,8 @@ export class Quests {
 
   // something happened: kind, and what it was about
   add(kind, v = {}) {
+    const pf = this.game.profile;
+    if (kind === 'chest') pf.chests++; else if (kind === 'outpost') pf.outposts++; else if (kind === 'stage') pf.stagesCleared++; else if (kind === 'gate') pf.gatesCleared++;
     for (const q of this.list) {
       if (q.done || q.kind !== kind) continue;
       if (kind === 'kill' && v.zone !== q.zone) continue;
