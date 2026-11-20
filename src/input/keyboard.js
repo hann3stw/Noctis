@@ -44,6 +44,7 @@ export function initKeyboard() {
     else if (e.code === 'KeyQ') input.keyCast = 1;
     else if (e.code === 'KeyR') input.keyCast = 2;
     else if (e.code === 'KeyF') input.keyCast = 3;
+    else if (e.code === 'KeyV') input.keyCast = 4;
     else if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') {
       // 1 summon / recall, 2 Attack / Protect, 3 revive
       const k = Number(e.code.slice(5));

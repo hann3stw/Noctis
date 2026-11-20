@@ -37,7 +37,7 @@ export class Player {
     this.newSkills = []; // skills found but not looked at yet
     this.equip = { weapon: makeWeapon(c.startWeapon, 0, 1), helmet: null, chest: null, gloves: null, boots: null };
     this.known = [...c.startSkills, c.startUltimate]; // learned skills and ultimates
-    this.slots = [c.startSkills[0] || null, c.startSkills[1] || null, c.startUltimate]; // skill 1, skill 2, ultimate
+    this.slots = [c.startSkills[0] || null, c.startSkills[1] || null, c.startUltimate, null]; // skill 1, skill 2, ultimate, skill 3 (Mage path)
 
     // ---- derived values, see recalc()
     this.bonus = {};
@@ -71,8 +71,8 @@ export class Player {
     this.pendingP = 1;
     this.noAmmoFlash = 0;
 
-    this.cds = [0, 0]; // skill cooldowns
-    this.cdMax = [1, 1]; // what they started at (for the HUD)
+    this.cds = [0, 0, 0, 0]; // skill cooldowns (slots 0, 1 and 3)
+    this.cdMax = [1, 1, 1, 1]; // what they started at (for the HUD)
     this.ult = 0; // ultimate charge
     this.ultLockT = 0; // > 0: an ultimate is active, hits do not charge the next one
     this.shield = 0;
@@ -152,7 +152,7 @@ export class Player {
     }
     const valid = (id) => CONFIG.skills[id] || CONFIG.ultimates[id];
     if (d.known) this.known = d.known.filter(valid);
-    if (d.slots) this.slots = d.slots.map((id) => (id && valid(id) ? id : null));
+    if (d.slots) { this.slots = d.slots.map((id) => (id && valid(id) ? id : null)); while (this.slots.length < 4) this.slots.push(null); }
     this.newSkills = (d.newSkills || []).filter(valid);
     this.ult = d.ult || 0;
     if (d.mastery) {
@@ -421,16 +421,17 @@ export class Player {
     if (CONFIG.ultimates[id]) { if (!this.slots[2]) this.slots[2] = id; }
     else if (!this.slots[0]) this.slots[0] = id;
     else if (!this.slots[1]) this.slots[1] = id;
+    else if (!this.slots[3] && this.game.path && this.game.path.skillSlots() >= 3) this.slots[3] = id;
   }
 
-  // slot: 0 / 1 = skills, 2 = ultimate
+  // slot: 0 / 1 / 3 = skills (3 comes with the Mage path), 2 = ultimate
   setSlot(slot, id) {
     if (!this.known.includes(id)) return;
     const isUlt = !!CONFIG.ultimates[id];
     if (isUlt !== (slot === 2)) return;
-    if (slot < 2) {
-      const other = 1 - slot;
-      if (this.slots[other] === id) this.slots[other] = this.slots[slot]; // swap
+    if (slot === 3 && this.game.path.skillSlots() < 3) return;
+    if (slot !== 2) {
+      for (const other of [0, 1, 3]) if (other !== slot && this.slots[other] === id) this.slots[other] = this.slots[slot]; // swap
     }
     this.slots[slot] = id;
   }
@@ -596,7 +597,7 @@ export class Player {
 
     if (this.dead) {
       input.dodge = false;
-      for (let k = 0; k < 4; k++) sticks[k].fire = false;
+      for (let k = 0; k < 5; k++) sticks[k].fire = false;
       this.moving = false;
       this.respawnT -= dt;
       if (this.respawnT <= 0) this.respawn();
@@ -612,6 +613,7 @@ export class Player {
     this.calmT += dt;
     if (this.cds[0] > 0) this.cds[0] -= dt;
     if (this.cds[1] > 0) this.cds[1] -= dt;
+    if (this.cds[3] > 0) this.cds[3] -= dt;
     if (this.eclipseT > 0) this.eclipseT -= dt;
     if (this.rageT > 0) this.rageT -= dt;
     if (this.chillT > 0) {
@@ -727,7 +729,7 @@ export class Player {
     }
 
     // ---- skills and ultimate
-    for (let k = 1; k < 4; k++) {
+    for (let k = 1; k < 5; k++) {
       const s = sticks[k];
       if (!s.fire) continue;
       s.fire = false;
@@ -736,7 +738,7 @@ export class Player {
 
     // ---- facing
     let aim = null;
-    for (let k = 0; k < 4; k++) if (sticks[k].aiming) { aim = sticks[k]; break; }
+    for (let k = 0; k < 5; k++) if (sticks[k].aiming) { aim = sticks[k]; break; }
     if (aim) { this.dirX = aim.x; this.dirZ = aim.z; }
     else if (this.attackAnim <= 0 && this.dodgeT <= 0 && ml > 0.01) { this.dirX = mx / ml; this.dirZ = mz / ml; }
 
@@ -804,6 +806,7 @@ export class Player {
   cast(slot, auto, dx, dz, power) {
     const id = this.slots[slot];
     if (!id || this.dodgeT > 0) return;
+    if (slot === 3 && this.game.path.skillSlots() < 3) return;
     this.game.profile.casts++;
     const def = skillDef(id);
     const hud = this.game.hud;

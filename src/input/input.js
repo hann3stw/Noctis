@@ -22,7 +22,7 @@ export const input = {
   keyX: 0,
   keyZ: 0,
 
-  sticks: [stick(), stick(), stick(), stick()],
+  sticks: [stick(), stick(), stick(), stick(), stick()], // attack, skill 1, skill 2, ultimate, skill 3
 
   // one-shot events, consumed by the game
   dodge: false,
@@ -31,7 +31,7 @@ export const input = {
   armyBehavior: false, // switch Attack / Protect
   armySummon: false, // summon or recall the army
   armyRevive: false, // revive the fallen shadows that are ready
-  keyCast: -1, // stick 1-3 triggered by the keyboard, aimed with the mouse
+  keyCast: -1, // stick 1-4 triggered by the keyboard, aimed with the mouse
 
   // mouse (PC testing): the game converts screen position to an aim direction
   mouseDown: false,

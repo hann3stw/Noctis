@@ -89,6 +89,7 @@ export class Hud {
           ${skillBtn('btn-skill0', '')}
           ${skillBtn('btn-skill1', '')}
           ${skillBtn('btn-ult', 'ult')}
+          ${skillBtn('btn-skill2', '')}
           <div id="btn-attack" class="btn round" aria-label="${t('hud.attack')}">
             <div class="knob">${ICON_SWORD}</div>
             <div class="ammo"><i></i><i></i><i></i><i></i></div>
@@ -98,7 +99,7 @@ export class Hud {
       </div>
     `;
     const $ = (s) => root.querySelector(s);
-    this.skillEls = ['#btn-skill0', '#btn-skill1', '#btn-ult'].map((sel) => {
+    this.skillEls = ['#btn-skill0', '#btn-skill1', '#btn-ult', '#btn-skill2'].map((sel) => {
       const btn = $(sel);
       return {
         btn, knob: btn.querySelector('.knob'), label: btn.querySelector('b'),
@@ -431,12 +432,14 @@ export class Hud {
   // labels and costs of the skill buttons; call after the slots changed
   syncSkills() {
     const P = this.game.player;
-    for (let k = 0; k < 3; k++) {
-      const s = this.skillEls[k], id = P.slots[k];
+    const third = this.game.path.skillSlots() >= 3;
+    this.skillEls[3].btn.classList.toggle('off', !third);
+    for (let k = 0; k < 4; k++) {
+      const s = this.skillEls[k], id = k === 3 && !third ? null : P.slots[k];
       s.btn.classList.toggle('none', !id);
       s.label.innerHTML = id ? SKILL_ICONS[id] || '' : '';
       s.btn.setAttribute('aria-label', id ? t('skill.' + id) : '');
-      s.cost.textContent = id && k < 2 ? skillDef(id).mana : '';
+      s.cost.textContent = id && k !== 2 ? skillDef(id).mana : '';
       s.vP = -1;
       s.vLow = null;
     }
@@ -453,9 +456,9 @@ export class Hud {
   updateSkills() {
     const P = this.game.player;
     const max = CONFIG.progression.ultCharge.max;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < 4; k++) {
       const s = this.skillEls[k], id = P.slots[k];
-      if (!id) continue;
+      if (!id || (k === 3 && this.skillEls[3].btn.classList.contains('off'))) continue;
       let p, low;
       if (k === 2) {
         p = Math.floor((1 - P.ult / max) * 50); // 0 = fully charged

@@ -70,12 +70,14 @@ export function skillDef(id) {
   let d = runed.get(key);
   if (!d) {
     d = { ...base };
-    const mods = RUNE_KINDS[r] || {};
-    for (const k in mods) {
-      if (typeof d[k] !== 'number') continue;
-      d[k] = d[k] * mods[k];
-      if (k === 'mana' || k === 'ticks') d[k] = Math.max(1, Math.round(d[k]));
-      else d[k] = Math.round(d[k] * 100) / 100;
+    for (const kind of r.split('+')) {
+      const mods = RUNE_KINDS[kind] || {};
+      for (const k in mods) {
+        if (typeof d[k] !== 'number') continue;
+        d[k] = d[k] * mods[k];
+        if (k === 'mana' || k === 'ticks') d[k] = Math.max(1, Math.round(d[k]));
+        else d[k] = Math.round(d[k] * 100) / 100;
+      }
     }
     runed.set(key, d);
   }

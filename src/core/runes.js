@@ -1,6 +1,6 @@
 // Skill runes: every skill and ultimate has up to three runes. A rune changes
 // how the skill works (stronger but dearer, quicker but weaker, wider, more
-// hits, longer ...). One rune can be worn per skill. Runes are found (gate
+// hits, longer ...). A skill has 1 to 3 rune sockets (they grow with the Path picks). Runes are found (gate
 // bosses, daily quests, the Seal Shop); the ones not found yet stay unknown.
 // The runed numbers are made by skillDef (combat/skills.js).
 import { CONFIG } from '../config.js';
@@ -34,8 +34,11 @@ export class Runes {
   constructor(game, saved) {
     this.game = game;
     this.owned = saved && Array.isArray(saved.owned) ? saved.owned.filter((k) => this.valid(k)) : []; // 'skill:rune'
-    this.worn = {}; // skill -> rune
-    if (saved && saved.worn) for (const id in saved.worn) if (this.owned.includes(id + ':' + saved.worn[id])) this.worn[id] = saved.worn[id];
+    this.worn = {}; // skill -> [runes]
+    if (saved && saved.worn) for (const id in saved.worn) {
+      const list = [].concat(saved.worn[id]).filter((r) => this.owned.includes(id + ':' + r));
+      if (list.length) this.worn[id] = [...new Set(list)].slice(0, 3);
+    }
   }
 
   valid(key) {
@@ -44,22 +47,36 @@ export class Runes {
   }
 
   serialize() {
-    return { owned: [...this.owned], worn: { ...this.worn } };
+    const worn = {};
+    for (const id in this.worn) worn[id] = [...this.worn[id]];
+    return { owned: [...this.owned], worn };
   }
 
   has(id, r) {
     return this.owned.includes(id + ':' + r);
   }
 
-  // the rune of a skill that is worn ('' = none)
-  of(id) {
-    return this.worn[id] || '';
+  // sockets of a skill (Path picks)
+  sockets() {
+    return this.game.path ? this.game.path.runeSockets() : 1;
   }
 
-  // wears a rune (or takes it off when it is worn already)
+  // the runes of a skill that are worn: a key like 'swift+wide' ('' = none)
+  of(id) {
+    return (this.worn[id] || []).slice(0, this.sockets()).join('+');
+  }
+
+  isWorn(id, r) {
+    return (this.worn[id] || []).slice(0, this.sockets()).includes(r);
+  }
+
+  // wears a rune (or takes it off when it is worn already); a full skill drops the oldest
   wear(id, r) {
     if (!this.has(id, r)) return;
-    if (this.worn[id] === r) delete this.worn[id]; else this.worn[id] = r;
+    let list = (this.worn[id] || []).slice(0, this.sockets());
+    if (list.includes(r)) list = list.filter((x) => x !== r);
+    else { list.push(r); if (list.length > this.sockets()) list.shift(); }
+    if (list.length) this.worn[id] = list; else delete this.worn[id];
     this.game.player.cds && this.game.hud.syncSkills();
     this.game.save();
   }

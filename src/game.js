@@ -708,7 +708,7 @@ export class Game {
   updateAim() {
     const P = this.player, sticks = input.sticks;
     let k = -1;
-    if (!P.dead) for (let i = 0; i < 4; i++) if (sticks[i].aiming) { k = i; break; }
+    if (!P.dead) for (let i = 0; i < 5; i++) if (sticks[i].aiming) { k = i; break; }
     if (k < 0) { this.aim.hide(); return; }
     const st = sticks[k];
     if (k === 0) {

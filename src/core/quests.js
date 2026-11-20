@@ -38,6 +38,7 @@ export class Quests {
     this.stones = saved && Array.isArray(saved.stones) ? saved.stones.filter((n) => n >= 0 && n <= 2).slice(0, 50) : [];
     this.xpTokens = (saved && saved.xpTokens | 0) || 0; // Double XP Tokens
     this.keys = (saved && saved.keys | 0) || 0; // Gate Keys
+    this.respecs = (saved && saved.respecs | 0) || 0; // Respec Tokens (take Path picks back)
     this.bought = {}; // shop purchases of today
     if (saved && saved.day === today() && Array.isArray(saved.list)) {
       this.day = saved.day;
@@ -51,7 +52,7 @@ export class Quests {
     return {
       day: this.day, list: this.list, bonus: this.bonus, bought: this.bought,
       seals: this.seals, streak: this.streak, streakDay: this.streakDay, stones: this.stones,
-      xpTokens: this.xpTokens, keys: this.keys,
+      xpTokens: this.xpTokens, keys: this.keys, respecs: this.respecs,
     };
   }
 
@@ -154,6 +155,7 @@ export class Quests {
     if (q.d >= 1) all.push({ kind: 'xp' });
     if (q.d >= 1 && this.game.runes.canFind()) all.push({ kind: 'rune' });
     if (q.d === 2) all.push({ kind: 'key' });
+    if (q.d >= 1 && this.game.path.chosen.length) all.push({ kind: 'respec' });
     // three of them; the item stays most of the time, so gear is always an option
     const keepItem = rng() < 0.7;
     const rest = all.slice(1);
@@ -200,6 +202,8 @@ export class Quests {
       this.addXpToken(1);
     } else if (o.kind === 'key') {
       this.addKey(1);
+    } else if (o.kind === 'respec') {
+      this.addRespec(1);
     } else {
       this.give(o.rarity);
     }
@@ -219,11 +223,17 @@ export class Quests {
     if (m.stone !== undefined) this.stones.push(m.stone);
     if (m.xp) this.addXpToken(m.xp);
     if (m.key) this.addKey(m.key);
+    if (m.respec) this.addRespec(m.respec);
   }
 
   addXpToken(n) {
     this.xpTokens = Math.min(Q.xpBoost.max, this.xpTokens + n);
     this.game.hud.toast(t('quest.xpGot'));
+  }
+
+  addRespec(n) {
+    this.respecs = Math.min(Q.respec.max, this.respecs + n);
+    this.game.hud.toast(t('quest.respecGot'));
   }
 
   addKey(n) {
@@ -300,7 +310,7 @@ export class Quests {
     if (!o || this.seals < o.cost || this.shopLeft(o) <= 0) return false;
     if (id === 'revive' && !g.army.deployed.some((u) => !u.alive)) return false;
     if (id === 'rune' && !g.runes.canFind()) return false;
-    if ((id === 'xp' && this.xpTokens >= Q.xpBoost.max) || (id === 'key' && this.keys >= Q.keyGate.max)) return false;
+    if ((id === 'xp' && this.xpTokens >= Q.xpBoost.max) || (id === 'key' && this.keys >= Q.keyGate.max) || (id === 'respec' && this.respecs >= Q.respec.max)) return false;
     this.seals -= o.cost;
     this.bought[id] = (this.bought[id] || 0) + 1;
     if (o.tier !== undefined) this.stones.push(o.tier);
@@ -309,6 +319,7 @@ export class Quests {
     else if (id === 'rune') g.runes.find();
     else if (id === 'xp') this.xpTokens++;
     else if (id === 'key') this.keys++;
+    else if (id === 'respec') this.respecs++;
     play('chest');
     g.save();
     return true;

@@ -638,7 +638,10 @@ export const CONFIG = {
   // Later stages build on the line of the nodes you already picked.
   paths: {
     stages: [1, 3, 5, 8], // rank indexes (0 = E) at which a pick is due (stage 1 at D, 2 at B, 3 at S, 4 at L)
-    respec: 250, // essence x (rank + 1) to take every pick back
+    respec: 250, // essence x (rank + 1) to take every pick back (or one Respec Token)
+    // Every pick is an upgrade: drawbacks count only drawback x their size, and each pick adds pickBonus
+    drawback: 0.5,
+    pickBonus: { damage: 0.05, hp: 0.05 },
     lines: ['commander', 'blade', 'mage'],
     nodes: {
       commander1: { line: 'commander', stage: 1, bonus: { armySlots: 3, armyHp: 0.2, armyDamage: 0.1 }, rule: { armyKillXp: 2, slotCapPlus: 10 }, like: { army: 1 } },
@@ -749,7 +752,7 @@ export const CONFIG = {
     streak: [
       { days: 3, seals: 6 },
       { days: 7, seals: 15, item: 3, xp: 1 },
-      { days: 14, seals: 30, stone: 2, key: 1 },
+      { days: 14, seals: 30, stone: 2, key: 1, respec: 1 },
       { days: 30, seals: 60, item: 5, stone: 2, key: 1, xp: 2 },
     ],
     // Double XP Token: for xpBoost.time seconds of play the hunter gets xpBoost.mult times the XP
@@ -757,6 +760,7 @@ export const CONFIG = {
     // than it is now, with keyGate.items more items. At most `max` of each are kept.
     xpBoost: { time: 1800, mult: 2, max: 5 },
     keyGate: { tier: 2, items: 2, max: 5 },
+    respec: { max: 5 }, // Respec Tokens: take every Path pick back, no essence needed
     // The Soul Seal shop: seals cost, max per day (0 = unlimited)
     shop: [
       { id: 'stone1', cost: 8, max: 2, tier: 1 },
@@ -766,6 +770,7 @@ export const CONFIG = {
       { id: 'xp', cost: 10, max: 2 }, // a Double XP Token
       { id: 'key', cost: 25, max: 1 }, // a Gate Key
       { id: 'rune', cost: 12, max: 2 }, // a skill rune (one you have not found)
+      { id: 'respec', cost: 14, max: 1 }, // a Respec Token
     ],
     kinds: {
       kill: { n: [25, 50, 100] }, // monsters of the zone

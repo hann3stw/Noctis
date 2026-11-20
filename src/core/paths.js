@@ -144,6 +144,7 @@ export class Paths {
     this.chosen.push(id);
     this.offer = null;
     this.game.player.recalc();
+    this.game.hud.syncSkills();
     this.game.hud.banner(t('path.picked'), t('path.' + id));
     play('levelup');
     this.game.save();
@@ -154,13 +155,16 @@ export class Paths {
     return CONFIG.paths.respec * (this.game.rankIndex + 1);
   }
 
-  respec() {
-    const P = this.game.player, cost = this.respecCost();
-    if (!this.chosen.length || P.essence < cost) return false;
-    P.essence -= cost;
+  // a Respec Token (useToken) or essence
+  respec(useToken) {
+    const P = this.game.player, Q = this.game.quests, cost = this.respecCost();
+    if (!this.chosen.length) return false;
+    if (useToken) { if (Q.respecs <= 0) return false; Q.respecs--; }
+    else { if (P.essence < cost) return false; P.essence -= cost; }
     this.chosen = [];
     this.offer = null;
     P.recalc();
+    this.game.hud.syncSkills();
     play('ui');
     this.game.save();
     return true;
@@ -169,9 +173,33 @@ export class Paths {
   // adds the bonuses of the picked nodes to b (Player.recalc)
   apply(b) {
     for (const id of this.chosen) {
-      const bo = CONFIG.paths.nodes[id].bonus;
+      const bo = this.bonusOf(id);
       for (const k in bo) b[k] = (b[k] || 0) + bo[k];
+      const pb = CONFIG.paths.pickBonus;
+      for (const k in pb) b[k] = (b[k] || 0) + pb[k];
     }
+  }
+
+  // the bonuses of a node, drawbacks softened (a pick is an upgrade, not a loss)
+  bonusOf(id) {
+    const n = CONFIG.paths.nodes[id], out = {};
+    for (const k in n.bonus) {
+      const v = n.bonus[k], bad = k === 'damageTaken' ? v > 0 : v < 0;
+      const w = bad ? v * CONFIG.paths.drawback : v;
+      out[k] = k === 'armySlots' ? Math.round(w) : Math.round(w * 1000) / 1000;
+    }
+    return out;
+  }
+
+  // a third skill slot: the Mage line from stage 2 on
+  skillSlots() {
+    return this.chosen.some((id) => { const n = CONFIG.paths.nodes[id]; return n.line === 'mage' && n.stage >= 2; }) ? 3 : 2;
+  }
+
+  // rune sockets per skill grow with the picks: 1, 2 (two picks), 3 (four picks)
+  runeSockets() {
+    const n = this.chosen.length;
+    return 1 + (n >= 2 ? 1 : 0) + (n >= 4 ? 1 : 0);
   }
 
   // a rule value of the picked nodes (0 = none); the biggest one counts
