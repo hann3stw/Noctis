@@ -12,17 +12,20 @@ export function playerHit(game, i, base, kx, kz) {
   let dmg = base * (1 + (Math.random() * 2 - 1) * CONFIG.combat.damageVariance);
   // Last Rites: more damage on wounded enemies
   if (U.execute && E.hp[i] < E.maxHp[i] * U.execute.below) dmg *= 1 + U.execute.damage;
-  let crit = Math.random() < P.crit;
+  let crit = Math.random() < P.crit + P.cp * CONFIG.rogue.critPerPoint; // Rogue: Combo Points
   // class skill Execute (Slayer): more damage on elites and bosses
   const ex = game.path.skillOf('slayer');
   if (ex && E.tier[i] >= 1) dmg *= 1 + ex.def.value[ex.level];
   // class skill Afterimage (Blade): the first hit after a dodge is a critical one that hits harder
   const ai = P.afterimageT > 0 && game.path.skillOf('blade');
   if (ai) { crit = true; P.afterimageT = 0; }
+  // Rogue: an Ambush is a critical hit that hits harder
+  if (P.ambushT > 0) { crit = true; dmg *= 1 + CONFIG.rogue.ambush; P.ambushT = 0; }
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
   P.addRage(CONFIG.warrior.rageHit);
   if (game.mainClass === 'cleric') { P.addFaith(CONFIG.cleric.faithHit); P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); } // Faith heals with every hit
+  P.addCombo(1);
   play(crit ? 'crit' : 'hit', P.weapon); // every weapon sounds its own way
   const fx = game.effects;
   if (crit) {

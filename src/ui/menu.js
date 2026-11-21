@@ -776,6 +776,8 @@ export class Menu {
     if (def.jumps) row('jumps', def.jumps);
     if (def.arcane) row('arcane', '+' + def.arcane);
     if (def.faith) row('faith', '+' + def.faith);
+    if (def.combo) row('combo', '+' + def.combo);
+    if (def.finisher) row('finisher', t('ks.finisherYes'));
     if (def.rage) row('rage', '+' + def.rage);
     if (def.duration) row('duration', def.duration + 's');
     return rows.join('');

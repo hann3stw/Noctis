@@ -2,6 +2,14 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  backstab: svg('M4 20L16 4l3 2L7 22zM15 3l5 3-2 3z'),
+  fanOfKnives: svg('M12 2l1 8 6-5-4 7 7 1-7 3 5 6-8-3-3 6-2-7-7 2 5-6-5-5 7 1z'),
+  eviscerate: svg('M3 3l18 18-2 2L1 5zM21 3l-6 4 2 2zM3 21l6-4-2-2z'),
+  rupture: svg('M12 2c3 5 6 7 6 11a6 6 0 0 1-12 0c0-4 3-6 6-11zm-1 8v4h2v-4z'),
+  smokeBomb: svg('M7 14a4 4 0 0 1 3-6 5 5 0 0 1 9 2 3.500 3.500 0 0 1-1 7H8a3 3 0 0 1-1-3zM5 21h14v1H5z'),
+  evasion: svg('M13 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM8 21l3-7-3-3 3-4 4 3 3-1 1 2-5 2-1 3 2 4-2 1-3-4-2 5z'),
+  deathBlossom: svg('M12 2l3 5 6-1-3 5 4 4-6 0-1 6-3-4-3 4-1-6-6 0 4-4-3-5 6 1z'),
+  assassinate: svg('M12 2l2 7 7 1-6 4 2 8-5-5-5 5 2-8-6-4 7-1z'),
   smite: svg('M11 2h2v8h4l-5 12-5-12h4zM5 4l2 1-1 2zM19 4l-2 1 1 2z'),
   holyNova: svg('M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-5 4 1-6-6-1 5-3-3-5 6 2z'),
   consecration: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm-1 2h2v3h3v2h-3v3h-2v-3H8v-2h3z'),

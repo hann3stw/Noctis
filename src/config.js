@@ -468,6 +468,13 @@ export const CONFIG = {
     mend: { for: ['cleric'], mana: 25, cooldown: 10, aim: 'self', radius: 3, healSelf: 0.35, faith: 12 },
     divineShield: { for: ['cleric'], mana: 24, cooldown: 15, aim: 'self', radius: 2, shield: 0.4, guard: 0.2, duration: 6 },
     judgement: { for: ['cleric'], mana: 30, cooldown: 11, aim: 'point', range: 11, radius: 3.5, power: 4.2, stun: 0.8 },
+    // Rogue (combo = Combo Points it gives; finisher = spends all Combo Points for more damage)
+    backstab: { for: ['rogue'], mana: 12, cooldown: 4, aim: 'arc', range: 3.5, arcDeg: 80, power: 2.8, combo: 2 },
+    fanOfKnives: { for: ['rogue'], mana: 18, cooldown: 7, aim: 'self', radius: 7, power: 1.6, combo: 1 },
+    eviscerate: { for: ['rogue'], mana: 20, cooldown: 6, aim: 'point', range: 7, radius: 3.5, power: 3.5, finisher: true },
+    rupture: { for: ['rogue'], mana: 24, cooldown: 10, aim: 'point', range: 8, radius: 4, power: 0.9, ticks: 5, interval: 0.4, finisher: true },
+    smokeBomb: { for: ['rogue'], mana: 22, cooldown: 14, aim: 'self', radius: 5, stun: 1.6, duration: 4 }, // duration = how long your next hit is an Ambush
+    evasion: { for: ['rogue'], mana: 18, cooldown: 16, aim: 'self', radius: 2, duration: 2.5 }, // untouchable for duration, then an Ambush
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
@@ -485,6 +492,8 @@ export const CONFIG = {
     timeStop: { for: ['mage'], aim: 'self', radius: 14, stun: 4.5, duration: 5 }, // everything close is frozen; your skills cost no mana meanwhile
     divineIntervention: { for: ['cleric'], aim: 'self', radius: 8, power: 6, healSelf: 0.6, shield: 0.5, duration: 8, stun: 1.5, faith: 40 },
     sunburst: { for: ['cleric'], aim: 'line', range: 22, width: 4, power: 14, healSelf: 0.25 },
+    deathBlossom: { for: ['rogue'], aim: 'self', radius: 9, power: 1.5, ticks: 10, interval: 0.2 },
+    assassinate: { for: ['rogue'], aim: 'point', range: 10, radius: 4, power: 20, finisher: true },
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -676,6 +685,12 @@ export const CONFIG = {
   // health per point. The Cleric heals itself, so it plays well alone; in a team the same skills will help the others.
   cleric: { faithMax: 100, faithHit: 2, decay: 5, calm: 4, damage: 0.002, hitHeal: 0.00012 },
 
+  // Rogue: every hit you deal gives a Combo Point (up to cpMax, at most one per 0.2 s); they are lost after
+  // cpTime seconds without a hit. Each adds critPerPoint crit chance. A finisher skill spends them all
+  // for finisher more damage per point. An Ambush (after Smoke Bomb or Evasion) makes your next hit a
+  // critical one with ambush more damage.
+  rogue: { cpMax: 5, cpTime: 4, critPerPoint: 0.04, finisher: 0.3, ambush: 0.6 },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -686,7 +701,7 @@ export const CONFIG = {
       necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
       warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', cores: ['tank', 'blade', 'slayer', 'delver'] },
       mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.2 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
-      rogue: { role: 'melee', ready: false, army: false, cores: ['blade', 'slayer', 'delver', 'mage'] },
+      rogue: { role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.15, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
     },

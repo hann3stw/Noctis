@@ -4232,3 +4232,4 @@ input.shake {
 .rage .bar i { background: linear-gradient(90deg, #7a1010, #ff3040, #ff8a60); box-shadow: 0 0 calc(var(--u) * 1.5) rgba(255, 48, 64, 0.6); }
 .rage.arcane .bar i { background: linear-gradient(90deg, #1c3a8a, #4a86f0, #9fd0ff); box-shadow: 0 0 calc(var(--u) * 1.5) rgba(74, 134, 240, 0.6); }
 .rage.faith .bar i { background: linear-gradient(90deg, #8a6a10, #ffd24a, #fff0a0); box-shadow: 0 0 calc(var(--u) * 1.5) rgba(255, 210, 74, 0.6); }
+.rage.combo .bar i { background: linear-gradient(90deg, #4a1a6a, #c040a0, #ff90c8); box-shadow: 0 0 calc(var(--u) * 1.5) rgba(220, 80, 180, 0.6); }

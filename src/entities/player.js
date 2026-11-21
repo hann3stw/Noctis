@@ -95,6 +95,10 @@ export class Player {
     this.faith = 0; // Cleric: Faith 0 .. 100
     this.hotT = 0; // a skill heals over time: time left
     this.hotV = 0; // ... share of max health per second
+    this.cp = 0; // Rogue: Combo Points
+    this.cpT = 0; // time until they are lost
+    this.cpCd = 0; // a short gap between two points
+    this.ambushT = 0; // Rogue: the next hit is an Ambush while this runs
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -273,6 +277,14 @@ export class Player {
     const fort = this.fortT > 0 && this.fortLv > 0 ? 1 - CONFIG.fortify.reduction[this.fortLv - 1] : 1; // Fortified outpost
     const guard = (this.guardT > 0 ? 1 - this.guardV : 1) * (1 - this.rage * CONFIG.warrior.reduction); // Warrior: skills and Rage
     return (K / (K + this.defense)) * this.takenBonus * fort * guard;
+  }
+
+  // the Rogue's Combo Points (force = a skill gives them, no gap needed)
+  addCombo(n, force) {
+    if (this.game.mainClass !== 'rogue' || n <= 0 || (!force && this.cpCd > 0)) return;
+    this.cpCd = 0.2;
+    this.cp = Math.min(CONFIG.rogue.cpMax, this.cp + n);
+    this.cpT = CONFIG.rogue.cpTime;
   }
 
   // the Cleric's Faith
@@ -615,6 +627,8 @@ export class Player {
       this.surgeT = 0;
       this.faith = 0;
       this.hotT = 0;
+      this.cp = 0;
+      this.ambushT = 0;
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
@@ -679,6 +693,9 @@ export class Player {
     if (this.guardT > 0) this.guardT -= dt;
     if (this.surgeT > 0) this.surgeT -= dt;
     if (this.hotT > 0) { this.hotT -= dt; this.heal(this.maxHp * this.hotV * dt); } // healing over time
+    if (this.cpCd > 0) this.cpCd -= dt;
+    if (this.cpT > 0 && (this.cpT -= dt) <= 0) this.cp = 0; // the Combo Points are lost
+    if (this.ambushT > 0) this.ambushT -= dt;
     if (this.faith > 0 && this.calmT > CONFIG.cleric.calm) this.faith = Math.max(0, this.faith - CONFIG.cleric.decay * dt); // Faith fades
     if (this.arcaneT > 0 && (this.arcaneT -= dt) <= 0) this.arcane = 0; // the Arcane Charges fade
     if (this.rage > 0 && this.calmT > CONFIG.warrior.calm) this.rage = Math.max(0, this.rage - CONFIG.warrior.decay * dt); // Rage fades

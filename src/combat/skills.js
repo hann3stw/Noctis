@@ -92,7 +92,9 @@ export function castSkill(game, id, dx, dz, power) {
   const def = skillDef(id);
   const P = game.player, E = game.enemies, fx = game.effects, army = game.army;
   const aura = game.appearance.aura;
-  const base = P.skillPower() * (def.power || 0);
+  let base = P.skillPower() * (def.power || 0);
+  // Rogue: a finisher spends all Combo Points for more damage
+  if (def.finisher && P.cp > 0) { base *= 1 + P.cp * CONFIG.rogue.finisher; P.cp = 0; P.cpT = 0; }
   const dist = (def.range || 0) * Math.max(0.15, power);
   let tx = P.x + dx * dist, tz = P.z + dz * dist;
   const yaw = Math.atan2(dx, dz);
@@ -423,6 +425,62 @@ export function castSkill(game, id, dx, dz, power) {
       game.hitStop(0.05);
       break;
 
+    // ---- Rogue
+    case 'backstab':
+      hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base);
+      P.addCombo(def.combo || 0, true);
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0xd8d2ff, SWEEP, P.combo ? -1 : 1, 0.25);
+      fx.burst(P.x + dx * 2, 1, P.z + dz * 2, 10, 0xd8d2ff, 4, 0.18, 0.4);
+      game.cam.shake(0.14, 0.12);
+      break;
+    case 'fanOfKnives':
+      hitCircle(game, P.x, P.z, def.radius, base);
+      P.addCombo(def.combo || 0, true);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xd8d2ff, EXPAND, 1, 0.35);
+      fx.ring(P.x, P.z, 0.5, def.radius + 0.5, 0xffffff, 0.35);
+      fx.burst(P.x, 1, P.z, 22, 0xd8d2ff, 7, 0.2, 0.6);
+      game.cam.shake(0.15, 0.15);
+      break;
+    case 'eviscerate': {
+      // one enemy: a heavy cut
+      let i = E.nearest(tx, tz, def.radius);
+      if (i < 0) i = E.nearest(P.x, P.z, def.range);
+      if (i < 0) {
+        P.cds[0] = Math.min(P.cds[0], 1);
+        P.cds[1] = Math.min(P.cds[1], 1);
+        break;
+      }
+      let ex = E.x[i] - P.x, ez = E.z[i] - P.z;
+      const d = Math.sqrt(ex * ex + ez * ez) || 1;
+      ex /= d; ez /= d;
+      playerHit(game, i, base, ex, ez);
+      fx.slash(E.x[i], E.z[i], Math.atan2(ex, ez), 2.6, 220, 0xff4060, SWEEP, 1, 0.22);
+      fx.ring(E.x[i], E.z[i], 0.4, 3, 0xff4060, 0.3);
+      game.cam.shake(0.22, 0.16);
+      game.hitStop(0.05);
+      break;
+    }
+    case 'rupture':
+      // the enemies bleed: several hits over time
+      game.zones.add(tx, tz, def.radius, 0.2, def.ticks, def.interval, base, 0, 0xff4060);
+      fx.ring(tx, tz, def.radius + 1, 0.4, 0xff4060, 0.4);
+      fx.burst(tx, 1, tz, 18, 0xff4060, 4, 0.2, 0.6);
+      break;
+    case 'smokeBomb':
+      hitCircle(game, P.x, P.z, def.radius, 0, def.stun);
+      P.ambushT = def.duration;
+      P.invuln = Math.max(P.invuln, 0.8);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0x9a9ab8, EXPAND, 1, 0.5);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0xc8c8e0, 0.45);
+      fx.burst(P.x, 1, P.z, 34, 0x9a9ab8, 4, 0.3, 1.0);
+      break;
+    case 'evasion':
+      P.invuln = Math.max(P.invuln, def.duration);
+      P.ambushT = def.duration + 2;
+      fx.ring(P.x, P.z, 0.5, 4, 0xd8d2ff, 0.4);
+      fx.burst(P.x, 1.2, P.z, 22, 0xd8d2ff, 6, 0.2, 0.6);
+      break;
+
     // ---- ultimates
     case 'voidStorm':
       // a storm that stays where it was cast
@@ -473,6 +531,45 @@ export function castSkill(game, id, dx, dz, power) {
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
       game.cam.shake(0.35, 0.35);
       break;
+    case 'deathBlossom':
+      // a whirl of blades around the Rogue: many quick hits
+      game.zones.add(P.x, P.z, def.radius, 0.05, def.ticks, def.interval, base, 0, 0xff4060);
+      P.ambushT = 5;
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xff4060, EXPAND, 1, 0.5);
+      fx.slash(P.x, P.z, 0, def.radius * 0.6, 360, 0xffffff, SWEEP, 1, 0.4);
+      fx.ring(P.x, P.z, 1, def.radius + 2, 0xff4060, 0.5);
+      fx.burst(P.x, 1, P.z, 50, 0xff4060, 10, 0.28, 0.9);
+      game.cam.shake(0.4, 0.35);
+      break;
+    case 'assassinate': {
+      // jumps to the enemy nearest to the target and kills it with one cut
+      let i = E.nearest(tx, tz, def.radius);
+      if (i < 0) i = E.nearest(P.x, P.z, def.range);
+      fx.burst(P.x, 1, P.z, 14, 0xff4060, 4, 0.22, 0.4);
+      if (i < 0) { hitCircle(game, tx, tz, def.radius, base * 0.3); break; } // nothing to jump to: a weak cut where you aimed
+      let ex = E.x[i] - P.x, ez = E.z[i] - P.z;
+      const d = Math.sqrt(ex * ex + ez * ez) || 1;
+      ex /= d; ez /= d;
+      const lx = E.x[i] - ex * (E.radius[i] + 1.1), lz = E.z[i] - ez * (E.radius[i] + 1.1);
+      if (game.gates.active >= 0) {
+        game.gates.clamp(lx, lz, P.radius);
+        P.x = game.gates.cx;
+        P.z = game.gates.cz;
+      } else {
+        game.world.resolve(lx, lz, P.radius);
+        P.x = game.world.rx;
+        P.z = game.world.rz;
+      }
+      P.dirX = ex;
+      P.dirZ = ez;
+      P.invuln = Math.max(P.invuln, 0.5);
+      playerHit(game, i, base, ex, ez);
+      fx.slash(E.x[i], E.z[i], Math.atan2(ex, ez), 3, 260, 0xffffff, SWEEP, 1, 0.3);
+      fx.ring(E.x[i], E.z[i], 0.4, 4, 0xff4060, 0.4);
+      game.cam.shake(0.4, 0.25);
+      game.hitStop(0.1);
+      break;
+    }
     case 'divineIntervention':
       hitCircle(game, P.x, P.z, def.radius, base, def.stun);
       P.heal(P.maxHp * def.healSelf);
