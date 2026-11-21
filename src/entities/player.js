@@ -95,6 +95,7 @@ export class Player {
     this.faith = 0; // Cleric: Faith 0 .. 100
     this.hotT = 0; // a skill heals over time: time left
     this.hotV = 0; // ... share of max health per second
+    this.faithCd = 0; // Cleric: a short gap between two heals of Faith
     this.cp = 0; // Rogue: Combo Points
     this.cpT = 0; // time until they are lost
     this.cpCd = 0; // a short gap between two points
@@ -697,6 +698,7 @@ export class Player {
     if (this.surgeT > 0) this.surgeT -= dt;
     if (this.hotT > 0) { this.hotT -= dt; this.heal(this.maxHp * this.hotV * dt); } // healing over time
     if (this.cpCd > 0) this.cpCd -= dt;
+    if (this.faithCd > 0) this.faithCd -= dt;
     if (this.cpT > 0 && (this.cpT -= dt) <= 0) this.cp = 0; // the Combo Points are lost
     if (this.ambushT > 0) this.ambushT -= dt;
     if (this.focusT > 0) this.focusT -= dt;

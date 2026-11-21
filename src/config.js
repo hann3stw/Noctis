@@ -462,10 +462,10 @@ export const CONFIG = {
     meteor: { for: ['mage'], mana: 35, cooldown: 14, aim: 'point', range: 12, radius: 5, power: 6, stun: 0.8 },
     arcaneSurge: { for: ['mage'], mana: 0, cooldown: 24, aim: 'self', radius: 3, duration: 6, arcane: 3 }, // for duration your skills cost no mana
     // Cleric (faith = Faith it gives; healSelf = share of your health healed; a skill with ticks and healSelf heals over duration)
-    smite: { for: ['cleric'], mana: 12, cooldown: 3.5, aim: 'point', range: 11, radius: 3, power: 2.6, healSelf: 0.03 },
-    holyNova: { for: ['cleric'], mana: 22, cooldown: 9, aim: 'self', radius: 6, power: 1.8, healSelf: 0.1 },
-    consecration: { for: ['cleric'], mana: 26, cooldown: 12, aim: 'self', radius: 5, power: 0.7, ticks: 6, interval: 0.8, healSelf: 0.2, duration: 5, faith: 10 },
-    mend: { for: ['cleric'], mana: 25, cooldown: 10, aim: 'self', radius: 3, healSelf: 0.35, faith: 12 },
+    smite: { for: ['cleric'], mana: 12, cooldown: 3.5, aim: 'point', range: 11, radius: 3, power: 2.6, healSelf: 0.02 },
+    holyNova: { for: ['cleric'], mana: 22, cooldown: 9, aim: 'self', radius: 6, power: 1.8, healSelf: 0.06 },
+    consecration: { for: ['cleric'], mana: 26, cooldown: 12, aim: 'self', radius: 5, power: 0.7, ticks: 6, interval: 0.8, healSelf: 0.14, duration: 5, faith: 10 },
+    mend: { for: ['cleric'], mana: 25, cooldown: 12, aim: 'self', radius: 3, healSelf: 0.25, faith: 12 },
     divineShield: { for: ['cleric'], mana: 24, cooldown: 15, aim: 'self', radius: 2, shield: 0.4, guard: 0.2, duration: 6 },
     judgement: { for: ['cleric'], mana: 30, cooldown: 11, aim: 'point', range: 11, radius: 3.5, power: 4.2, stun: 0.8 },
     // Rogue (combo = Combo Points it gives; finisher = spends all Combo Points for more damage)
@@ -683,16 +683,16 @@ export const CONFIG = {
   // Warrior: Rage grows with every hit you deal (rageHit) and take (rageHurt + the share of your health
   // times rageHurtScale), and fades after calm seconds without a fight (decay per second). Every point
   // gives damage and less damage taken.
-  warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.003, reduction: 0.0015 },
+  warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.004, reduction: 0.0015 },
 
   // Mage: every skill you cast gives an Arcane Charge (up to arcaneMax); each adds arcaneDamage
   // to your skill damage. All charges are lost after arcaneTime seconds without a cast.
-  mage: { arcaneMax: 5, arcaneTime: 6, arcaneDamage: 0.06 },
+  mage: { arcaneMax: 5, arcaneTime: 6, arcaneDamage: 0.08 },
 
   // Cleric: Faith grows with every hit you deal (faithHit) and fades after calm seconds without a
   // fight (decay per second). Every point gives damage, and every hit heals you by hitHeal of your
   // health per point. The Cleric heals itself, so it plays well alone; in a team the same skills will help the others.
-  cleric: { faithMax: 100, faithHit: 2, decay: 5, calm: 4, damage: 0.002, hitHeal: 0.00012 },
+  cleric: { faithMax: 100, faithHit: 2, decay: 5, calm: 4, damage: 0.002, hitHeal: 0.00006, healGap: 0.3 },
 
   // Rogue: every hit you deal gives a Combo Point (up to cpMax, at most one per 0.2 s); they are lost after
   // cpTime seconds without a hit. Each adds critPerPoint crit chance. A finisher skill spends them all
@@ -713,8 +713,8 @@ export const CONFIG = {
     choiceRank: 1,
     list: {
       necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
-      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', cores: ['tank', 'blade', 'slayer', 'delver'] },
-      mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.2 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
+      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
+      mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.12 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.15, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
@@ -754,7 +754,7 @@ export const CONFIG = {
         unlocks: [{ id: 'duelArena', stage: 3 }],
       },
       commander: {
-        bonus: { armySlots: 1.5, armyHp: 0.08, armyDamage: 0.07 },
+        bonus: { armySlots: 1.5, armyHp: 0.08, armyDamage: 0.05 },
         rule: { slotCapPlus: 1.5, armyKillXp: 0.15, reviveCostMult: -0.03 },
         like: { army: 0.6, hunter: -0.25, officers: 0.15 },
         skill: { id: 'rally', value: [0.15, 0.25, 0.4], time: [5, 7, 9], cooldown: 8 }, // value = army damage after an elite or boss kill
@@ -768,7 +768,7 @@ export const CONFIG = {
         unlocks: [{ id: 'thirdSlot', stage: 3 }, { id: 'runeWorkshop', stage: 5 }],
       },
       tank: {
-        bonus: { hp: 0.08, damageTaken: -0.015, armyHp: 0.03 },
+        bonus: { hp: 0.08, damageTaken: -0.015, damage: 0.03 },
         rule: { hpRegenMult: 0.04 },
         like: { tank: 0.7, deaths: -0.3 },
         skill: { id: 'bulwark', value: [0.06, 0.1, 0.15], time: 4, cooldown: 12 }, // value = shield, share of max health
@@ -996,7 +996,7 @@ export const CONFIG = {
     // himself. Shadows raised from enemies far below your level get weaker
     // (fresh: (their power / power at your level) ^ freshPower, within
     // freshMin ... freshMax); officers follow your level.
-    monarch: { share: 0.07, levelBonus: 0.025, freshPower: 0.25, freshMin: 0.3, freshMax: 1.25 },
+    monarch: { share: 0.055, levelBonus: 0.025, freshPower: 0.25, freshMin: 0.3, freshMax: 1.25 },
     evolveLevels: [5, 12, 22], // shadows evolve at these levels
     evolveScale: 0.18, // size gain per evolution
     evolveBonus: 0.25, // stat gain per evolution

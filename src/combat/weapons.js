@@ -24,7 +24,11 @@ export function playerHit(game, i, base, kx, kz) {
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
   P.addRage(CONFIG.warrior.rageHit);
-  if (game.mainClass === 'cleric') { P.addFaith(CONFIG.cleric.faithHit); P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); } // Faith heals with every hit
+  if (game.mainClass === 'cleric') {
+    P.addFaith(CONFIG.cleric.faithHit);
+    // Faith heals with the hits, at most once per healGap (an area hit on many enemies is one heal)
+    if (P.faithCd <= 0) { P.faithCd = CONFIG.cleric.healGap; P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); }
+  }
   P.addCombo(1);
   // Ranger: the farther the enemy, the harder the hit
   if (game.mainClass === 'ranger') {
