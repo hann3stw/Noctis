@@ -6,7 +6,7 @@ import { t } from '../strings.js';
 import { runesOf } from '../core/runes.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard'];
+const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -125,12 +125,20 @@ function boardView(menu) {
     <div class="pa-sub">${t('board.trophyList')}</div><div class="cp-list cp-wide" data-scroll="cpTro">${chips ? `<ul class="pa-tot">${chips}</ul>` : `<p class="cp-none">${t('board.noTrophy')}</p>`}</div>`;
 }
 
+function contractsView(menu) {
+  const g = menu.game, C = CONFIG.contracts, M = CONFIG.modifiers;
+  return `<div class="cp-head"><b>${t('contracts.title')}</b></div>
+    <div class="cp-exp"><p>${t('contracts.text', { max: M.max + C.extra, luck: Math.round(C.luck * 100), per: Math.round(1 / C.seals) })}</p>
+    <small>${t('contracts.how')}</small>
+    <button class="ap-btn gold" data-act="campMods">${t('contracts.open', { n: g.mods.length, max: g.modsMax() })}</button></div>`;
+}
+
 export function campView(menu) {
   const secs = campSections(menu.game);
   if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
   const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
   const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
-  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView, huntBoard: boardView };
+  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView, huntBoard: boardView, contracts: contractsView };
   return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
 }
 
@@ -148,6 +156,7 @@ export function campAct(menu, act, target) {
   else if (act === 'campCraft') g.runes.craft(target.dataset.skill, target.dataset.r);
   else if (act === 'campFort') g.fort.upgrade(Number(target.dataset.si));
   else if (act === 'campHunt') g.hunts.call(Number(target.dataset.ci));
+  else if (act === 'campMods') { menu.close(); g.abyssPanel.open('mods'); }
   else if (act === 'campDuel') { if (g.duel.start()) menu.close(); }
   else return false;
   return true;

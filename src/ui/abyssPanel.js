@@ -72,7 +72,7 @@ export class AbyssPanel {
     } else if (act === 'mod') {
       const id = b.dataset.id, k = mods.indexOf(id);
       if (k >= 0) mods.splice(k, 1);
-      else if (mods.length < M.max) mods.push(id);
+      else if (mods.length < game.modsMax(this.mode === 'abyss')) mods.push(id);
     } else if (act === 'floor') {
       const starts = game.abyss.starts();
       const k = Math.max(0, Math.min(starts.length - 1, starts.indexOf(this.start) + Number(b.dataset.d)));
@@ -83,15 +83,16 @@ export class AbyssPanel {
 
   render() {
     const game = this.game, A = game.abyss, M = CONFIG.modifiers, mods = game.mods;
-    const n = mods.length;
+    const abyssMode = this.mode === 'abyss', max = game.modsMax(abyssMode), lm = !abyssMode && max > M.max ? CONFIG.contracts.luck : 1;
+    const n = Math.min(mods.length, max);
     const mlist = Object.keys(M.list).map((id) => {
       const on = mods.includes(id);
-      const full = !on && n >= M.max;
+      const full = !on && n >= max;
       return `<button class="ab-mod${on ? ' on' : ''}" data-act="mod" data-id="${id}"${full ? ' disabled' : ''}>
         <i>${MOD_ICONS[id] || '•'}</i><div><b>${t('mod.' + id)}</b><small>${t('modd.' + id)}</small></div></button>`;
     }).join('');
-    const pct = Math.round(n * M.luck * 100), xp = Math.round(n * M.xp * 100);
-    const count = n ? t('mods.count', { n, max: M.max, luck: pct, xp }) : t('mods.none');
+    const pct = Math.round(n * M.luck * lm * 100), xp = Math.round(n * M.xp * 100);
+    const count = n ? t('mods.count', { n, max, luck: pct, xp }) : t('mods.none');
     let head, side = '', buttons;
     const board = this.mode === 'abyss' && this.tab === 'board';
     if (this.mode === 'abyss') {
@@ -107,7 +108,7 @@ export class AbyssPanel {
         ? `<button class="ap-btn ghost" data-act="close">${t('menu.close')}</button><button class="ap-btn" data-act="lbRefresh"${this.board.canRefresh() ? '' : ' disabled'}>${t('lb.refresh')}</button>`
         : `<button class="ap-btn ghost" data-act="close">${t('menu.close')}</button><button class="ap-btn go" data-act="enter">${t('abyss.enter')}</button>`;
     } else {
-      head = `<h2>${t('mods.title')}</h2><small>${t('mods.hint')}</small>`;
+      head = `<h2>${t('mods.title')}</h2><small>${t('mods.hint')}${max > M.max ? ' ' + t('mods.contracts') : ''}</small>`;
       buttons = `<button class="ap-btn go" data-act="close">${t('mods.done')}</button>`;
     }
     const keep = this.el.querySelector('[data-scroll="lb"]');

@@ -77,7 +77,7 @@ export class Game {
     // zones the player has set foot in (the minimap only shows these)
     this.knownZones = new Set(save && save.knownZones ? save.knownZones : [0]);
     // gate modifiers chosen by the player (kept until changed)
-    this.mods = (save && save.mods ? save.mods : []).filter((id) => CONFIG.modifiers.list[id]).slice(0, CONFIG.modifiers.max);
+    this.mods = (save && save.mods ? save.mods : []).filter((id) => CONFIG.modifiers.list[id]).slice(0, CONFIG.modifiers.max + CONFIG.contracts.extra);
     this.respawnIndex = save ? save.respawnIndex || 0 : 0; // safe place to come back to after dying
     this.lastSafe = 0;
     this.captureT = new Float32Array(64); // capture progress per outpost
@@ -291,7 +291,12 @@ export class Game {
 
   // gate modifiers can be chosen from rank A on
   modsOpen() {
-    return this.rankIndex >= CONFIG.modifiers.minRank;
+    return this.rankIndex >= CONFIG.modifiers.minRank || !!(this.path && this.path.has('contracts'));
+  }
+
+  // how many modifiers a gate can have (the Delver's Gate Contracts allow more; the Abyss never does)
+  modsMax(abyss) {
+    return CONFIG.modifiers.max + (!abyss && this.path && this.path.has('contracts') ? CONFIG.contracts.extra : 0);
   }
 
   // Values of a modifier while it is on (only inside a gate or the Abyss), else null.

@@ -387,6 +387,11 @@ export const CONFIG = {
     },
   },
 
+  // Gate Contracts (unlocked by the Delver core): gate modifiers from the first rank on, extra
+  // modifiers at a time (gates only, not the Abyss), a loot bonus of luck times what a modifier
+  // gives, and seals Soul Seals per modifier when a gate is cleared (rounded down).
+  contracts: { extra: 2, luck: 1.5, seals: 0.5 },
+
   // Unique items: one fixed special effect each. A weapon gets one of the
   // weapon effects, a piece of armour the effect of its slot.
   uniques: {
@@ -653,7 +658,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard'],
+    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },

@@ -67,6 +67,7 @@ export class Gates {
     this.abyssIndex = this.list.findIndex((g) => g.abyss);
     this.trialIndex = this.list.findIndex((g) => g.trial);
     this.runMods = []; // modifiers of the gate the player is in
+    this.contractRun = false; // the gate runs under Gate Contracts
     this.timeLeft = 0; // Against the Clock in a normal gate
 
     // gates in the world
@@ -260,7 +261,8 @@ export class Gates {
       this.armyOut = game.army.out;
       game.army.out = false;
     }
-    this.runMods = game.modsOpen() ? [...game.mods] : [];
+    this.runMods = game.modsOpen() ? game.mods.slice(0, game.modsMax(g.abyss)) : [];
+    this.contractRun = !g.abyss && !g.trial && game.path.has('contracts') && this.runMods.length > 0; // Gate Contracts (Delver)
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
     this.timeLeft = 0;
     this.buildArena(gi).visible = true;
@@ -313,6 +315,11 @@ export class Gates {
     }
   }
 
+  // the loot bonus of the modifiers is bigger under Gate Contracts
+  contractLuck() {
+    return this.contractRun ? CONFIG.contracts.luck : 1;
+  }
+
   // victory: the Leave button; toCamp: died and respawned in the camp
   leave(toCamp) {
     const gi = this.active;
@@ -328,6 +335,7 @@ export class Gates {
     game.hazards.clear();
     if (this.list[gi].abyss) game.abyss.end();
     this.runMods = [];
+    this.contractRun = false;
     this.timeLeft = 0;
     this.stages = [];
     this.stageI = -1;
@@ -350,7 +358,7 @@ export class Gates {
   onBossKilled(gi, x, z) {
     const game = this.game, P = game.player, E = game.enemies;
     const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = gateDiff(gate);
-    const modLuck = this.runMods.length * CONFIG.modifiers.luck;
+    const modLuck = this.runMods.length * CONFIG.modifiers.luck * this.contractLuck();
     // deadly gate tiers: more luck and a better chance for the top rarity
     const GT = CONFIG.gateTiers, tier = gate.tier || 0;
     const luck = P.luck + D.luck + modLuck + tier * GT.luck, top = Math.min(1, CONFIG.items.bossTopChance + tier * GT.topChance);
@@ -390,6 +398,10 @@ export class Gates {
       game.hud.toast(t('toast.essence', { n: ess }));
       if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
       game.quests.add('gate', { diff: gate.diff });
+      if (this.contractRun) {
+        const s = Math.floor(this.runMods.length * CONFIG.contracts.seals); // Gate Contracts: Soul Seals
+        if (s > 0) { game.quests.seals += s; game.hud.toast(t('quest.sealsGot', { n: s })); }
+      }
       const up = D.id === 'deadly' && !gate.keyRun && game.gateTierUp(gate.zone);
       if (up && game.tips) game.tips.show('gateTier');
       game.hud.banner(t('toast.gateCleared'), up ? t('gate.tierUp', { n: game.gateTier(gate.zone) }) : t('gate.clearedSub', { boss: t('enemy.' + zone.boss) }));
@@ -482,7 +494,7 @@ export class Gates {
     // a little reward for every stage
     const a = Math.atan2(P.dirX, P.dirZ);
     this.clamp(P.x + Math.sin(a) * 3, P.z + Math.cos(a) * 3, 1);
-    const modLuck = this.runMods.length * CONFIG.modifiers.luck;
+    const modLuck = this.runMods.length * CONFIG.modifiers.luck * this.contractLuck();
     game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.luck + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
     const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck) * (1 + (g.tier || 0) * CONFIG.gateTiers.essence));
     P.essence += ess;
