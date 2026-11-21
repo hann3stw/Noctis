@@ -653,7 +653,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot'],
+    live: ['thirdSlot', 'barracks', 'expeditions'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
@@ -697,6 +697,22 @@ export const CONFIG = {
         skill: { id: 'resolve', value: [0.15, 0.25, 0.4] }, // value = share of max health healed per gate stage cleared
         unlocks: [{ id: 'contracts', stage: 3 }],
       },
+    },
+  },
+
+  // The Barracks (unlocked by the Commander core): stationed shadows train with real
+  // time; a level costs essence. Expeditions (a later Commander class) send stationed
+  // shadows away for time seconds. essence is times (zone + 1).
+  barracks: {
+    maxLevel: 10,
+    baseSlots: 3, slotsPerLevel: 2, // shadows that can be stationed
+    upgradeCost: 400, upgradeGrowth: 1.7, // essence for level n + 1 = upgradeCost x upgradeGrowth ^ (n - 1)
+    trainRate: 0.3, trainPerLevel: 0.05, // levels of XP per hour of a stationed shadow
+    trainCap: 12, // hours that count at most between two visits
+    expeditions: {
+      scout: { time: 1800, party: 2, essence: 40, items: 0, seals: 0, injury: 0.05 },
+      raid: { time: 7200, party: 4, essence: 160, items: 1, rarity: 2, seals: 1, injury: 0.12 },
+      siege: { time: 21600, party: 6, essence: 520, items: 2, rarity: 3, seals: 3, injury: 0.2 },
     },
   },
 

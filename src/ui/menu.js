@@ -12,6 +12,7 @@ import { msToMidnight, today } from '../core/quests.js';
 import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
+import { campView, campAct, campSections, campNews } from './camp.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
@@ -22,7 +23,7 @@ import {
   upgradeCost, dismantleValue, itemPower, slotOf, attuneLevel, attuneCost,
 } from '../core/items.js';
 
-const TABS = ['gear', 'stats', 'skills', 'path', 'army', 'quests', 'bestiary', 'look'];
+const TABS = ['gear', 'stats', 'skills', 'path', 'camp', 'army', 'quests', 'bestiary', 'look'];
 
 const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="currentColor"/></svg>`;
 const ICONS = {
@@ -76,6 +77,7 @@ export class Menu {
     this.qMode = 'quests'; // quests | shop
     this.qPick = -1; // quest whose reward is being picked
     this.qStone = -1; // Soul Stone whose monster kind is being picked
+    this.campTab = ''; // the section of the Camp tab
     this.el.addEventListener('click', (e) => this.onClick(e));
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
     window.addEventListener('resize', () => { if (this.isOpen && this.el.isConnected) this.fitHead(); });
@@ -235,6 +237,8 @@ export class Menu {
       this.selSkill = target.dataset.id;
     } else if (act === 'slot' && this.selSkill && !this.locked) {
       P.setSlot(Number(target.dataset.slot), this.selSkill);
+    } else if (act.startsWith('camp')) {
+      campAct(this, act, target);
     }
     this.render();
   }
@@ -248,14 +252,15 @@ export class Menu {
       quests: this.game.quests.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
       path: this.game.path.due() ? '!' : '',
+      camp: campNews(this.game),
     };
-    const tabs = TABS.map((id) => {
+    const tabs = TABS.filter((id) => id !== 'camp' || campSections(this.game).length).map((id) => {
       const badge = news[id] ? `<i>${news[id]}</i>` : '';
       return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     this.el.innerHTML = `
-      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
+      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path', 'camp'].includes(this.tab) ? t('menu.campOnly') : ''}</span>
         <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
       <div class="mn-body"></div>`;
     this.fitHead();
@@ -265,7 +270,7 @@ export class Menu {
       this.army.render();
     } else {
       const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look(),
-        quests: () => this.questsView(), bestiary: () => this.bestiaryView(), path: () => this.pathView() };
+        quests: () => this.questsView(), bestiary: () => this.bestiaryView(), path: () => this.pathView(), camp: () => campView(this) };
       body.innerHTML = views[this.tab]();
       if (this.tab === 'bestiary') this.showBeast(body);
     }

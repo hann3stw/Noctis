@@ -85,13 +85,7 @@ export class Army {
   // ---- saving ---------------------------------------------------------------
   serialize() {
     const units = [];
-    for (const u of this.units) {
-      if (!u) continue;
-      units.push({
-        type: u.type, role: u.role, tier: u.tier, zone: u.zone, plv: u.plv, level: u.level, xp: u.xp, totalXp: u.totalXp,
-        stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT, rank: u.rank, nick: u.nick, olv: u.olv || 0, oxp: u.oxp || 0,
-      });
-    }
+    for (const u of this.units) if (u) units.push(this.unitData(u));
     return { units, behavior: this.behavior, out: this.out };
   }
 
@@ -103,28 +97,92 @@ export class Army {
     let slot = 0;
     for (const d of data.units || []) {
       if (slot >= MAX_UNITS || !CONFIG.enemies.types[d.type]) continue;
-      const u = {
-        slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier, zone: d.zone || 0,
-        plv: d.plv || (CONFIG.world.zones[d.zone || 0] || CONFIG.world.zones[0]).level,
-        abT: 2, tauntT: 0,
-        level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
-        rank: Math.max(0, Math.min(CONFIG.shadows.ranks.length - 1, d.rank | 0)),
-        nick: typeof d.nick === 'string' ? d.nick.slice(0, CONFIG.shadows.nameMaxLength) : '',
-        olv: d.olv || 0, oxp: d.oxp || 0,
-        alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
-        x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
-        target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
-        reviveT: d.reviveT || 0, riseT: 0, flash: 0, lunge: 0, phase: Math.random() * TAU, moving: false,
-      };
-      this.recalc(u);
-      if (u.alive && u.hp <= 0) u.hp = u.maxHp;
-      this.units[slot++] = u;
+      this.units[slot] = this.makeUnit(d, slot);
+      slot++;
     }
     this.rebuild();
     this.checkRanks();
     for (const u of this.deployed) this.recalc(u);
     // the army appears in formation around the player
     for (const u of this.deployed) if (u.alive) this.placeAtHome(u, false);
+  }
+
+  // the saved form of one shadow
+  unitData(u) {
+    return {
+      type: u.type, role: u.role, tier: u.tier, zone: u.zone, plv: u.plv, level: u.level, xp: u.xp, totalXp: u.totalXp,
+      stage: u.stage, alive: u.alive, hp: u.hp, reviveT: u.reviveT, rank: u.rank, nick: u.nick, olv: u.olv || 0, oxp: u.oxp || 0,
+    };
+  }
+
+  // a shadow from its saved form (slot -1: not in the army, like in the barracks)
+  makeUnit(d, slot) {
+    const P = this.game.player;
+    const u = {
+      slot, type: d.type, ti: this.game.enemies.typeIndex[d.type], role: d.role, tier: d.tier, zone: d.zone || 0,
+      plv: d.plv || (CONFIG.world.zones[d.zone || 0] || CONFIG.world.zones[0]).level,
+      abT: 2, tauntT: 0,
+      level: d.level, xp: d.xp, totalXp: d.totalXp || 0, stage: d.stage,
+      rank: Math.max(0, Math.min(CONFIG.shadows.ranks.length - 1, d.rank | 0)),
+      nick: typeof d.nick === 'string' ? d.nick.slice(0, CONFIG.shadows.nameMaxLength) : '',
+      olv: d.olv || 0, oxp: d.oxp || 0,
+      alive: d.alive, hp: d.hp, maxHp: 1, dmg: 1, radius: 0.7, scale: 1, speed: 5,
+      x: P.x, z: P.z, yaw: Math.random() * TAU, ox: 0, oz: 0,
+      target: -1, tgtT: Math.random() * 0.3, atkCd: 0, windup: 0, block: 0, pd: 1e9, chase: -1,
+      reviveT: d.reviveT || 0, riseT: 0, flash: 0, lunge: 0, phase: Math.random() * TAU, moving: false,
+    };
+    this.recalc(u);
+    if (u.alive && u.hp <= 0) u.hp = u.maxHp;
+    return u;
+  }
+
+  // takes a shadow out of the army (into the barracks): the hunter gets no XP for it
+  detach(slot) {
+    const u = this.units[slot];
+    if (!u) return null;
+    this.units[slot] = null;
+    this.rebuild();
+    return u;
+  }
+
+  // puts a shadow back into the army; false when there is no room
+  attach(u) {
+    let slot = -1;
+    for (let i = 0; i < MAX_UNITS; i++) if (!this.units[i]) { slot = i; break; }
+    if (slot < 0 || !this.hasRoom()) return false;
+    u.slot = slot;
+    this.units[slot] = u;
+    this.recalc(u);
+    if (u.alive && u.hp <= 0) u.hp = u.maxHp;
+    this.rebuild();
+    if (this.out && u.alive) this.placeAtHome(u, true);
+    return true;
+  }
+
+  // a shadow trains for some hours: rate = levels worth of XP per hour (the barracks)
+  train(u, hours, rate) {
+    const S = CONFIG.shadows;
+    if (this.isOfficer(u)) {
+      const max = CONFIG.levels.maxLevel;
+      if (this.powerLevel(u) >= max) return;
+      if (!(u.olv > 0)) u.olv = u.plv;
+      u.oxp = (u.oxp || 0) + this.officerNeed(u) * rate * hours;
+      while (u.olv < max && u.oxp >= this.officerNeed(u)) {
+        u.oxp -= this.officerNeed(u);
+        u.olv = Math.max(u.olv, u.plv) + 1;
+      }
+    } else {
+      let h = hours;
+      while (h > 0 && u.level < S.maxLevel) {
+        const need = this.xpNeed(u.level, u), perHour = need * rate, left = need - u.xp, tt = left / perHour;
+        if (h >= tt) { h -= tt; u.level++; u.xp = 0; } else { u.xp += perHour * h; h = 0; }
+      }
+      let stage = 0;
+      for (let s = 0; s < S.evolveLevels.length; s++) if (u.level >= S.evolveLevels[s]) stage = s + 1;
+      u.stage = stage;
+    }
+    this.recalc(u);
+    if (u.alive) u.hp = u.maxHp;
   }
 
   // ---- roster ---------------------------------------------------------------
