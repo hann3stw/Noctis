@@ -52,6 +52,8 @@ export class Gates {
     this.returnX = 0;
     this.returnZ = 0;
     this.exitOpen = false;
+    this.solo = false; // a duel: the army stays out of it
+    this.armyOut = true; // whether the army was out before the duel
     this.zoneNow = -1; // zone whose gates are shown
     this.time = 0;
     this.b = { state: PAUSE, t: 0, pattern: '', last: '', cdx: 0, cdz: 0, bite: 0, hitP: false, hitS: new Set(), phase: 1, tired: 0, combo: false };
@@ -87,7 +89,7 @@ export class Gates {
     });
     this.list.forEach((g, gi) => {
       const s = saved && saved[gi];
-      if (s) { g.open = !!s.open; g.gen = s.gen || 0; g.t = s.t || 0; g.keyed = !!s.keyed; }
+      if (s) { g.open = !!s.open; g.gen = s.gen || 0; g.t = s.t || 0; g.keyed = !!s.keyed; g.duel = !!s.duel; }
       this.place(gi);
     });
 
@@ -134,7 +136,7 @@ export class Gates {
   }
 
   serialize() {
-    return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t), keyed: !!g.keyed }));
+    return this.list.map((g) => ({ open: g.open, gen: g.gen, t: Math.round(g.t), keyed: !!g.keyed, duel: !!g.duel }));
   }
 
   get inAbyss() {
@@ -249,6 +251,15 @@ export class Gates {
     g.keyRun = !!g.keyed && !g.abyss && !g.trial;
     g.keyed = false;
     if (g.keyRun) g.tier += CONFIG.quests.keyGate.tier;
+    // a duel (Duel Arena of the Blade): harder, richer, and without the army
+    g.duelRun = !!g.duel && !g.abyss && !g.trial;
+    g.duel = false;
+    if (g.duelRun) {
+      g.tier += CONFIG.duel.tier;
+      this.solo = true;
+      this.armyOut = game.army.out;
+      game.army.out = false;
+    }
     this.runMods = game.modsOpen() ? [...game.mods] : [];
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
     this.timeLeft = 0;
@@ -321,6 +332,7 @@ export class Gates {
     this.stages = [];
     this.stageI = -1;
     this.surviveT = 0;
+    if (this.solo) { this.solo = false; game.army.out = this.armyOut; } // the army is back
     if (!toCamp) {
       // loot that still lies in the arena comes along
       game.loot.moveAll(arenaCenter(gi), CONFIG.gates.arenaRadius + 2, this.returnX, this.returnZ);
@@ -343,7 +355,7 @@ export class Gates {
     const GT = CONFIG.gateTiers, tier = gate.tier || 0;
     const luck = P.luck + D.luck + modLuck + tier * GT.luck, top = Math.min(1, CONFIG.items.bossTopChance + tier * GT.topChance);
     this.timeLeft = 0;
-    const items = D.items + (gate.keyRun ? CONFIG.quests.keyGate.items : 0);
+    const items = D.items + (gate.keyRun ? CONFIG.quests.keyGate.items : 0) + (gate.duelRun ? CONFIG.duel.items : 0);
     for (let k = 0; k < items; k++) {
       const a = (k / items) * Math.PI * 2;
       game.loot.drop(x + Math.cos(a) * 2.5, z + Math.sin(a) * 2.5, rollLoot(gate.level, luck, P.known, D.minRarity, k < items - 1, top));
@@ -359,7 +371,7 @@ export class Gates {
     // runes: a gate boss may carry one (deadly: always)
     const rc = gate.trial ? 1 : { normal: 0.25, hard: 0.6, deadly: 1 }[D.id] || 0;
     if (Math.random() < rc) game.runes.find();
-    if (gate.keyRun) game.runes.find();
+    if (gate.keyRun || gate.duelRun) game.runes.find();
     this.exitOpen = true;
     if (gate.trial) {
       const ess = CONFIG.trial.essence * (game.rankIndex + 1);
@@ -367,7 +379,13 @@ export class Gates {
       game.hud.toast(t('trial.passed') + ' · ' + t('toast.essence', { n: ess }));
       game.passTrial(); // the level, the new rank and its banner
     } else {
-      const ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck) * (1 + 0.3 * D.stages.length) * (1 + tier * GT.essence));
+      let ess = Math.round(10 * (gate.zone + 1) * (gate.diff + 1) * (1 + modLuck) * (1 + 0.3 * D.stages.length) * (1 + tier * GT.essence));
+      if (gate.duelRun) {
+        ess = Math.round(ess * (1 + CONFIG.duel.essence));
+        game.quests.seals += CONFIG.duel.seals;
+        game.duel.onWon(tier);
+        game.hud.toast(t('duel.won', { n: CONFIG.duel.seals }));
+      }
       P.essence += ess;
       game.hud.toast(t('toast.essence', { n: ess }));
       if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);

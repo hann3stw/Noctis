@@ -86,7 +86,9 @@ export class Army {
   serialize() {
     const units = [];
     for (const u of this.units) if (u) units.push(this.unitData(u));
-    return { units, behavior: this.behavior, out: this.out };
+    // in a duel the army is out of it: saved as it was before
+    const g = this.game.gates;
+    return { units, behavior: this.behavior, out: g && g.solo ? g.armyOut : this.out };
   }
 
   restore(data) {
@@ -367,7 +369,7 @@ export class Army {
 
   // Summons the whole army out of the shadows, or sends it back.
   toggleSummon() {
-    if (this.summonCd > 0) return false;
+    if (this.summonCd > 0 || (this.game.gates && this.game.gates.solo)) return false;
     this.summonCd = CONFIG.shadows.summonCooldown;
     this.out = !this.out;
     const fx = this.game.effects;

@@ -23,6 +23,7 @@ export const TITLES = {
   soul_weaver: (g) => g.profile.casts >= 5000,
   beast_scholar: (g) => g.bestiary.counts().mastered >= 20,
   apex_hunter: (g) => g.rankIndex >= 9,
+  duelist: (g) => g.duel.won >= 10,
   iron_commander: (g) => g.path.chosen.some((c) => c.core === 'commander'),
   shadow_blade: (g) => g.path.chosen.some((c) => c.core === 'blade'),
   soul_reaper: (g) => g.path.chosen.some((c) => c.core === 'mage'),

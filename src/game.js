@@ -43,6 +43,7 @@ import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { Barracks } from './core/barracks.js';
+import { Duel } from './core/duel.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
 import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
@@ -146,6 +147,7 @@ export class Game {
       setNextItemId(Math.max(save.nextItemId || 1, getNextItemId()));
     }
     this.barracks = new Barracks(this, save && save.barracks); // shadows stationed in the camp (Commander)
+    this.duel = new Duel(this, save && save.duel); // the Duel Arena (Blade)
 
     // outposts taken in this world
     for (const si of this.discovered) this.markCaptured(si);
@@ -260,6 +262,7 @@ export class Game {
       tips: this.tips.serialize(),
       quests: this.quests.serialize(),
       barracks: this.barracks.serialize(),
+      duel: this.duel.serialize(),
       bestiary: this.bestiary.serialize(),
       fog: this.fog.serialize(),
       mark: this.waypoint.serialize(),

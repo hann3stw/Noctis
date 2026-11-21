@@ -653,7 +653,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot', 'barracks', 'expeditions'],
+    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
@@ -715,6 +715,11 @@ export const CONFIG = {
       siege: { time: 21600, party: 6, essence: 520, items: 2, rarity: 3, seals: 3, injury: 0.2 },
     },
   },
+
+  // The Duel Arena (unlocked by the Blade core): the deadly gate of your zone, fought
+  // without your army. cost = essence x (zone + 1); tier = tiers harder; items = more
+  // items; essence = more essence (a share); seals = Soul Seals for a win.
+  duel: { cost: 150, tier: 2, items: 2, essence: 0.5, seals: 2 },
 
   // Rank trial: the last level of a rank is the gate to the next one. Its XP
   // fills up but the level stays until the trial is passed: a golden gate in

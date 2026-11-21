@@ -5,7 +5,7 @@ import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks'];
+const SECTIONS = ['barracks', 'duelArena'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -66,12 +66,21 @@ function barracksView(menu) {
     <div class="cp-col"><div class="pa-sub">${t('barracks.inArmy')}</div><div class="cp-list" data-scroll="cpArmy">${army}</div></div></div>`;
 }
 
+function duelView(menu) {
+  const g = menu.game, D = g.duel, C = CONFIG.duel, why = D.block();
+  const z = CONFIG.world.zones[D.zone()];
+  return `<div class="cp-head"><b>${t('duel.title')}</b><span>${t('duel.record', { won: D.won, best: D.best })}</span></div>
+    <div class="cp-exp"><p>${t('duel.text', { zone: t('zone.' + z.id), tier: C.tier, items: C.items, seals: C.seals })}</p>
+    <button class="ap-btn gold" data-act="campDuel"${why ? ' disabled' : ''}>${t('duel.start', { n: fmt(D.cost()) })}</button>
+    ${why ? `<small>${t('duel.no.' + why)}</small>` : ''}</div>`;
+}
+
 export function campView(menu) {
   const secs = campSections(menu.game);
   if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
   const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
   const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
-  const views = { barracks: barracksView };
+  const views = { barracks: barracksView, duelArena: duelView };
   return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
 }
 
@@ -85,6 +94,7 @@ export function campAct(menu, act, target) {
   else if (act === 'campParty') { const id = Number(target.dataset.id); if (B.party.has(id)) B.party.delete(id); else B.party.add(id); }
   else if (act === 'campSend') B.startMission(target.dataset.kind);
   else if (act === 'campClaim') B.claim();
+  else if (act === 'campDuel') { if (g.duel.start()) menu.close(); }
   else return false;
   return true;
 }
