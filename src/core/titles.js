@@ -23,9 +23,9 @@ export const TITLES = {
   soul_weaver: (g) => g.profile.casts >= 5000,
   beast_scholar: (g) => g.bestiary.counts().mastered >= 20,
   apex_hunter: (g) => g.rankIndex >= 9,
-  iron_commander: (g) => g.path.chosen.includes('commander1'),
-  shadow_blade: (g) => g.path.chosen.includes('blade1'),
-  soul_reaper: (g) => g.path.chosen.includes('mage1'),
+  iron_commander: (g) => g.path.chosen.some((c) => c.core === 'commander'),
+  shadow_blade: (g) => g.path.chosen.some((c) => c.core === 'blade'),
+  soul_reaper: (g) => g.path.chosen.some((c) => c.core === 'mage'),
 };
 
 export class Titles {

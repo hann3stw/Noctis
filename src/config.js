@@ -305,7 +305,8 @@ export const CONFIG = {
     rarityStat: [1, 1.2, 1.5, 2, 2.7, 3.6, 4.8, 6.5], // stat factor per rarity
     upgradeBonus: 0.1, // +10 % stats per upgrade
     maxUpgrade: 5,
-    upgradeCost: [2, 3, 5, 8, 14, 24, 40, 70], // essence per rarity, times (upgrade + 1)
+    upgradeCost: [2, 3, 5, 8, 14, 24, 40, 70], // essence per rarity, times (upgrade + 1) ...
+    upgradeLevel: 60, upgradeExp: 1.3, // ... times (1 + (item level / upgradeLevel) ^ upgradeExp): late items cost a lot
     dismantle: [1, 2, 4, 8, 18, 40, 90, 250], // essence per rarity
     inventorySize: 80,
     armor: { helmet: { defense: 5 }, chest: { defense: 9 }, gloves: { defense: 4 }, boots: { defense: 4 } },
@@ -629,73 +630,73 @@ export const CONFIG = {
   // of items.bossTopChance), and the essence grows.
   gateTiers: { max: 10, hp: 1.3, damage: 1.12, luck: 0.3, topChance: 0.03, essence: 0.25 },
 
-  // Paths (the class tree of the Necromancer): at certain ranks you pick one of
-  // a few path nodes. Every node belongs to a line (commander, blade, mage) and
-  // gives bonuses (the same names as item bonuses) and sometimes a rule
-  // (armyKillXp = x times your share of the XP of kills by your shadows,
-  // killMana = share of your mana per kill, slotCapPlus = more army slots at most,
-  // slotCapMax = the army can never be bigger than this; picking it needs an army that fits). stage 1 is offered from rank D (index 1).
-  // Later stages build on the line of the nodes you already picked.
+  // Paths (the class tree of the Necromancer): at every rank from D to M the
+  // System offers three classes, made from the way you play (core/paths.js).
+  // A class = a core (the style it comes from), maybe a second core (the mod:
+  // it gives modShare of that package) and a rarity. Its bonuses grow with the
+  // stage and the rarity. Every class is an upgrade (no drawbacks), the packages
+  // of all earlier picks stay, and every pick adds pickBonus. A core has
+  //   bonus    one package per stage (the same names as item bonuses)
+  //   rule     rules per stage, summed (armyKillXp = more XP from kills by your shadows,
+  //            killMana = share of your mana per kill, slotCapPlus = more army slots at most,
+  //            selfXp, reviveCostMult, hpRegenMult, manaRegenMult)
+  //   like     how it fits a style: -1 .. 1 per measure (army, hunter, caster, dodger, deaths,
+  //            lossy, elite, gates, sprint, officers, critty, tank)
+  //   skill    the class skill of the last pick; value / time / cooldown per level (I-III)
+  //   unlocks  mechanics a class of this core brings from that stage on
+  // live = the unlocks that exist in the game so far.
   paths: {
-    stages: [1, 3, 5, 8], // rank indexes (0 = E) at which a pick is due (stage 1 at D, 2 at B, 3 at S, 4 at L)
-    respec: 250, // essence x (rank + 1) to take every pick back (or one Respec Token)
-    // Every pick is an upgrade: drawbacks count only drawback x their size, and each pick adds pickBonus
-    drawback: 0.5,
-    pickBonus: { damage: 0.05, hp: 0.05 },
-    lines: ['commander', 'blade', 'mage'],
-    nodes: {
-      commander1: { line: 'commander', stage: 1, bonus: { armySlots: 3, armyHp: 0.2, armyDamage: 0.1 }, rule: { armyKillXp: 2, slotCapPlus: 10 }, like: { army: 1 } },
-      blade1: { line: 'blade', stage: 1, bonus: { damage: 0.3, crit: 0.08, speed: 0.06, killHeal: 0.02, armyDamage: -0.1 }, rule: { slotCapMax: 12 }, like: { hunter: 1 } },
-      mage1: { line: 'mage', stage: 1, bonus: { mana: 0.4, skillDamage: 0.25, cooldown: 0.15 }, rule: { killMana: 0.02 }, like: { caster: 1 } },
-      // Stage 2. Which of these are offered depends on how you play (see Paths.options):
-      //   req   all must hold: armyMin / armyMax (shadows), hunterMin / hunterMax (share of kills made by you),
-      //         killsMin, deathsMin (per hour), castMin (per minute), gateMin (share of time in gates), eliteMin (share of elite kills)
-      //   like  how well it fits a style, -1 .. 1 per measure (army, hunter, caster, dodger, deaths, lossy, elite, gates, sprint, officers, critty)
-      // More rules: reviveCostMult, manaRegenMult, hpRegenMult, selfXp (x XP from your own kills)
-      warBanner: { line: 'commander', stage: 2, bonus: { armyDamage: 0.25, armyHp: 0.1, damage: -0.15, damageTaken: 0.1 }, req: { armyMin: 8 }, like: { army: 1, hunter: -0.6 } },
-      graveLegion: { line: 'commander', stage: 2, bonus: { armySlots: 4, armyHp: 0.15 }, rule: { reviveCostMult: 1.5, manaRegenMult: 0.8 }, req: { armyMin: 15 }, like: { army: 1, lossy: 0.5, officers: 0.4 } },
-      officerCorps: { line: 'commander', stage: 2, bonus: { armyHp: 0.3, armyDamage: 0.15, speed: -0.08 }, req: { armyMin: 6 }, like: { officers: 1, army: 0.5 } },
-      duelist: { line: 'blade', stage: 2, bonus: { crit: 0.12, damage: 0.2, reload: 0.1, armyHp: -0.2, armyDamage: -0.15 }, req: { armyMax: 30 }, like: { hunter: 1, critty: 0.7, dodger: 0.5 } },
-      bladeDance: { line: 'blade', stage: 2, bonus: { speed: 0.12, reload: 0.15, killHeal: 0.03, hp: -0.12, damageTaken: 0.1 }, like: { sprint: 1, dodger: 0.8, deaths: -0.5 } },
-      executioner: { line: 'blade', stage: 2, bonus: { damage: 0.35, skillDamage: -0.2, mana: -0.25 }, like: { elite: 1, hunter: 0.5 } },
-      soulFurnace: { line: 'mage', stage: 2, bonus: { skillDamage: 0.35, ultCharge: 0.3, hp: -0.1 }, rule: { manaRegenMult: 0.7 }, like: { caster: 1 } },
-      graveWard: { line: 'mage', stage: 2, bonus: { armyHp: 0.35, hp: 0.15, damage: -0.2, skillDamage: -0.1 }, like: { deaths: 0.8, lossy: 1, army: 0.4 } },
-      soulSiphon: { line: 'mage', stage: 2, bonus: { cooldown: -0.2, armySlots: -2 }, rule: { killMana: 0.04, hpRegenMult: 0.5 }, like: { caster: 0.5, army: 0.5 } },
-      // only for some ways to play
-      bloodlust: { line: 'blade', stage: 2, bonus: { damage: 0.1, armyDamage: -0.2 }, rule: { selfXp: 1.5 }, req: { hunterMin: 0.6, killsMin: 1500 }, like: { hunter: 1 } },
-      reapersToll: { line: 'commander', stage: 2, bonus: { armyDamage: 0.1, damage: -0.1 }, rule: { armyKillXp: 3 }, req: { hunterMax: 0.3, killsMin: 1500 }, like: { army: 1 } },
-      lastStand: { line: 'mage', stage: 2, bonus: { damageTaken: -0.2, hp: 0.2, damage: -0.1 }, req: { deathsMin: 3 }, like: { deaths: 1 } },
-      huntersCall: { line: 'blade', stage: 2, bonus: { damage: 0.25, crit: 0.06, hp: -0.1 }, req: { eliteMin: 0.05 }, like: { elite: 1 } },
-      archmage: { line: 'mage', stage: 2, bonus: { mana: 0.5, skillDamage: 0.25, cooldown: 0.1, damage: -0.15 }, req: { castMin: 4 }, like: { caster: 1 } },
-      // Stage 3: specializations. req.lineMin = picks needed per line (a line picked twice, or two lines for the hybrids)
-      legion: { line: 'commander', stage: 3, bonus: { armySlots: 6, armyDamage: 0.25, damage: -0.25, speed: -0.1 }, req: { lineMin: { commander: 2 } }, like: { army: 1 } },
-      warlordCommand: { line: 'commander', stage: 3, bonus: { armyHp: 0.4, armyDamage: 0.2, hp: -0.2 }, req: { armyMin: 20 }, like: { officers: 1, army: 0.5 } },
-      eternalRanks: { line: 'commander', stage: 3, bonus: { armyHp: 0.2, armyDamage: -0.2 }, rule: { reviveCostMult: 0.5 }, like: { lossy: 1, army: 0.4 } },
-      thousandCuts: { line: 'blade', stage: 3, bonus: { reload: 0.3, crit: 0.15, damage: 0.2, hp: -0.25, damageTaken: 0.2 }, req: { lineMin: { blade: 2 } }, like: { critty: 1, dodger: 0.6, hunter: 0.4 } },
-      loneReaper: { line: 'blade', stage: 3, bonus: { damage: 0.5, crit: 0.1 }, rule: { slotCapMax: 8, selfXp: 1.5 }, req: { hunterMin: 0.5 }, like: { hunter: 1 } },
-      phantomStep: { line: 'blade', stage: 3, bonus: { speed: 0.2, reload: 0.1, killHeal: 0.04, mana: -0.3, skillDamage: -0.3 }, like: { sprint: 1, dodger: 0.5 } },
-      soulTempest: { line: 'mage', stage: 3, bonus: { skillDamage: 0.6, ultCharge: 0.4, cooldown: 0.2, hp: -0.2 }, rule: { manaRegenMult: 0.6 }, req: { lineMin: { mage: 2 } }, like: { caster: 1 } },
-      necroticAegis: { line: 'mage', stage: 3, bonus: { hp: 0.3, damageTaken: -0.2, armyHp: 0.2, skillDamage: -0.3, damage: -0.2 }, like: { deaths: 1, lossy: 0.5 } },
-      lichForm: { line: 'mage', stage: 3, bonus: { mana: 1.0, hp: -0.3 }, rule: { killMana: 0.06, hpRegenMult: 0.3 }, like: { caster: 0.5, deaths: -0.5 } },
-      spellblade: { line: 'blade', stage: 3, bonus: { damage: 0.25, skillDamage: 0.25, crit: 0.08, hp: -0.2, armyHp: -0.2 }, req: { lineMin: { blade: 1, mage: 1 } }, like: { caster: 0.7, hunter: 0.7 } },
-      necromancerKing: { line: 'commander', stage: 3, bonus: { armySlots: 3, armyHp: 0.2, skillDamage: 0.2, damage: -0.3 }, rule: { killMana: 0.03 }, req: { lineMin: { commander: 1, mage: 1 } }, like: { army: 0.7, caster: 0.7 } },
-      boneMarshal: { line: 'commander', stage: 3, bonus: { armyDamage: 0.15, damage: 0.15, armySlots: 2, hp: -0.15, speed: -0.05 }, req: { lineMin: { commander: 1, blade: 1 } }, like: { army: 0.5, hunter: 0.5, officers: 0.5 } },
-      // only for some ways to play
-      gatecrasher: { line: 'blade', stage: 3, bonus: { damage: 0.2, hp: 0.2, damageTaken: -0.1, speed: -0.1 }, req: { gateMin: 0.25 }, like: { gates: 1 } },
-      bossBane: { line: 'blade', stage: 3, bonus: { damage: 0.3, ultCharge: 0.3, armyDamage: -0.15 }, req: { eliteMin: 0.06 }, like: { elite: 1 } },
-      // Stage 4: the crowning of a path. The strongest nodes, with the heaviest drawbacks.
-      shadowEmperor: { line: 'commander', stage: 4, bonus: { armySlots: 8, armyHp: 0.3, armyDamage: 0.3, damage: -0.4, hp: -0.25 }, rule: { slotCapPlus: 10, reviveCostMult: 1.5 }, req: { lineMin: { commander: 3 } }, like: { army: 1, officers: 0.5 } },
-      undyingHost: { line: 'commander', stage: 4, bonus: { armyHp: 0.5, armyDamage: -0.25, speed: -0.1 }, rule: { reviveCostMult: 0.3 }, req: { lineMin: { commander: 2 } }, like: { lossy: 1, army: 0.5 } },
-      deathIncarnate: { line: 'blade', stage: 4, bonus: { damage: 0.7, crit: 0.2, reload: 0.2, speed: 0.1, hp: -0.4, damageTaken: 0.3 }, rule: { slotCapMax: 6 }, req: { lineMin: { blade: 3 } }, like: { hunter: 1, critty: 0.6 } },
-      perfectForm: { line: 'blade', stage: 4, bonus: { reload: 0.25, crit: 0.15, killHeal: 0.05, damage: 0.3, mana: -0.4, skillDamage: -0.4 }, req: { lineMin: { blade: 2 } }, like: { dodger: 0.7, critty: 0.7, hunter: 0.5 } },
-      arcaneSovereign: { line: 'mage', stage: 4, bonus: { skillDamage: 0.9, ultCharge: 0.5, cooldown: 0.3, mana: 0.5, hp: -0.3, armyHp: -0.3 }, rule: { manaRegenMult: 0.5 }, req: { lineMin: { mage: 3 } }, like: { caster: 1 } },
-      soulLord: { line: 'mage', stage: 4, bonus: { mana: 0.6, skillDamage: 0.4, damage: -0.3 }, rule: { killMana: 0.1, hpRegenMult: 0.2 }, req: { lineMin: { mage: 2 } }, like: { caster: 0.7, army: 0.4 } },
-      lichKing: { line: 'commander', stage: 4, bonus: { armySlots: 5, skillDamage: 0.4, armyDamage: 0.3, hp: -0.35, damage: -0.4 }, rule: { killMana: 0.05 }, req: { lineMin: { commander: 1, mage: 1 } }, like: { army: 0.7, caster: 0.7 } },
-      shadowMonarch: { line: 'commander', stage: 4, bonus: { damage: 0.3, skillDamage: 0.3, armyDamage: 0.3, armyHp: 0.2, armySlots: 3, hp: -0.2, speed: -0.1, damageTaken: 0.15 }, rule: { manaRegenMult: 0.8 }, req: { lineMin: { commander: 1, blade: 1, mage: 1 } }, like: { army: 0.5, caster: 0.5, hunter: 0.5 } },
-      // only for some ways to play
-      abyssTouched: { line: 'blade', stage: 4, bonus: { hp: 0.3, damage: 0.3, damageTaken: -0.2, armyHp: 0.3, speed: -0.15, mana: -0.3 }, req: { gateMin: 0.4 }, like: { gates: 1 } },
-      apexPredator: { line: 'blade', stage: 4, bonus: { damage: 0.6, ultCharge: 0.4, armyDamage: -0.3, armyHp: -0.3 }, req: { eliteMin: 0.08, hunterMin: 0.5 }, like: { elite: 1, hunter: 0.6 } },
-      grimHarvest: { line: 'mage', stage: 4, bonus: { damage: 0.2, hp: -0.2 }, rule: { selfXp: 2, armyKillXp: 2 }, req: { killsMin: 8000 }, like: { hunter: 0.3, army: 0.3 } },
+    stages: [1, 2, 3, 4, 5, 6, 7, 8, 9], // rank indexes (0 = E) at which a pick is due: D C B A S SS SSS L M
+    stageScale: 0.06, // a later stage is stronger: 1 + stageScale x (stage - 1)
+    rarityMult: [1, 1.15, 1.3, 1.5, 1.8], // Common .. Legendary
+    modShare: 0.5,
+    pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
+    sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
+    skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
+    live: ['thirdSlot'],
+    cores: {
+      blade: {
+        bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
+        rule: { selfXp: 0.05 },
+        like: { hunter: 0.5, critty: 0.25, dodger: 0.25 },
+        skill: { id: 'afterimage', value: [0.25, 0.5, 0.8], time: 4 }, // value = extra crit damage; time = seconds after a dodge
+        unlocks: [{ id: 'duelArena', stage: 3 }],
+      },
+      commander: {
+        bonus: { armySlots: 1.5, armyHp: 0.08, armyDamage: 0.07 },
+        rule: { slotCapPlus: 1.5, armyKillXp: 0.15, reviveCostMult: -0.03 },
+        like: { army: 0.6, hunter: -0.25, officers: 0.15 },
+        skill: { id: 'rally', value: [0.15, 0.25, 0.4], time: [5, 7, 9], cooldown: 8 }, // value = army damage after an elite or boss kill
+        unlocks: [{ id: 'barracks', stage: 3 }, { id: 'expeditions', stage: 5 }],
+      },
+      mage: {
+        bonus: { mana: 0.1, skillDamage: 0.09, cooldown: 0.02, ultCharge: 0.04 },
+        rule: { killMana: 0.01 },
+        like: { caster: 1 },
+        skill: { id: 'overflow', value: [0.15, 0.25, 0.4] }, // value = share of the mana of a skill that comes back
+        unlocks: [{ id: 'thirdSlot', stage: 3 }, { id: 'runeWorkshop', stage: 5 }],
+      },
+      tank: {
+        bonus: { hp: 0.08, damageTaken: -0.015, armyHp: 0.03 },
+        rule: { hpRegenMult: 0.04 },
+        like: { tank: 0.7, deaths: -0.3 },
+        skill: { id: 'bulwark', value: [0.06, 0.1, 0.15], time: 4, cooldown: 12 }, // value = shield, share of max health
+        unlocks: [{ id: 'fortify', stage: 3 }],
+      },
+      slayer: {
+        bonus: { damage: 0.07, ultCharge: 0.04, skillDamage: 0.03 },
+        rule: {},
+        like: { elite: 1 },
+        skill: { id: 'execute', value: [0.12, 0.22, 0.35] }, // value = extra damage on elites and bosses
+        unlocks: [{ id: 'huntBoard', stage: 3 }],
+      },
+      delver: {
+        bonus: { damage: 0.05, hp: 0.05, speed: 0.01, reload: 0.01 },
+        rule: { manaRegenMult: 0.03 },
+        like: { gates: 1 },
+        skill: { id: 'resolve', value: [0.15, 0.25, 0.4] }, // value = share of max health healed per gate stage cleared
+        unlocks: [{ id: 'contracts', stage: 3 }],
+      },
     },
   },
 

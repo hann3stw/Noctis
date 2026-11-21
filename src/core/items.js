@@ -149,7 +149,8 @@ export function armorBonus(item) {
 }
 
 export function upgradeCost(item) {
-  return CONFIG.items.upgradeCost[item.rarity] * (item.up + 1);
+  const I = CONFIG.items;
+  return Math.max(1, Math.round(I.upgradeCost[item.rarity] * (item.up + 1) * (1 + Math.pow(item.level / I.upgradeLevel, I.upgradeExp))));
 }
 
 export function dismantleValue(item) {

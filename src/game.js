@@ -519,6 +519,7 @@ export class Game {
     this.tips.update(dt);
     this.quests.update(dt);
     this.titles.update(dt);
+    this.path.update(dt);
     this.waypoint.update(dt);
     this.hunts.update(dt);
   }
@@ -886,6 +887,7 @@ export class Game {
     const km = this.path.rule('killMana');
     if (km && !this.player.dead) this.player.mana = Math.min(this.player.maxMana, this.player.mana + this.player.maxMana * km);
     if (src < 0) this.player.onKill();
+    this.path.onKill(tier); // class skill Rally
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');
     if (ex && E.arena[i] && tier < 3) this.hazards.add(E.x[i], E.z[i], ex.radius, ex.delay, E.dmg[i] * ex.damage, 0xff6030);

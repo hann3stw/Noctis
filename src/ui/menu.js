@@ -212,13 +212,13 @@ export class Menu {
     } else if (act === 'stoneUse') {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
-      this.game.path.pick(target.dataset.id);
+      this.game.path.pick(Number(target.dataset.id));
     } else if (act === 'runeWear') {
       this.game.runes.wear(target.dataset.skill, target.dataset.r);
     } else if (act === 'titlePick') {
       this.game.titles.wear(target.dataset.id);
     } else if (act === 'pathRespec') {
-      this.game.path.respec(target.dataset.token === '1');
+      this.game.path.respec();
     } else if (act === 'useXp') {
       this.game.quests.useXp();
     } else if (act === 'useKey') {
@@ -535,42 +535,41 @@ export class Menu {
   }
 
   // ---- daily quests -------------------------------------------------------------
-  // bonuses and rule of a path node, as lines of text
-  pathLines(id) {
-    const n = CONFIG.paths.nodes[id];
+  // the bonuses (bo) and rules (ro) of a class or of all picks, as lines of text
+  pathLines(bo, ro) {
     const out = [];
-    const bo = this.game.path.bonusOf(id);
-    if (n.line === 'mage' && n.stage >= 2) out.push(`<li class="rule">${t('path.thirdSlot')}</li>`);
     for (const k in bo) {
-      const v = bo[k], flat = k === 'armySlots';
-      if (!v) continue;
-      const bad = k === 'damageTaken' ? v > 0 : v < 0;
-      out.push(`<li class="${bad ? 'neg' : ''}">${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + (flat ? Math.abs(v) : Math.round(Math.abs(v) * 100)) })}</li>`);
+      const v = bo[k], n = k === 'armySlots' ? Math.round(Math.abs(v)) : Math.round(Math.abs(v) * 100);
+      if (n) out.push(`<li>${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + n })}</li>`);
     }
-    // rules: a text of its own for the node, else one text per rule
-    const own = 'path.' + id + '.rule';
-    if (n.rule) {
-      if (t(own) !== own) out.push(`<li class="rule">${t(own)}</li>`);
-      else for (const k in n.rule) { if (t('path.r.' + k) !== 'path.r.' + k && !['slotCapMax', 'slotCapPlus'].includes(k)) { const rv = n.rule[k], v = k === 'killMana' ? Math.round(rv * 100) : k === 'selfXp' || k === 'reviveCostMult' ? Math.round((rv - 1) * 100) : rv; out.push(`<li class="${['reviveCostMult', 'manaRegenMult', 'hpRegenMult'].includes(k) ? 'neg' : 'rule'}">${t('path.r.' + k, { v })}</li>`); } }
+    for (const k in ro) {
+      const v = ro[k], n = k === 'slotCapPlus' ? Math.round(v) : k === 'killMana' ? Math.round(v * 1000) / 10 : Math.round(Math.abs(v) * 100);
+      if (n && t('path.r.' + k) !== 'path.r.' + k) out.push(`<li class="rule">${t('path.r.' + k, { v: n })}</li>`);
     }
     return out.join('');
   }
 
-  // The Path of the Necromancer: the pick that is due (cards), and what was picked
+  // a class skill of a core at a level (0 .. 2), as text
+  skillText(core, level) {
+    const def = CONFIG.paths.cores[core].skill;
+    return `<b>${t('cskill.' + def.id)} ${['I', 'II', 'III'][level]}</b>: ${t('cskill.' + def.id + '.desc', this.game.path.skillParams(def, level))}`;
+  }
+
+  // The Path of the Necromancer: the classes of the pick that is due (cards), and what was picked
   pathView() {
-    const Pa = this.game.path, P = this.game.player, due = Pa.due();
-    const card = (id, pick) => {
-      const n = CONFIG.paths.nodes[id];
-      const why = ''; // the offers come without comment: no reason, no hint what else would be offered
-      return `<div class="pa-card l-${n.line}${pick ? ' pick' : ''}"><em>${t('path.line.' + n.line)}</em><b>${t('path.' + id)}</b><p>${t('path.' + id + '.desc')}</p>${why ? `<small class="pa-why">${why}</small>` : ''}<ul>${this.pathLines(id)}</ul>
-        ${pick ? `<button class="ap-btn gold" data-act="pathPick" data-id="${id}"${this.game.path.canPick(id) ? '' : ' disabled'}>${this.game.path.canPick(id) ? t('path.choose') : t('path.armyTooBig', { n: n.rule.slotCapMax })}</button>` : ''}</div>`;
+    const Pa = this.game.path, Q = this.game.quests, pb = CONFIG.paths.pickBonus, due = Pa.due();
+    const card = (cls, i) => {
+      const st = Pa.stage(), lvl = Math.min(2, Math.floor(Pa.coreCount(cls.core) / CONFIG.paths.skillStep));
+      const un = Pa.unlocksOf(cls, st).map((id) => `<li class="rule">${t('unlock.' + id)}</li>`).join('');
+      return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}"><em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
+        <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>
+        <button class="ap-btn gold" data-act="pathPick" data-id="${i}">${t('path.choose')}</button></div>`;
     };
-    const cost = Pa.respecCost(), Q = this.game.quests, pb = CONFIG.paths.pickBonus;
-    // while a pick is due the picks so far are only a strip, so the offers and the picks fit one page
     const mine = !Pa.chosen.length ? `<p class="pa-none">${t('path.none')}</p>`
-      : due ? Pa.chosen.map((id) => `<span class="pa-pill l-${CONFIG.paths.nodes[id].line}">${t('path.' + id)}</span>`).join('')
-        : Pa.chosen.map((id) => card(id, false)).join('');
-    const respec = Pa.chosen.length ? `<div class="pa-respec">${Q.respecs ? `<button class="ap-btn ghost" data-act="pathRespec" data-token="1">${t('path.respecToken', { n: Q.respecs })}</button>` : ''}<button class="ap-btn ghost" data-act="pathRespec"${P.essence >= cost ? '' : ' disabled'}>${t('path.respec', { n: fmt(cost) })}</button></div>` : '';
+      : Pa.chosen.map((c, i) => `<span class="pa-pill l-${c.core} r-${c.rarity}">${Pa.chosenName(i)}</span>`).join('');
+    const sk = Pa.skill(), unl = Pa.unlockedList();
+    const info = sk ? `<div class="pa-info"><p>${this.skillText(sk.core, sk.level)}</p>${unl.length ? `<p class="pa-unl">${unl.map((id) => t('unlock.' + id)).join(' · ')}</p>` : ''}<ul class="pa-tot">${this.pathLines(Pa.totals(), Pa.rules())}</ul></div>` : '';
+    const respec = Pa.chosen.length ? `<div class="pa-respec"><button class="ap-btn ghost" data-act="pathRespec"${Q.respecs ? '' : ' disabled'}>${t('path.respecToken', { n: Q.respecs })}</button>${Q.respecs ? '' : `<small>${t('path.noToken')}</small>`}</div>` : '';
     const titles = Object.keys(TITLES).filter((id) => this.game.titles.has(id)).map((id) => {
       const worn = this.game.titles.worn === id;
       return `<button class="ttl${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}" title="${t('title.' + id + '.how')}"><b>${t('title.' + id)}</b></button>`;
@@ -578,8 +577,8 @@ export class Menu {
     return `<div class="path" data-scroll="path">
       <div class="pa-top"><div class="pa-head"><b>${t('path.title')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
         <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
-      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((id) => card(id, true)).join('')}</div>` : ''}
-      <div class="pa-sub">${t('path.yours')}</div><div class="${due ? 'pa-strip' : 'pa-row pa-mine'}">${mine}</div>
+      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}
+      <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}
       ${titles ? `<div class="pa-sub">${t('title.heading')}</div><div class="ttl-list">${titles}</div>` : ''}</div>`;
   }
 

@@ -84,6 +84,8 @@ export class Player {
     this.frenzy = 0; // Frenzy Grips: faster reload
     this.frenzyT = 0;
     this.bastionCd = 0; // Bastion of Night: time until the next shield
+    this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
+    this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
     this.rageT = 0; // Blood Rage
     this.chillT = 0; // slowed by a chilling shot
@@ -554,6 +556,14 @@ export class Player {
       this.bastionCd = B.cooldown;
       fx.ring(this.x, this.z, 0.5, 2.5, 0x6aa8ff, 0.4);
     }
+    // class skill Bulwark: a shield right after a hit
+    const W = this.game.path.skillOf('tank');
+    if (W && this.bulwarkCd <= 0 && this.hp > 0) {
+      this.shield = this.shieldMax = this.maxHp * W.def.value[W.level];
+      this.shieldT = W.def.time;
+      this.bulwarkCd = W.def.cooldown;
+      fx.ring(this.x, this.z, 0.5, 2.5, 0x6aa8ff, 0.4);
+    }
     this.hurtFlash = 1;
     play('hurt');
     if (d > this.maxHp * 0.15) this.game.cam.shake(0.25, 0.2);
@@ -622,6 +632,8 @@ export class Player {
     }
     if (this.ultLockT > 0) this.ultLockT -= dt;
     if (this.bastionCd > 0) this.bastionCd -= dt;
+    if (this.bulwarkCd > 0) this.bulwarkCd -= dt;
+    if (this.afterimageT > 0) this.afterimageT -= dt;
     if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.frenzy = 0; }
     if (this.shieldT > 0) {
       this.shieldT -= dt;
@@ -651,6 +663,7 @@ export class Player {
         this.dodgeT = c.dodge.duration;
         this.counts.dodge++;
         game.profile.dodges++;
+        if (game.path.skillOf('blade')) this.afterimageT = CONFIG.paths.cores.blade.skill.time; // Afterimage
         // Voidstep Treads: an explosion where the dodge started
         const V = this.uq.voidstep;
         if (V) game.zones.add(this.x, this.z, V.radius, V.delay, 1, 0, this.skillPower() * V.power, 0, 0xb070ff);
@@ -824,6 +837,8 @@ export class Player {
     this.fought();
     if (slot === 2) this.ult = 0;
     else { this.game.profile.manaSpent += this.manaCost(def); this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
+    const O = slot !== 2 && this.game.path.skillOf('mage'); // class skill Overflow: part of the mana comes back
+    if (O) this.mana = Math.min(this.maxMana, this.mana + this.manaCost(def) * O.def.value[O.level]);
     this.counts.cast++;
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
