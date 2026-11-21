@@ -497,12 +497,12 @@ export class Hud {
       this.mpText.textContent = mp + ' / ' + P.maxMana;
     }
 
-    // the Warrior's Rage
-    const warrior = game.mainClass === 'warrior';
-    if (warrior !== this.vRageOn) { this.vRageOn = warrior; this.rageEl.style.display = warrior ? '' : 'none'; }
-    if (warrior) {
-      const r = Math.round(P.rage);
-      if (r !== this.vRage) { this.vRage = r; this.rageFill.style.transform = 'scaleX(' + (r / CONFIG.warrior.rageMax).toFixed(2) + ')'; }
+    // the Warrior's Rage, the Mage's Arcane Charges
+    const mc = game.mainClass, res = mc === 'warrior' ? P.rage / CONFIG.warrior.rageMax : mc === 'mage' ? P.arcane / CONFIG.mage.arcaneMax : -1;
+    if (mc !== this.vRageOn) { this.vRageOn = mc; this.rageEl.style.display = res >= 0 ? '' : 'none'; this.rageEl.classList.toggle('arcane', mc === 'mage'); }
+    if (res >= 0) {
+      const r = Math.round(res * 100);
+      if (r !== this.vRage) { this.vRage = r; this.rageFill.style.transform = 'scaleX(' + (r / 100).toFixed(2) + ')'; }
     }
 
     // the army belongs to the Necromancer

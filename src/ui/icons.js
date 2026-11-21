@@ -2,6 +2,14 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  arcaneBolt: svg('M3 12l12-3-3 6zM15 9l6 3-6 3z'),
+  fireball: svg('M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z'),
+  frostNova: svg('M11 2h2v7l5-3 1 2-5 3 5 3-1 2-5-3v7h-2v-7l-5 3-1-2 5-3-5-3 1-2 5 3z'),
+  chainLightning: svg('M13 2L5 14h6l-2 8 8-12h-6zM17 4l3 3-3 3z'),
+  meteor: svg('M16 2a6 6 0 0 1 6 6c0 4-4 5-8 8l-3-3c3-4 4-8 5-11zM3 21l7-7 2 2-7 7z'),
+  arcaneSurge: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm-1 5v3H8v2h3v3h2v-3h3v-2h-3V8z'),
+  cataclysm: svg('M2 20L10 4l4 8 3-5 5 13z'),
+  timeStop: svg('M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm-1 4v7l5 3 1-2-4-2V6z'),
   shieldBash: svg('M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zM8 9v2h8V9z'),
   cleave: svg('M4 20L14 6l2 1-9 14zM13 4c4-1 7 1 8 4-3 1-6 0-8-1z'),
   groundSlam: svg('M12 3l2 6 6 1-5 3 2 7-5-4-5 4 2-7-5-3 6-1z'),

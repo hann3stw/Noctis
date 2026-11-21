@@ -773,6 +773,8 @@ export class Menu {
     if (def.armyDamage) row('army', '+' + Math.round(def.armyDamage * 100) + '%');
     if (def.damage) row('damageUp', '+' + Math.round(def.damage * 100) + '%');
     if (def.guard) row('guard', '-' + Math.round(def.guard * 100) + '%');
+    if (def.jumps) row('jumps', def.jumps);
+    if (def.arcane) row('arcane', '+' + def.arcane);
     if (def.rage) row('rage', '+' + def.rage);
     if (def.duration) row('duration', def.duration + 's');
     return rows.join('');

@@ -89,6 +89,9 @@ export class Player {
     this.rage = 0; // Warrior: Rage 0 .. 100
     this.guardT = 0; // a skill cuts the damage taken: time left
     this.guardV = 0; // ... and by how much
+    this.arcane = 0; // Mage: Arcane Charges
+    this.arcaneT = 0; // time until they are lost
+    this.surgeT = 0; // Mage: skills cost no mana while this runs
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -213,6 +216,8 @@ export class Player {
     }
     if (this.game.path) this.game.path.apply(b); // the Path of the Necromancer
     if (this.game.hunts && this.game.path.has('huntBoard')) this.game.hunts.apply(b); // trophies of the Hunt Board
+    const mc = CONFIG.classes.list[this.game.mainClass]; // what the main class gives
+    if (mc && mc.bonus) for (const k in mc.bonus) b[k] = (b[k] || 0) + mc.bonus[k];
     // mastery points (after the last level)
     const M = CONFIG.mastery.perPoint, ms = this.mastery.s;
     // effects of unique items
@@ -267,6 +272,13 @@ export class Player {
     return (K / (K + this.defense)) * this.takenBonus * fort * guard;
   }
 
+  // the Mage's Arcane Charges
+  addArcane(n) {
+    if (this.game.mainClass !== 'mage' || n <= 0) return;
+    this.arcane = Math.min(CONFIG.mage.arcaneMax, this.arcane + n);
+    this.arcaneT = CONFIG.mage.arcaneTime;
+  }
+
   // the Warrior's Rage
   addRage(n) {
     if (this.game.mainClass !== 'warrior' || n <= 0) return;
@@ -294,7 +306,7 @@ export class Player {
 
   // damage of a skill with power 1: the same with every weapon type
   skillPower() {
-    return skillDamage(this.equip.weapon) * this.damageMult * this.skillMult * this.tempMult();
+    return skillDamage(this.equip.weapon) * this.damageMult * this.skillMult * this.tempMult() * (1 + this.arcane * CONFIG.mage.arcaneDamage);
   }
 
   // an enemy was hit: the ultimate charges (not while one is active)
@@ -589,6 +601,8 @@ export class Player {
       this.hp = 0;
       this.dead = true;
       this.rage = 0;
+      this.arcane = 0;
+      this.surgeT = 0;
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
@@ -651,6 +665,8 @@ export class Player {
     if (this.bastionCd > 0) this.bastionCd -= dt;
     if (this.bulwarkCd > 0) this.bulwarkCd -= dt;
     if (this.guardT > 0) this.guardT -= dt;
+    if (this.surgeT > 0) this.surgeT -= dt;
+    if (this.arcaneT > 0 && (this.arcaneT -= dt) <= 0) this.arcane = 0; // the Arcane Charges fade
     if (this.rage > 0 && this.calmT > CONFIG.warrior.calm) this.rage = Math.max(0, this.rage - CONFIG.warrior.decay * dt); // Rage fades
     if (this.afterimageT > 0) this.afterimageT -= dt;
     if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.frenzy = 0; }
@@ -831,7 +847,7 @@ export class Player {
   // mana a skill costs (Mana Curse doubles it)
   manaCost(def) {
     const m = this.game.modOn('manaCurse');
-    return def.mana * (m ? m.cost : 1);
+    return this.surgeT > 0 ? 0 : def.mana * (m ? m.cost : 1); // Mage: Arcane Surge
   }
 
   // slot 0 / 1 = skills, 2 = ultimate
@@ -858,6 +874,7 @@ export class Player {
     else { this.game.profile.manaSpent += this.manaCost(def); this.mana -= this.manaCost(def); this.cds[slot] = this.cdMax[slot] = def.cooldown * this.cdMult; }
     const O = slot !== 2 && this.game.path.skillOf('mage'); // class skill Overflow: part of the mana comes back
     if (O) this.mana = Math.min(this.maxMana, this.mana + this.manaCost(def) * O.def.value[O.level]);
+    if (slot !== 2) this.addArcane(1);
     this.counts.cast++;
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;

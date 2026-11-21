@@ -454,6 +454,13 @@ export const CONFIG = {
     shieldRush: { for: ['warrior'], mana: 20, cooldown: 8, aim: 'point', range: 11, radius: 2.5, width: 2.4, power: 2.2 },
     challengingRoar: { for: ['warrior'], mana: 25, cooldown: 14, aim: 'self', radius: 9, power: 0.6, guard: 0.3, duration: 6, rage: 25 },
     ironWill: { for: ['warrior'], mana: 22, cooldown: 16, aim: 'self', radius: 2, shield: 0.3, guard: 0.35, healSelf: 0.15, duration: 6 },
+    // Mage (arcane = Arcane Charges it gives; jumps / jumpRange = a bolt that leaps from enemy to enemy)
+    arcaneBolt: { for: ['mage'], mana: 10, cooldown: 3, aim: 'line', range: 16, width: 1.2, power: 2 },
+    fireball: { for: ['mage'], mana: 22, cooldown: 7, aim: 'point', range: 12, radius: 4, power: 3.4 },
+    frostNova: { for: ['mage'], mana: 20, cooldown: 11, aim: 'self', radius: 6.5, power: 1.2, stun: 1.8 },
+    chainLightning: { for: ['mage'], mana: 24, cooldown: 8, aim: 'point', range: 11, radius: 4, power: 1.6, jumps: 5, jumpRange: 6 },
+    meteor: { for: ['mage'], mana: 35, cooldown: 14, aim: 'point', range: 12, radius: 5, power: 6, stun: 0.8 },
+    arcaneSurge: { for: ['mage'], mana: 0, cooldown: 24, aim: 'self', radius: 3, duration: 6, arcane: 3 }, // for duration your skills cost no mana
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
@@ -467,6 +474,8 @@ export const CONFIG = {
     oblivionRay: { aim: 'line', range: 24, width: 3, power: 16 },
     earthshatter: { for: ['warrior'], aim: 'self', radius: 12, power: 10, stun: 2.5 },
     unbreakable: { for: ['warrior'], aim: 'self', radius: 5, duration: 10, guard: 0.5, damage: 0.3, healSelf: 0.3 }, // damage = the bonus of Blood Rage
+    cataclysm: { for: ['mage'], aim: 'point', range: 12, radius: 8, power: 14, stun: 2 },
+    timeStop: { for: ['mage'], aim: 'self', radius: 14, stun: 4.5, duration: 5 }, // everything close is frozen; your skills cost no mana meanwhile
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -649,6 +658,10 @@ export const CONFIG = {
   // gives damage and less damage taken.
   warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.003, reduction: 0.0015 },
 
+  // Mage: every skill you cast gives an Arcane Charge (up to arcaneMax); each adds arcaneDamage
+  // to your skill damage. All charges are lost after arcaneTime seconds without a cast.
+  mage: { arcaneMax: 5, arcaneTime: 6, arcaneDamage: 0.06 },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -658,7 +671,7 @@ export const CONFIG = {
     list: {
       necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
       warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', cores: ['tank', 'blade', 'slayer', 'delver'] },
-      mage: { role: 'ranged', ready: false, army: false, cores: ['mage', 'slayer', 'delver', 'tank'] },
+      mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.2 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: false, army: false, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { role: 'support', ready: false, army: false, cores: ['mage', 'tank', 'delver', 'slayer'] },

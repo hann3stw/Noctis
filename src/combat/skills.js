@@ -306,6 +306,73 @@ export function castSkill(game, id, dx, dz, power) {
       fx.burst(P.x, 1.2, P.z, 22, 0xc8d8ff, 4, 0.18, 0.6);
       break;
 
+    // ---- Mage
+    case 'arcaneBolt':
+      hitLine(game, P.x, P.z, dx, dz, def.range, def.width, base);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width, 0x8aa8ff);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width * 0.35, 0xffffff);
+      fx.ring(P.x + dx * def.range, P.z + dz * def.range, 0.4, 2.4, 0x8aa8ff, 0.25);
+      game.cam.shake(0.12, 0.12);
+      break;
+    case 'fireball':
+      game.zones.add(tx, tz, def.radius, 0.35, 1, 0, base, 0, 0xff7a30);
+      fx.ring(tx, tz, def.radius + 1, 0.4, 0xff7a30, 0.4);
+      fx.burst(tx, 1.2, tz, 34, 0xff7a30, 8, 0.26, 0.8);
+      game.cam.shake(0.2, 0.2);
+      break;
+    case 'frostNova':
+      hitCircle(game, P.x, P.z, def.radius, base, def.stun);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0x9fe0ff, EXPAND, 1, 0.45);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0xd8f4ff, 0.45);
+      fx.burst(P.x, 1, P.z, 30, 0xc8f0ff, 8, 0.2, 0.8);
+      game.cam.shake(0.2, 0.2);
+      break;
+    case 'chainLightning': {
+      let i = E.nearest(tx, tz, def.radius);
+      if (i < 0) i = E.nearest(P.x, P.z, def.range);
+      if (i < 0) {
+        // no enemy: the mana is not wasted on a long cooldown
+        P.cds[0] = Math.min(P.cds[0], 1);
+        P.cds[1] = Math.min(P.cds[1], 1);
+        break;
+      }
+      const done = new Set();
+      let px = P.x, pz = P.z;
+      for (let n = 0; n < def.jumps && i >= 0; n++) {
+        done.add(i);
+        const ex = E.x[i] - px, ez = E.z[i] - pz, len = Math.hypot(ex, ez) || 1;
+        fx.beam(px, pz, ex / len, ez / len, len, 0.5, 0xa0d8ff);
+        fx.burst(E.x[i], 1, E.z[i], 8, 0xa0d8ff, 4, 0.2, 0.4);
+        playerHit(game, i, base, ex / len, ez / len);
+        px = E.x[i];
+        pz = E.z[i];
+        // the next one: the nearest enemy that was not hit yet
+        let best = -1, bd = def.jumpRange * def.jumpRange;
+        for (let k = 0; k < E.activeCount; k++) {
+          const j = E.active[k];
+          if (!E.alive[j] || done.has(j)) continue;
+          const d2 = (E.x[j] - px) ** 2 + (E.z[j] - pz) ** 2;
+          if (d2 < bd) { bd = d2; best = j; }
+        }
+        i = best;
+      }
+      game.cam.shake(0.18, 0.15);
+      break;
+    }
+    case 'meteor':
+      // a meteor falls where you aimed, a moment after the cast
+      game.zones.add(tx, tz, def.radius, 1.1, 1, 0, base, def.stun, 0xff5020, true);
+      fx.ring(tx, tz, def.radius + 1, 0.5, 0xff5020, 0.5);
+      game.cam.shake(0.15, 0.2);
+      break;
+    case 'arcaneSurge':
+      P.surgeT = def.duration;
+      P.addArcane(def.arcane);
+      fx.ring(P.x, P.z, 0.5, 5, 0x8aa8ff, 0.45);
+      fx.ring(P.x, P.z, 0.5, 3, 0xffffff, 0.4, 0.1);
+      fx.burst(P.x, 1.4, P.z, 26, 0x8aa8ff, 7, 0.22, 0.7);
+      break;
+
     // ---- ultimates
     case 'voidStorm':
       // a storm that stays where it was cast
@@ -355,6 +422,23 @@ export function castSkill(game, id, dx, dz, power) {
       fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
       game.cam.shake(0.35, 0.35);
+      break;
+    case 'cataclysm':
+      game.zones.add(tx, tz, def.radius, 0.9, 1, 0, base, def.stun, 0xff4020, true);
+      fx.ring(tx, tz, def.radius + 3, 0.6, 0xff4020, 0.6);
+      fx.ring(tx, tz, 0.5, def.radius, 0xffffff, 0.5, 0.15);
+      fx.burst(tx, 2, tz, 50, 0xff4020, 10, 0.28, 0.9);
+      game.cam.shake(0.5, 0.4);
+      break;
+    case 'timeStop':
+      hitCircle(game, P.x, P.z, def.radius, 0, def.stun);
+      P.surgeT = def.duration;
+      P.addArcane(CONFIG.mage.arcaneMax);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0x8aa8ff, EXPAND, 1, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius + 2, 0xffffff, 0.6);
+      fx.ring(P.x, P.z, 1, def.radius * 0.7, 0x8aa8ff, 0.5, 0.15);
+      fx.burst(P.x, 1.2, P.z, 50, 0x8aa8ff, 10, 0.28, 0.9);
+      game.cam.shake(0.3, 0.3);
       break;
     case 'earthshatter':
       hitCircle(game, P.x, P.z, def.radius, base, def.stun);
