@@ -84,6 +84,8 @@ export class Player {
     this.frenzy = 0; // Frenzy Grips: faster reload
     this.frenzyT = 0;
     this.bastionCd = 0; // Bastion of Night: time until the next shield
+    this.fortT = 0; // Fortified outpost: time left of the damage cut
+    this.fortLv = 0;
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -256,7 +258,8 @@ export class Player {
   takenFactor() {
     const zi = Math.max(0, this.game.curZone);
     const K = CONFIG.progression.defenseK * Math.pow(CONFIG.levels.itemRank, zi);
-    return (K / (K + this.defense)) * this.takenBonus;
+    const fort = this.fortT > 0 && this.fortLv > 0 ? 1 - CONFIG.fortify.reduction[this.fortLv - 1] : 1; // Fortified outpost
+    return (K / (K + this.defense)) * this.takenBonus * fort;
   }
 
   // Eclipse and Blood Rage: more damage while they last

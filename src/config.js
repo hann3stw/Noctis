@@ -653,7 +653,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop'],
+    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
@@ -725,6 +725,11 @@ export const CONFIG = {
   // level adds levelBonus of its effect, up to max) or crafts a rune that was not found.
   // Costs are times (rank + 1): infuse per level, craft for a rune.
   runeWorkshop: { max: 3, levelBonus: 0.15, infuse: [300, 900, 2700], craft: 1500 },
+
+  // Fortified Outposts (unlocked by the Tank core): cost = essence per level, times
+  // (zone of the outpost + 1). regen = share of max health and mana per second inside;
+  // reduction = damage taken less for time seconds after leaving.
+  fortify: { max: 3, cost: [500, 1500, 4500], regen: [0.03, 0.05, 0.08], reduction: [0.1, 0.2, 0.3], time: 180 },
 
   // Rank trial: the last level of a rank is the gate to the next one. Its XP
   // fills up but the level stays until the trial is passed: a golden gate in

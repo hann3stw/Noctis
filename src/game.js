@@ -44,6 +44,7 @@ import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
 import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { Barracks } from './core/barracks.js';
 import { Duel } from './core/duel.js';
+import { Fort } from './core/fort.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
 import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
@@ -148,6 +149,7 @@ export class Game {
     }
     this.barracks = new Barracks(this, save && save.barracks); // shadows stationed in the camp (Commander)
     this.duel = new Duel(this, save && save.duel); // the Duel Arena (Blade)
+    this.fort = new Fort(this, save && save.fort); // fortified outposts (Tank)
 
     // outposts taken in this world
     for (const si of this.discovered) this.markCaptured(si);
@@ -263,6 +265,7 @@ export class Game {
       quests: this.quests.serialize(),
       barracks: this.barracks.serialize(),
       duel: this.duel.serialize(),
+      fort: this.fort.serialize(),
       bestiary: this.bestiary.serialize(),
       fog: this.fog.serialize(),
       mark: this.waypoint.serialize(),
@@ -527,6 +530,7 @@ export class Game {
     this.titles.update(dt);
     this.path.update(dt);
     this.barracks.update(dt);
+    this.fort.update(dt);
     this.waypoint.update(dt);
     this.hunts.update(dt);
   }

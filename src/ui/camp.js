@@ -6,7 +6,7 @@ import { t } from '../strings.js';
 import { runesOf } from '../core/runes.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop'];
+const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -95,12 +95,23 @@ function workshopView(menu) {
     <div class="cp-list cp-wide" data-scroll="cpWork">${rows || `<p class="cp-none">${t('workshop.none')}</p>`}</div>`;
 }
 
+function fortView(menu) {
+  const g = menu.game, F = g.fort, P = g.player, C = CONFIG.fortify;
+  const rows = F.outposts().map((si) => {
+    const lv = F.level(si), c = F.cost(si), pips = '◆'.repeat(lv) + '◇'.repeat(C.max - lv);
+    return `<div class="cp-row"><div><b>${g.safeName(si)} <span class="cp-pips">${pips}</span></b><small>${lv ? t('fort.lv', { r: Math.round(C.reduction[lv - 1] * 100), h: Math.round(C.regen[lv - 1] * 100) }) : t('fort.none')}</small></div>
+      ${c ? `<button class="ap-btn ghost" data-act="campFort" data-si="${si}"${P.essence >= c ? '' : ' disabled'}>${t('fort.upgrade', { n: fmt(c) })}</button>` : `<small>${t('fort.max')}</small>`}</div>`;
+  }).join('');
+  return `<div class="cp-head"><b>${t('fort.title')}</b><span>${t('fort.hint', { s: C.time })}</span></div>
+    <div class="cp-list cp-wide" data-scroll="cpFort">${rows || `<p class="cp-none">${t('fort.empty')}</p>`}</div>`;
+}
+
 export function campView(menu) {
   const secs = campSections(menu.game);
   if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
   const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
   const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
-  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView };
+  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView };
   return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
 }
 
@@ -116,6 +127,7 @@ export function campAct(menu, act, target) {
   else if (act === 'campClaim') B.claim();
   else if (act === 'campInfuse') g.runes.infuse(target.dataset.skill, target.dataset.r);
   else if (act === 'campCraft') g.runes.craft(target.dataset.skill, target.dataset.r);
+  else if (act === 'campFort') g.fort.upgrade(Number(target.dataset.si));
   else if (act === 'campDuel') { if (g.duel.start()) menu.close(); }
   else return false;
   return true;
