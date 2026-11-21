@@ -6,7 +6,7 @@ import { t } from '../strings.js';
 import { runesOf } from '../core/runes.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify'];
+const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -106,12 +106,31 @@ function fortView(menu) {
     <div class="cp-list cp-wide" data-scroll="cpFort">${rows || `<p class="cp-none">${t('fort.empty')}</p>`}</div>`;
 }
 
+function boardView(menu) {
+  const g = menu.game, H = g.hunts, P = g.player, B = CONFIG.huntBoard, busy = H.on || H.pending >= 0;
+  const T = B.trophy, n = H.trophyCount();
+  const cards = B.contracts.map((C, ci) => {
+    const c = H.callCost(ci), parts = [t('board.c.tough', { hp: Math.round((C.hp - 1) * 100), dmg: Math.round((C.damage - 1) * 100) })];
+    const rew = [t('board.c.essence', { n: Math.round(C.essence * 100) })];
+    if (C.items) rew.push(t('board.c.items', { n: C.items }));
+    if (C.rarity) rew.push(t('board.c.rarity'));
+    if (C.seals) rew.push(t('board.c.seals', { n: C.seals }));
+    return `<div class="cp-mis"><b>${t('board.c.' + C.id)}</b><small>${C.hp > 1 ? parts[0] : t('board.c.plain')}</small><small>${rew.join(', ')}</small>
+      <button class="ap-btn gold" data-act="campHunt" data-ci="${ci}"${busy || P.essence < c ? ' disabled' : ''}>${t('board.call', { n: fmt(c) })}</button></div>`;
+  }).join('');
+  const chips = Object.keys(H.trophies).map((id) => `<li>${t('enemy.' + id)}${H.trophies[id] > 1 ? ' ×' + H.trophies[id] : ''}</li>`).join('');
+  const state = H.pending >= 0 ? t('board.pending') : H.on ? t('board.on', { name: H.name }) : '';
+  return `<div class="cp-head"><b>${t('board.title')}</b><span>${t('board.trophies', { n, d: (T.damage * n * 100).toFixed(1), h: (T.hp * n * 100).toFixed(1) })}</span></div>
+    <div class="cp-exp"><small>${t('board.hint')}</small>${state ? `<p>${state}</p>` : ''}<div class="cp-mis-row">${cards}</div></div>
+    <div class="pa-sub">${t('board.trophyList')}</div><div class="cp-list cp-wide" data-scroll="cpTro">${chips ? `<ul class="pa-tot">${chips}</ul>` : `<p class="cp-none">${t('board.noTrophy')}</p>`}</div>`;
+}
+
 export function campView(menu) {
   const secs = campSections(menu.game);
   if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
   const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
   const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
-  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView };
+  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView, huntBoard: boardView };
   return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
 }
 
@@ -128,6 +147,7 @@ export function campAct(menu, act, target) {
   else if (act === 'campInfuse') g.runes.infuse(target.dataset.skill, target.dataset.r);
   else if (act === 'campCraft') g.runes.craft(target.dataset.skill, target.dataset.r);
   else if (act === 'campFort') g.fort.upgrade(Number(target.dataset.si));
+  else if (act === 'campHunt') g.hunts.call(Number(target.dataset.ci));
   else if (act === 'campDuel') { if (g.duel.start()) menu.close(); }
   else return false;
   return true;

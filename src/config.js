@@ -653,7 +653,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify'],
+    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
@@ -730,6 +730,20 @@ export const CONFIG = {
   // (zone of the outpost + 1). regen = share of max health and mana per second inside;
   // reduction = damage taken less for time seconds after leaving.
   fortify: { max: 3, cost: [500, 1500, 4500], regen: [0.03, 0.05, 0.08], reduction: [0.1, 0.2, 0.3], time: 180 },
+
+  // The Hunt Board (unlocked by the Slayer core): call a hunted monster at once, with a
+  // contract (cost = call x factor x (zone + 1) essence; hp / damage = how much tougher; items,
+  // rarity = more and better loot; essence = factor; seals = Soul Seals). Every kind of monster
+  // hunted down leaves a trophy: each kind gives the bonuses of trophy.
+  huntBoard: {
+    call: 100,
+    contracts: [
+      { id: 'normal', cost: 1, hp: 1, damage: 1, items: 0, rarity: 0, essence: 1, seals: 0 },
+      { id: 'fierce', cost: 2.5, hp: 1.6, damage: 1.3, items: 1, rarity: 0, essence: 1.6, seals: 1 },
+      { id: 'mythic', cost: 6, hp: 2.6, damage: 1.7, items: 2, rarity: 1, essence: 3, seals: 3 },
+    ],
+    trophy: { damage: 0.004, hp: 0.004 },
+  },
 
   // Rank trial: the last level of a rank is the gate to the next one. Its XP
   // fills up but the level stays until the trial is passed: a golden gate in

@@ -170,7 +170,8 @@ export class Game {
       for (const si of this.discovered) { const o = this.world.safes[si]; this.fog.revealAround(o.x, o.z, CONFIG.minimap.fogReveal); }
     }
     this.waypoint = new Waypoint(this, save && save.mark);
-    this.hunts = new Hunts(this);
+    this.hunts = new Hunts(this, save && save.hunts);
+    this.player.recalc(); // (the trophies of the Hunt Board)
     if (!this.quests.list.length || this.quests.day < 0) this.quests.make();
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
@@ -266,6 +267,7 @@ export class Game {
       barracks: this.barracks.serialize(),
       duel: this.duel.serialize(),
       fort: this.fort.serialize(),
+      hunts: this.hunts.serialize(),
       bestiary: this.bestiary.serialize(),
       fog: this.fog.serialize(),
       mark: this.waypoint.serialize(),

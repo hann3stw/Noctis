@@ -209,6 +209,7 @@ export class Player {
       }
     }
     if (this.game.path) this.game.path.apply(b); // the Path of the Necromancer
+    if (this.game.hunts && this.game.path.has('huntBoard')) this.game.hunts.apply(b); // trophies of the Hunt Board
     // mastery points (after the last level)
     const M = CONFIG.mastery.perPoint, ms = this.mastery.s;
     // effects of unique items
