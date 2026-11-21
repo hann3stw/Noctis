@@ -461,6 +461,13 @@ export const CONFIG = {
     chainLightning: { for: ['mage'], mana: 24, cooldown: 8, aim: 'point', range: 11, radius: 4, power: 1.6, jumps: 5, jumpRange: 6 },
     meteor: { for: ['mage'], mana: 35, cooldown: 14, aim: 'point', range: 12, radius: 5, power: 6, stun: 0.8 },
     arcaneSurge: { for: ['mage'], mana: 0, cooldown: 24, aim: 'self', radius: 3, duration: 6, arcane: 3 }, // for duration your skills cost no mana
+    // Cleric (faith = Faith it gives; healSelf = share of your health healed; a skill with ticks and healSelf heals over duration)
+    smite: { for: ['cleric'], mana: 12, cooldown: 3.5, aim: 'point', range: 11, radius: 3, power: 2.6, healSelf: 0.03 },
+    holyNova: { for: ['cleric'], mana: 22, cooldown: 9, aim: 'self', radius: 6, power: 1.8, healSelf: 0.1 },
+    consecration: { for: ['cleric'], mana: 26, cooldown: 12, aim: 'self', radius: 5, power: 0.7, ticks: 6, interval: 0.8, healSelf: 0.2, duration: 5, faith: 10 },
+    mend: { for: ['cleric'], mana: 25, cooldown: 10, aim: 'self', radius: 3, healSelf: 0.35, faith: 12 },
+    divineShield: { for: ['cleric'], mana: 24, cooldown: 15, aim: 'self', radius: 2, shield: 0.4, guard: 0.2, duration: 6 },
+    judgement: { for: ['cleric'], mana: 30, cooldown: 11, aim: 'point', range: 11, radius: 3.5, power: 4.2, stun: 0.8 },
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
@@ -476,6 +483,8 @@ export const CONFIG = {
     unbreakable: { for: ['warrior'], aim: 'self', radius: 5, duration: 10, guard: 0.5, damage: 0.3, healSelf: 0.3 }, // damage = the bonus of Blood Rage
     cataclysm: { for: ['mage'], aim: 'point', range: 12, radius: 8, power: 14, stun: 2 },
     timeStop: { for: ['mage'], aim: 'self', radius: 14, stun: 4.5, duration: 5 }, // everything close is frozen; your skills cost no mana meanwhile
+    divineIntervention: { for: ['cleric'], aim: 'self', radius: 8, power: 6, healSelf: 0.6, shield: 0.5, duration: 8, stun: 1.5, faith: 40 },
+    sunburst: { for: ['cleric'], aim: 'line', range: 22, width: 4, power: 14, healSelf: 0.25 },
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -662,6 +671,11 @@ export const CONFIG = {
   // to your skill damage. All charges are lost after arcaneTime seconds without a cast.
   mage: { arcaneMax: 5, arcaneTime: 6, arcaneDamage: 0.06 },
 
+  // Cleric: Faith grows with every hit you deal (faithHit) and fades after calm seconds without a
+  // fight (decay per second). Every point gives damage, and every hit heals you by hitHeal of your
+  // health per point. The Cleric heals itself, so it plays well alone; in a team the same skills will help the others.
+  cleric: { faithMax: 100, faithHit: 2, decay: 5, calm: 4, damage: 0.002, hitHeal: 0.00012 },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -674,7 +688,7 @@ export const CONFIG = {
       mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.2 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: false, army: false, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },
-      cleric: { role: 'support', ready: false, army: false, cores: ['mage', 'tank', 'delver', 'slayer'] },
+      cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.15, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
     },
   },
 

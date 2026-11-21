@@ -22,6 +22,7 @@ export function playerHit(game, i, base, kx, kz) {
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
   P.addRage(CONFIG.warrior.rageHit);
+  if (game.mainClass === 'cleric') { P.addFaith(CONFIG.cleric.faithHit); P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); } // Faith heals with every hit
   play(crit ? 'crit' : 'hit', P.weapon); // every weapon sounds its own way
   const fx = game.effects;
   if (crit) {

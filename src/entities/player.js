@@ -92,6 +92,9 @@ export class Player {
     this.arcane = 0; // Mage: Arcane Charges
     this.arcaneT = 0; // time until they are lost
     this.surgeT = 0; // Mage: skills cost no mana while this runs
+    this.faith = 0; // Cleric: Faith 0 .. 100
+    this.hotT = 0; // a skill heals over time: time left
+    this.hotV = 0; // ... share of max health per second
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -272,6 +275,12 @@ export class Player {
     return (K / (K + this.defense)) * this.takenBonus * fort * guard;
   }
 
+  // the Cleric's Faith
+  addFaith(n) {
+    if (this.game.mainClass !== 'cleric' || n <= 0) return;
+    this.faith = Math.min(CONFIG.cleric.faithMax, this.faith + n);
+  }
+
   // the Mage's Arcane Charges
   addArcane(n) {
     if (this.game.mainClass !== 'mage' || n <= 0) return;
@@ -291,6 +300,7 @@ export class Player {
     if (this.eclipseT > 0) m *= 1 + CONFIG.ultimates.eclipse.damage;
     if (this.rageT > 0) m *= 1 + CONFIG.skills.bloodRage.damage;
     if (this.rage > 0) m *= 1 + this.rage * CONFIG.warrior.damage; // Warrior: Rage
+    if (this.faith > 0) m *= 1 + this.faith * CONFIG.cleric.damage; // Cleric: Faith
     return m;
   }
 
@@ -603,6 +613,8 @@ export class Player {
       this.rage = 0;
       this.arcane = 0;
       this.surgeT = 0;
+      this.faith = 0;
+      this.hotT = 0;
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
@@ -666,6 +678,8 @@ export class Player {
     if (this.bulwarkCd > 0) this.bulwarkCd -= dt;
     if (this.guardT > 0) this.guardT -= dt;
     if (this.surgeT > 0) this.surgeT -= dt;
+    if (this.hotT > 0) { this.hotT -= dt; this.heal(this.maxHp * this.hotV * dt); } // healing over time
+    if (this.faith > 0 && this.calmT > CONFIG.cleric.calm) this.faith = Math.max(0, this.faith - CONFIG.cleric.decay * dt); // Faith fades
     if (this.arcaneT > 0 && (this.arcaneT -= dt) <= 0) this.arcane = 0; // the Arcane Charges fade
     if (this.rage > 0 && this.calmT > CONFIG.warrior.calm) this.rage = Math.max(0, this.rage - CONFIG.warrior.decay * dt); // Rage fades
     if (this.afterimageT > 0) this.afterimageT -= dt;

@@ -373,6 +373,56 @@ export function castSkill(game, id, dx, dz, power) {
       fx.burst(P.x, 1.4, P.z, 26, 0x8aa8ff, 7, 0.22, 0.7);
       break;
 
+    // ---- Cleric
+    case 'smite':
+      hitCircle(game, tx, tz, def.radius, base);
+      P.heal(P.maxHp * def.healSelf);
+      fx.ring(tx, tz, def.radius + 0.5, 0.4, 0xfff0a0, 0.4);
+      fx.flare(tx, 1.2, tz, 6, 0xffffff, 0.35, 1.6);
+      fx.burst(tx, 2, tz, 22, 0xfff0a0, 5, 0.22, 0.6);
+      game.cam.shake(0.14, 0.14);
+      break;
+    case 'holyNova':
+      hitCircle(game, P.x, P.z, def.radius, base);
+      P.heal(P.maxHp * def.healSelf);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xfff0a0, EXPAND, 1, 0.4);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0xffffff, 0.4);
+      fx.burst(P.x, 1.2, P.z, 28, 0xfff0a0, 7, 0.22, 0.7);
+      game.cam.shake(0.18, 0.18);
+      break;
+    case 'consecration':
+      // holy ground that hurts enemies and heals you for as long as it lasts
+      game.zones.add(P.x, P.z, def.radius, 0.1, def.ticks, def.interval, base, 0, 0xfff0a0);
+      P.hotT = def.duration;
+      P.hotV = def.healSelf / def.duration;
+      P.addFaith(def.faith || 0);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0xfff0a0, 0.5);
+      fx.burst(P.x, 1, P.z, 20, 0xfff0a0, 4, 0.2, 0.7);
+      break;
+    case 'mend':
+      P.heal(P.maxHp * def.healSelf);
+      P.addFaith(def.faith || 0);
+      fx.ring(P.x, P.z, 0.5, 5, 0x9affc0, 0.5);
+      fx.ring(P.x, P.z, 0.5, 3, 0xffffff, 0.4, 0.1);
+      fx.burst(P.x, 1.4, P.z, 26, 0x9affc0, 5, 0.2, 0.8);
+      break;
+    case 'divineShield':
+      P.shield = P.shieldMax = Math.round(P.maxHp * def.shield);
+      P.shieldT = def.duration;
+      P.guardT = def.duration;
+      P.guardV = def.guard;
+      fx.ring(P.x, P.z, 0.5, 4, 0xfff0a0, 0.45);
+      fx.burst(P.x, 1.2, P.z, 22, 0xfff0a0, 4, 0.18, 0.6);
+      break;
+    case 'judgement':
+      hitCircle(game, tx, tz, def.radius, base, def.stun);
+      fx.ring(tx, tz, def.radius + 1, 0.4, 0xffd24a, 0.45);
+      fx.flare(tx, 1.4, tz, 9, 0xffffff, 0.4, 1.6);
+      fx.burst(tx, 2, tz, 30, 0xffd24a, 7, 0.24, 0.8);
+      game.cam.shake(0.25, 0.22);
+      game.hitStop(0.05);
+      break;
+
     // ---- ultimates
     case 'voidStorm':
       // a storm that stays where it was cast
@@ -422,6 +472,28 @@ export function castSkill(game, id, dx, dz, power) {
       fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
       game.cam.shake(0.35, 0.35);
+      break;
+    case 'divineIntervention':
+      hitCircle(game, P.x, P.z, def.radius, base, def.stun);
+      P.heal(P.maxHp * def.healSelf);
+      P.shield = P.shieldMax = Math.round(P.maxHp * def.shield);
+      P.shieldT = def.duration;
+      P.addFaith(def.faith || 0);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xfff0a0, EXPAND, 1, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius + 2, 0xffffff, 0.55);
+      fx.ring(P.x, P.z, 1, def.radius * 0.7, 0xffd24a, 0.5, 0.12);
+      fx.burst(P.x, 1.4, P.z, 50, 0xfff0a0, 10, 0.28, 0.9);
+      game.cam.shake(0.4, 0.35);
+      break;
+    case 'sunburst':
+      hitLine(game, P.x, P.z, dx, dz, def.range, def.width, base);
+      P.heal(P.maxHp * def.healSelf);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width, 0xffd24a);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width * 0.5, 0xffffff);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width * 1.5, 0xfff0a0);
+      fx.ring(P.x, P.z, 0.5, 4, 0xffffff, 0.35);
+      game.cam.shake(0.5, 0.4);
+      game.hitStop(0.08);
       break;
     case 'cataclysm':
       game.zones.add(tx, tz, def.radius, 0.9, 1, 0, base, def.stun, 0xff4020, true);

@@ -2,6 +2,14 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  smite: svg('M11 2h2v8h4l-5 12-5-12h4zM5 4l2 1-1 2zM19 4l-2 1 1 2z'),
+  holyNova: svg('M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-5 4 1-6-6-1 5-3-3-5 6 2z'),
+  consecration: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm-1 2h2v3h3v2h-3v3h-2v-3H8v-2h3z'),
+  mend: svg('M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z'),
+  divineShield: svg('M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zm-1 5v3H8v2h3v3h2v-3h3v-2h-3V7z'),
+  judgement: svg('M11 2h2v5h5v2h-5v13h-2V9H6V7h5zM4 20h16v2H4z'),
+  divineIntervention: svg('M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 4l-5 8h10zM8 17h8v2H8z'),
+  sunburst: svg('M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM11 1h2v3h-2zM11 20h2v3h-2zM1 11h3v2H1zM20 11h3v2h-3zM4 4l2 2-1 1-2-2zM18 18l2 2-1 1-2-2zM20 4l-2 2 1 1 2-2zM6 18l-2 2 1 1 2-2z'),
   arcaneBolt: svg('M3 12l12-3-3 6zM15 9l6 3-6 3z'),
   fireball: svg('M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z'),
   frostNova: svg('M11 2h2v7l5-3 1 2-5 3 5 3-1 2-5-3v7h-2v-7l-5 3-1-2 5-3-5-3 1-2 5 3z'),
