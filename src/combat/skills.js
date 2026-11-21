@@ -60,21 +60,24 @@ export function setRunes(r) {
   runes = r;
 }
 const runed = new Map(); // 'skill:rune' -> the skill with the rune's numbers
+let runedVer = -1; // the rune levels the cache was made for
 
 // The numbers of a skill (with the rune worn for it, if any).
 export function skillDef(id) {
   const base = CONFIG.skills[id] || CONFIG.ultimates[id];
   const r = runes && base ? runes.of(id) : '';
   if (!r) return base;
+  if (runes.ver !== runedVer) { runed.clear(); runedVer = runes.ver; }
   const key = id + ':' + r;
   let d = runed.get(key);
   if (!d) {
     d = { ...base };
     for (const kind of r.split('+')) {
       const mods = RUNE_KINDS[kind] || {};
+      const lvl = 1 + CONFIG.runeWorkshop.levelBonus * runes.level(id, kind); // Rune Workshop
       for (const k in mods) {
         if (typeof d[k] !== 'number') continue;
-        d[k] = d[k] * mods[k];
+        d[k] = d[k] * (1 + (mods[k] - 1) * lvl);
         if (k === 'mana' || k === 'ticks') d[k] = Math.max(1, Math.round(d[k]));
         else d[k] = Math.round(d[k] * 100) / 100;
       }

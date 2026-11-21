@@ -35,6 +35,9 @@ export class Runes {
     this.game = game;
     this.owned = saved && Array.isArray(saved.owned) ? saved.owned.filter((k) => this.valid(k)) : []; // 'skill:rune'
     this.worn = {}; // skill -> [runes]
+    this.ver = 0; // goes up when a rune level changes (skillDef caches the runed numbers)
+    this.lv = {}; // 'skill:rune' -> level (Rune Workshop)
+    if (saved && saved.levels) for (const k in saved.levels) if (this.owned.includes(k)) this.lv[k] = Math.max(0, Math.min(CONFIG.runeWorkshop.max, saved.levels[k] | 0));
     if (saved && saved.worn) for (const id in saved.worn) {
       const list = [].concat(saved.worn[id]).filter((r) => this.owned.includes(id + ':' + r));
       if (list.length) this.worn[id] = [...new Set(list)].slice(0, 3);
@@ -49,7 +52,7 @@ export class Runes {
   serialize() {
     const worn = {};
     for (const id in this.worn) worn[id] = [...this.worn[id]];
-    return { owned: [...this.owned], worn };
+    return { owned: [...this.owned], worn, levels: { ...this.lv } };
   }
 
   has(id, r) {
@@ -79,6 +82,45 @@ export class Runes {
     if (list.length) this.worn[id] = list; else delete this.worn[id];
     this.game.player.cds && this.game.hud.syncSkills();
     this.game.save();
+  }
+
+  // ---- Rune Workshop (Mage) ---------------------------------------------------------------
+  level(id, r) {
+    return this.lv[id + ':' + r] || 0;
+  }
+
+  // essence for the next level of a rune (0 = it is at the top)
+  infuseCost(id, r) {
+    const W = CONFIG.runeWorkshop, lv = this.level(id, r);
+    return lv >= W.max ? 0 : W.infuse[lv] * (this.game.rankIndex + 1);
+  }
+
+  infuse(id, r) {
+    const P = this.game.player, cost = this.infuseCost(id, r);
+    if (!this.has(id, r) || !cost || P.essence < cost) return false;
+    P.essence -= cost;
+    this.lv[id + ':' + r] = this.level(id, r) + 1;
+    this.ver++;
+    this.game.hud.syncSkills();
+    play('levelup');
+    this.game.save();
+    return true;
+  }
+
+  craftCost() {
+    return CONFIG.runeWorkshop.craft * (this.game.rankIndex + 1);
+  }
+
+  // makes a rune that was not found yet
+  craft(id, r) {
+    const P = this.game.player, cost = this.craftCost();
+    if (this.has(id, r) || !this.valid(id + ':' + r) || !P.known.includes(id) || P.essence < cost) return false;
+    P.essence -= cost;
+    this.owned.push(id + ':' + r);
+    this.game.hud.toast(t('rune.found', { rune: t('rune.' + r), skill: t('skill.' + id) }));
+    play('chest');
+    this.game.save();
+    return true;
   }
 
   // finds a rune: a random one of a skill the hunter knows (not found yet).

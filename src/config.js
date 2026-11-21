@@ -653,7 +653,7 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
-    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena'],
+    live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop'],
     cores: {
       blade: {
         bonus: { damage: 0.1, crit: 0.012, reload: 0.02, killHeal: 0.003 },
@@ -720,6 +720,11 @@ export const CONFIG = {
   // without your army. cost = essence x (zone + 1); tier = tiers harder; items = more
   // items; essence = more essence (a share); seals = Soul Seals for a win.
   duel: { cost: 150, tier: 2, items: 2, essence: 0.5, seals: 2 },
+
+  // The Rune Workshop (unlocked by the Mage core): essence makes runes stronger (a rune
+  // level adds levelBonus of its effect, up to max) or crafts a rune that was not found.
+  // Costs are times (rank + 1): infuse per level, craft for a rune.
+  runeWorkshop: { max: 3, levelBonus: 0.15, infuse: [300, 900, 2700], craft: 1500 },
 
   // Rank trial: the last level of a rank is the gate to the next one. Its XP
   // fills up but the level stays until the trial is passed: a golden gate in

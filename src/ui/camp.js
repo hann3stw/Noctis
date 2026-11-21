@@ -3,9 +3,10 @@
 import { CONFIG } from '../config.js';
 import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
+import { runesOf } from '../core/runes.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks', 'duelArena'];
+const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -75,12 +76,31 @@ function duelView(menu) {
     ${why ? `<small>${t('duel.no.' + why)}</small>` : ''}</div>`;
 }
 
+function workshopView(menu) {
+  const g = menu.game, R = g.runes, P = g.player, W = CONFIG.runeWorkshop;
+  const skills = P.known.filter((id) => (CONFIG.skills[id] || CONFIG.ultimates[id]) && runesOf(id).length);
+  const rows = skills.map((id) => {
+    const runes = runesOf(id).map((r) => {
+      if (!R.has(id, r)) {
+        const c = R.craftCost();
+        return `<div class="cp-row"><div><b>${t('rune.' + r)}</b><small>${t('workshop.unknown')}</small></div><button class="ap-btn ghost" data-act="campCraft" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.craft', { n: fmt(c) })}</button></div>`;
+      }
+      const lv = R.level(id, r), c = R.infuseCost(id, r);
+      const pips = '◆'.repeat(lv) + '◇'.repeat(W.max - lv);
+      return `<div class="cp-row"><div><b>${t('rune.' + r)} <span class="cp-pips">${pips}</span></b><small>${t('rune.' + r + '.desc')}</small></div>${c ? `<button class="ap-btn ghost" data-act="campInfuse" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.infuse', { n: fmt(c) })}</button>` : `<small>${t('workshop.max')}</small>`}</div>`;
+    }).join('');
+    return `<div class="pa-sub">${t('skill.' + id)}</div>${runes}`;
+  }).join('');
+  return `<div class="cp-head"><b>${t('workshop.title')}</b><span>${t('workshop.hint', { b: Math.round(W.levelBonus * 100) })}</span></div>
+    <div class="cp-list cp-wide" data-scroll="cpWork">${rows || `<p class="cp-none">${t('workshop.none')}</p>`}</div>`;
+}
+
 export function campView(menu) {
   const secs = campSections(menu.game);
   if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
   const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
   const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
-  const views = { barracks: barracksView, duelArena: duelView };
+  const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView };
   return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
 }
 
@@ -94,6 +114,8 @@ export function campAct(menu, act, target) {
   else if (act === 'campParty') { const id = Number(target.dataset.id); if (B.party.has(id)) B.party.delete(id); else B.party.add(id); }
   else if (act === 'campSend') B.startMission(target.dataset.kind);
   else if (act === 'campClaim') B.claim();
+  else if (act === 'campInfuse') g.runes.infuse(target.dataset.skill, target.dataset.r);
+  else if (act === 'campCraft') g.runes.craft(target.dataset.skill, target.dataset.r);
   else if (act === 'campDuel') { if (g.duel.start()) menu.close(); }
   else return false;
   return true;

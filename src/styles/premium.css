@@ -4208,3 +4208,6 @@ input.shake {
 .cp-row.sel { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); }
 .cp-row.away { opacity: 0.6; }
 .cp-row .ap-btn { flex: none; }
+
+.cp-wide { flex: 1; }
+.cp-pips { color: #ffd24a; font-size: calc(var(--u) * 2); letter-spacing: 1px; }

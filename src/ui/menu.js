@@ -779,7 +779,7 @@ export class Menu {
     const R = this.game.runes, list = runesOf(id);
     if (!list.length) return '';
     const cards = list.map((r) => R.has(id, r)
-      ? `<button class="rune${R.isWorn(id, r) ? ' on' : ''}" data-act="runeWear" data-skill="${id}" data-r="${r}"><b>${t('rune.' + r)}</b><small>${t('rune.' + r + '.desc')}</small></button>`
+      ? `<button class="rune${R.isWorn(id, r) ? ' on' : ''}" data-act="runeWear" data-skill="${id}" data-r="${r}"><b>${t('rune.' + r)}${R.level(id, r) ? ' +' + R.level(id, r) : ''}</b><small>${t('rune.' + r + '.desc')}</small></button>`
       : `<div class="rune lock"><b>???</b></div>`).join('');
     return `<h4 class="rune-h">${t('rune.heading', { n: R.count(id), max: list.length, s: R.sockets() })}</h4><div class="rune-list">${cards}</div>`;
   }
