@@ -65,7 +65,7 @@ export class Paths {
 
   // a pick is waiting
   due() {
-    return this.chosen.length < this.unlocked();
+    return !this.game.classDue() && this.chosen.length < this.unlocked();
   }
 
   // the stage that is due (1 = the first pick)
@@ -102,13 +102,19 @@ export class Paths {
   // how well each core fits the way the hunter plays: 0 .. 1
   scores() {
     const m = this.metrics(), out = {};
-    for (const c in C().cores) {
+    for (const c of this.cores()) {
       const like = C().cores[c].like;
       let s = 0, w = 0;
       for (const k in like) { const a = Math.abs(like[k]); s += a * (like[k] > 0 ? m[k] : 1 - m[k]); w += a; }
       out[c] = w ? s / w : 0;
     }
     return out;
+  }
+
+  // the cores the main class gets
+  cores() {
+    const k = CONFIG.classes.list[this.game.mainClass];
+    return k ? k.cores : Object.keys(C().cores);
   }
 
   // the core of the last pick ('' = none)
@@ -140,7 +146,7 @@ export class Paths {
     const st = this.stage();
     if (this.offer && this.offer.stage === st) return this.offer.list;
     const sc = this.scores();
-    const order = Object.keys(C().cores).sort((a, b) => sc[b] - sc[a]);
+    const order = this.cores().slice().sort((a, b) => sc[b] - sc[a]);
     const main = this.currentCore() || order[0];
     const rest = order.filter((c) => c !== main);
     const mod = (core, c) => (c && c !== core && sc[c] >= 0.4 ? c : '');

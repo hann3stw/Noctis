@@ -45,6 +45,7 @@ import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
 import { Barracks } from './core/barracks.js';
 import { Duel } from './core/duel.js';
 import { Fort } from './core/fort.js';
+import { ClassPanel } from './ui/classPanel.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
 import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
@@ -92,6 +93,10 @@ export class Game {
     this.zoneRank = 'E';
     this.rankIndex = save ? save.rankIndex || 0 : 0; // player rank: 0 = E ... 5 = S (from the level)
     this.trialRank = save ? save.trialRank || 0 : 0; // highest rank whose trial was passed
+    // the main class ('' = not chosen yet). Worlds from before the classes: a hunter from rank D on, or with
+    // shadows, is a Necromancer; a younger one chooses at rank D
+    this.mainClass = save ? (CONFIG.classes.list[save.mainClass] ? save.mainClass
+      : (save.rankIndex || 0) >= CONFIG.classes.choiceRank || (save.army && save.army.units && save.army.units.length) || (save.profile && save.profile.raised > 0) ? 'necromancer' : '') : '';
     this.xpBoostT = save ? Math.max(0, save.xpBoostT || 0) : 0; // seconds of Double XP left
     this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
@@ -138,6 +143,7 @@ export class Game {
     this.bestiary = new Bestiary(this, save && save.bestiary);
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
+    this.classPanel = new ClassPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
     if (save) {
@@ -264,6 +270,7 @@ export class Game {
       tutorialV: 2,
       tips: this.tips.serialize(),
       quests: this.quests.serialize(),
+      mainClass: this.mainClass,
       barracks: this.barracks.serialize(),
       duel: this.duel.serialize(),
       fort: this.fort.serialize(),
@@ -318,6 +325,31 @@ export class Game {
     this.enemies.rescale(b.enemyHp / a.enemyHp, b.enemyDamage / a.enemyDamage);
     this.player.recalc();
     this.save();
+  }
+
+  // the main class has the shadow army (Arise, the Army tab)
+  hasArmy() {
+    const c = CONFIG.classes.list[this.mainClass];
+    return !!c && c.army;
+  }
+
+  // the rank for the choice of the main class is reached
+  classDue() {
+    return !this.mainClass && this.rankIndex >= CONFIG.classes.choiceRank;
+  }
+
+  chooseClass(id) {
+    const c = CONFIG.classes.list[id];
+    if (!c || !c.ready || !this.classDue()) return false;
+    this.mainClass = id;
+    this.player.recalc();
+    this.hud.banner(t('mc.chosen'), t('mc.' + id));
+    play('levelup');
+    if (c.army && this.tips) this.tips.show('necro');
+    // the first pick of the Path comes at once
+    if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
+    this.save();
+    return true;
   }
 
   // rank that belongs to the player's level
@@ -482,6 +514,7 @@ export class Game {
     else if (this.gates.active >= 0) pf.timeGate += dt;
     else if (this.player.inCamp) pf.timeCamp += dt;
     if (this.player.sprint) pf.sprintTime += dt;
+    if (this.classDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open(); // the choice of the main class
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;
@@ -882,7 +915,7 @@ export class Game {
     this.bestiary.add(E.type[i]);
     this.quests.kill(E.types[E.type[i]].id, zi, tier);
     const level = E.lvl[i] + tierLevels(zi, tier);
-    this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]);
+    if (this.hasArmy()) this.souls.spawn(E.x[i], E.z[i], E.type[i], tier, zi, level, E.arena[i] > 0, E.lvl[i]); // only the Necromancer raises shadows
     this.army.grantXp(src, xp);
     // kill streak of the hunter: more XP the longer it runs
     let bonus = 0;

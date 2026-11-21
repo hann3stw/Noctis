@@ -190,6 +190,7 @@ export class Hud {
     this.vStreak = 0;
     this.toastT = 0;
     this.btnArise = $('#btn-arise');
+    this.squadsEl = $('.squads');
     this.ariseCost = $('#btn-arise small');
     this.noteEl = $('.sq-note');
     this.noteT = 0; // > 0: a notification is shown above the army
@@ -492,6 +493,10 @@ export class Hud {
       this.mpFill.style.transform = 'scaleX(' + (P.mana / P.maxMana).toFixed(3) + ')';
       this.mpText.textContent = mp + ' / ' + P.maxMana;
     }
+
+    // the army belongs to the Necromancer
+    const hasArmy = game.hasArmy();
+    if (hasArmy !== this.vHasArmy) { this.vHasArmy = hasArmy; this.squadsEl.style.display = hasArmy ? '' : 'none'; }
 
     // Arise button: only while a soul is in reach
     const cost = game.soulNear >= 0 ? game.ariseCost : -1;

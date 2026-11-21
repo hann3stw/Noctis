@@ -1855,7 +1855,8 @@ button,
 }
 
 /* the Abyss / modifier panel */
-#abyss-panel {
+#abyss-panel,
+#class-panel {
   position: absolute;
   inset: 0;
   z-index: 55;
@@ -1866,10 +1867,12 @@ button,
   background: radial-gradient(ellipse at 50% 40%, rgba(120, 10, 40, 0.45), rgba(6, 3, 10, 0.92));
   font-size: calc(var(--u) * 3);
 }
-#abyss-panel.on {
+#abyss-panel.on,
+#class-panel.on {
   display: flex;
 }
-#abyss-panel.on.enter {
+#abyss-panel.on.enter,
+#class-panel.on.enter {
   animation: fade-in 0.2s ease-out;
 }
 .ab-box {
@@ -4211,3 +4214,14 @@ input.shake {
 
 .cp-wide { flex: 1; }
 .cp-pips { color: #ffd24a; font-size: calc(var(--u) * 2); letter-spacing: 1px; }
+
+/* ---- choice of the main class ---- */
+#class-panel .ab-box { align-items: stretch; }
+.cls-grid { flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--u) * 38), 1fr)); gap: calc(var(--u) * 1.2); }
+.cls-card { display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.5); padding: calc(var(--u) * 1.4); border-radius: calc(var(--u) * 1.6); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; font: inherit; text-align: left; }
+.cls-card.on { border-color: #ffd24a; background: rgba(255, 210, 74, 0.12); box-shadow: 0 0 calc(var(--u) * 3) rgba(255, 210, 74, 0.35); }
+.cls-card.soon { opacity: 0.5; }
+.cls-card em { font-style: normal; color: #b9add6; font-size: calc(var(--u) * 2.1); }
+.cls-card b { font-size: calc(var(--u) * 3.4); color: #ffe08a; }
+.cls-card p { margin: 0; font-size: calc(var(--u) * 2.2); color: #e9ddff; }
+.cls-card small { color: #ff9a9a; font-size: calc(var(--u) * 2.1); }

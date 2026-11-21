@@ -635,6 +635,22 @@ export const CONFIG = {
   // of items.bossTopChance), and the essence grows.
   gateTiers: { max: 10, hp: 1.3, damage: 1.12, luck: 0.3, topChance: 0.03, essence: 0.25 },
 
+  // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
+  // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
+  // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
+  // others are shown as coming soon); cores = the Path cores its classes get.
+  classes: {
+    choiceRank: 1,
+    list: {
+      necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
+      warrior: { role: 'tank', ready: false, army: false, cores: ['tank', 'blade', 'slayer', 'delver'] },
+      mage: { role: 'ranged', ready: false, army: false, cores: ['mage', 'slayer', 'delver', 'tank'] },
+      rogue: { role: 'melee', ready: false, army: false, cores: ['blade', 'slayer', 'delver', 'mage'] },
+      ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },
+      cleric: { role: 'support', ready: false, army: false, cores: ['mage', 'tank', 'delver', 'slayer'] },
+    },
+  },
+
   // Paths (the class tree of the Necromancer): at every rank from D to M the
   // System offers three classes, made from the way you play (core/paths.js).
   // A class = a core (the style it comes from), maybe a second core (the mod:

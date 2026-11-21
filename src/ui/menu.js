@@ -254,7 +254,8 @@ export class Menu {
       path: this.game.path.due() ? '!' : '',
       camp: campNews(this.game),
     };
-    const tabs = TABS.filter((id) => id !== 'camp' || campSections(this.game).length).map((id) => {
+    if (this.tab === 'army' && !this.game.hasArmy()) this.tab = 'gear'; // no army without the Necromancer
+    const tabs = TABS.filter((id) => (id !== 'camp' || campSections(this.game).length) && (id !== 'army' || this.game.hasArmy())).map((id) => {
       const badge = news[id] ? `<i>${news[id]}</i>` : '';
       return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
     }).join('');
@@ -580,7 +581,7 @@ export class Menu {
       return `<button class="ttl${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}" title="${t('title.' + id + '.how')}"><b>${t('title.' + id)}</b></button>`;
     }).join('');
     return `<div class="path" data-scroll="path">
-      <div class="pa-top"><div class="pa-head"><b>${t('path.title')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
+      <div class="pa-top"><div class="pa-head"><b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
         <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
       ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}
@@ -628,7 +629,7 @@ export class Menu {
         ${Q.keys ? `<button class="ap-btn gold" data-act="useKey"${this.game.gates.active >= 0 ? ' disabled' : ''}>${t('quest.useKey', { n: Q.keys })}</button>` : ''}</div>${this.game.xpBoostT > 0 ? `<div class="q-streak"><b>${t('quest.xpActive', { t: Math.floor(this.game.xpBoostT / 60) + ':' + String(Math.floor(this.game.xpBoostT % 60)).padStart(2, '0') })}</b></div>` : ''}`;
     let body;
     if (shop) {
-      body = `<div class="q-list">${C.shop.map((o) => {
+      body = `<div class="q-list">${C.shop.filter((o) => this.game.hasArmy() || !(o.tier !== undefined || o.id === 'revive')).map((o) => {
         const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive)) && !(o.id === 'rune' && !this.game.runes.canFind()) && !(o.id === 'xp' && Q.xpTokens >= C.xpBoost.max) && !(o.id === 'key' && Q.keys >= C.keyGate.max) && !(o.id === 'respec' && Q.respecs >= C.respec.max);
         const desc = o.tier !== undefined ? t('quest.shop.stone', { tier: t('quest.tier.' + o.tier) })
           : o.id === 'essence' ? t('quest.shop.essence', { n: fmt(Q.shopEssence()) })

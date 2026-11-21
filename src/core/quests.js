@@ -67,7 +67,7 @@ export class Quests {
     const openOutpost = game.world.safes.some((s) => s.zone >= 0 && !s.captured && game.knownZones.has(s.zone));
     const used = new Set();
     this.list = [0, 1, 2].map((d) => {
-      const pool = Q.pools[d].filter((k) => !used.has(k) && (k !== 'outpost' || openOutpost));
+      const pool = Q.pools[d].filter((k) => !used.has(k) && (k !== 'outpost' || openOutpost) && (k !== 'arise' || game.hasArmy()));
       const kind = pool[(rng() * pool.length) | 0];
       used.add(kind);
       const q = { kind, d, n: Q.kinds[kind].n[d], have: 0, zone: zi, done: false, claimed: false };
@@ -151,8 +151,8 @@ export class Quests {
       { kind: 'item', rarity: Q.rarity[q.d] },
       { kind: 'essence', n: this.essence(q) },
       { kind: 'seals', n: Q.sealBonus[q.d] },
-      { kind: 'stone', tier: Q.stoneTier[q.d] },
     ];
+    if (this.game.hasArmy()) all.splice(3, 0, { kind: 'stone', tier: Q.stoneTier[q.d] });
     if (q.d >= 1) all.push({ kind: 'xp' });
     if (q.d >= 1 && this.game.runes.canFind()) all.push({ kind: 'rune' });
     if (q.d === 2) all.push({ kind: 'key' });

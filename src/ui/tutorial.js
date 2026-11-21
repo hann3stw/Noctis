@@ -20,8 +20,8 @@ const STEPS = [
   { id: 'dodge', hl: '#btn-dodge', done: (g, c) => g.player.counts.dodge > c.dodge },
   { id: 'skill', hl: '#btn-skill0', done: (g, c) => g.player.counts.cast > c.cast },
   { id: 'ult', hl: '#btn-ult' },
-  { id: 'arise', hl: '#btn-arise', done: (g) => g.army.totalCount() > 0 },
-  { id: 'army', hl: '.squad' },
+  { id: 'arise', hl: '#btn-arise', done: (g) => g.army.totalCount() > 0, need: (g) => g.hasArmy() }, // only for the Necromancer
+  { id: 'army', hl: '.squad', need: (g) => g.hasArmy() },
   { id: 'loot', done: (g, c) => g.player.inventory.length > c.inv || g.player.essence > c.essence },
   { id: 'menu', hl: '#btn-menu', done: (g, c) => g.menu.opens > c.opens },
   { id: 'done' },
@@ -67,6 +67,8 @@ export class Tutorial {
   }
 
   begin() {
+    // steps about the army are left out for a hunter without one
+    while (STEPS[this.step].need && !STEPS[this.step].need(this.game) && this.step < STEPS.length - 1) this.step++;
     const s = STEPS[this.step], g = this.game, P = g.player;
     this.c = this.snapshot();
     this.doneT = 0;
