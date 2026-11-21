@@ -99,6 +99,7 @@ export class Player {
     this.cpT = 0; // time until they are lost
     this.cpCd = 0; // a short gap between two points
     this.ambushT = 0; // Rogue: the next hit is an Ambush while this runs
+    this.focusT = 0; // Ranger: Hunter's Focus, more damage while this runs
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -313,6 +314,7 @@ export class Player {
     if (this.rageT > 0) m *= 1 + CONFIG.skills.bloodRage.damage;
     if (this.rage > 0) m *= 1 + this.rage * CONFIG.warrior.damage; // Warrior: Rage
     if (this.faith > 0) m *= 1 + this.faith * CONFIG.cleric.damage; // Cleric: Faith
+    if (this.focusT > 0) m *= 1 + CONFIG.skills.huntersFocus.damage; // Ranger: Hunter's Focus
     return m;
   }
 
@@ -629,6 +631,7 @@ export class Player {
       this.hotT = 0;
       this.cp = 0;
       this.ambushT = 0;
+      this.focusT = 0;
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
@@ -696,6 +699,7 @@ export class Player {
     if (this.cpCd > 0) this.cpCd -= dt;
     if (this.cpT > 0 && (this.cpT -= dt) <= 0) this.cp = 0; // the Combo Points are lost
     if (this.ambushT > 0) this.ambushT -= dt;
+    if (this.focusT > 0) this.focusT -= dt;
     if (this.faith > 0 && this.calmT > CONFIG.cleric.calm) this.faith = Math.max(0, this.faith - CONFIG.cleric.decay * dt); // Faith fades
     if (this.arcaneT > 0 && (this.arcaneT -= dt) <= 0) this.arcane = 0; // the Arcane Charges fade
     if (this.rage > 0 && this.calmT > CONFIG.warrior.calm) this.rage = Math.max(0, this.rage - CONFIG.warrior.decay * dt); // Rage fades

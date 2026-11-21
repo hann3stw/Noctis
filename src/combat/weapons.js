@@ -26,6 +26,11 @@ export function playerHit(game, i, base, kx, kz) {
   P.addRage(CONFIG.warrior.rageHit);
   if (game.mainClass === 'cleric') { P.addFaith(CONFIG.cleric.faithHit); P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); } // Faith heals with every hit
   P.addCombo(1);
+  // Ranger: the farther the enemy, the harder the hit
+  if (game.mainClass === 'ranger') {
+    const R = CONFIG.ranger, d = Math.hypot(E.x[i] - P.x, E.z[i] - P.z);
+    dmg *= 1 + R.rangeBonus * Math.max(0, Math.min(1, (d - R.rangeFrom) / (R.rangeTo - R.rangeFrom)));
+  }
   play(crit ? 'crit' : 'hit', P.weapon); // every weapon sounds its own way
   const fx = game.effects;
   if (crit) {

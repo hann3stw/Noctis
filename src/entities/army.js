@@ -195,6 +195,7 @@ export class Army {
   }
 
   maxDeployed() {
+    if (!this.game.hasArmy()) return this.game.mainClass === 'ranger' ? CONFIG.ranger.companions : 0; // the Ranger's companion
     // Intelligence decides how big the army can be
     const P = this.game.player, S = CONFIG.shadows;
     const n = S.baseSlots + Math.floor(P.stats.int * CONFIG.progression.stats.int.slots) + P.armySlots;

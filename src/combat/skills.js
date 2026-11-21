@@ -481,6 +481,40 @@ export function castSkill(game, id, dx, dz, power) {
       fx.burst(P.x, 1.2, P.z, 22, 0xd8d2ff, 6, 0.2, 0.6);
       break;
 
+    // ---- Ranger
+    case 'piercingShot':
+      hitLine(game, P.x, P.z, dx, dz, def.range, def.width, base);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width, 0xb8e080);
+      fx.beam(P.x, P.z, dx, dz, def.range, def.width * 0.35, 0xffffff);
+      fx.ring(P.x + dx * def.range, P.z + dz * def.range, 0.4, 2.2, 0xb8e080, 0.25);
+      game.cam.shake(0.12, 0.12);
+      break;
+    case 'multiShot':
+      hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base);
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0xb8e080, EXPAND, 1, 0.3);
+      fx.slash(P.x, P.z, yaw, def.range * 0.7, def.arcDeg, 0xffffff, EXPAND, 1, 0.22);
+      game.cam.shake(0.16, 0.14);
+      break;
+    case 'bearTrap':
+    case 'explosiveTrap':
+      game.ranger.addTrap(tx, tz, def, base);
+      fx.ring(tx, tz, 0.3, def.radius, id === 'bearTrap' ? 0x7fd6a0 : 0xff9040, 0.4);
+      fx.burst(tx, 0.4, tz, 10, 0xb8e080, 3, 0.2, 0.4);
+      break;
+    case 'huntersFocus':
+      P.focusT = def.duration;
+      fx.ring(P.x, P.z, 0.5, 4, 0xb8e080, 0.45);
+      fx.burst(P.x, 1.4, P.z, 22, 0xb8e080, 6, 0.2, 0.7);
+      break;
+    case 'beastCommand':
+      army.buff(def.armyDamage, def.duration);
+      army.healAll(def.healArmy);
+      army.reviveAll(); // the companion stands up at once
+      fx.ring(P.x, P.z, 1, def.radius, 0xb8e080, 0.5);
+      fx.burst(P.x, 1.4, P.z, 24, 0xb8e080, 7, 0.22, 0.7);
+      game.cam.shake(0.2, 0.2);
+      break;
+
     // ---- ultimates
     case 'voidStorm':
       // a storm that stays where it was cast
@@ -529,6 +563,23 @@ export function castSkill(game, id, dx, dz, power) {
       fx.ring(P.x, P.z, 1, def.radius, aura, 0.6);
       fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
+      game.cam.shake(0.35, 0.35);
+      break;
+    case 'arrowStorm':
+      // a storm of arrows where you aimed
+      game.zones.add(tx, tz, def.radius, 0.4, def.ticks, def.interval, base, 0, 0xb8e080, true);
+      fx.ring(tx, tz, def.radius + 3, 0.5, 0xb8e080, 0.5);
+      fx.ring(tx, tz, 0.5, def.radius, 0xffffff, 0.5, 0.15);
+      fx.burst(tx, 2, tz, 40, 0xb8e080, 9, 0.26, 0.9);
+      game.cam.shake(0.35, 0.3);
+      break;
+    case 'primalFury':
+      army.buff(def.armyDamage, def.duration);
+      army.reviveAll();
+      P.focusT = def.duration;
+      fx.ring(P.x, P.z, 1, def.radius, 0xff9040, 0.6);
+      fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
+      fx.burst(P.x, 1, P.z, 40, 0xff9040, 9, 0.26, 0.9);
       game.cam.shake(0.35, 0.35);
       break;
     case 'deathBlossom':

@@ -475,6 +475,13 @@ export const CONFIG = {
     rupture: { for: ['rogue'], mana: 24, cooldown: 10, aim: 'point', range: 8, radius: 4, power: 0.9, ticks: 5, interval: 0.4, finisher: true },
     smokeBomb: { for: ['rogue'], mana: 22, cooldown: 14, aim: 'self', radius: 5, stun: 1.6, duration: 4 }, // duration = how long your next hit is an Ambush
     evasion: { for: ['rogue'], mana: 18, cooldown: 16, aim: 'self', radius: 2, duration: 2.5 }, // untouchable for duration, then an Ambush
+    // Ranger (trap = it is laid on the ground and goes off when an enemy comes near; the army skills work on the companion)
+    piercingShot: { for: ['ranger'], mana: 10, cooldown: 3, aim: 'line', range: 20, width: 1, power: 2.4 },
+    multiShot: { for: ['ranger'], mana: 18, cooldown: 6, aim: 'arc', range: 11, arcDeg: 70, power: 2 },
+    bearTrap: { for: ['ranger'], mana: 16, cooldown: 8, aim: 'point', range: 9, radius: 2.5, power: 2.6, stun: 2.5, trap: true },
+    explosiveTrap: { for: ['ranger'], mana: 22, cooldown: 12, aim: 'point', range: 9, radius: 4.5, power: 5, trap: true },
+    huntersFocus: { for: ['ranger'], mana: 20, cooldown: 18, aim: 'self', radius: 2, damage: 0.25, duration: 8 },
+    beastCommand: { for: ['ranger'], mana: 25, cooldown: 20, aim: 'self', radius: 10, armyDamage: 0.6, healArmy: 0.4, duration: 8 }, // for your companion
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
@@ -494,6 +501,8 @@ export const CONFIG = {
     sunburst: { for: ['cleric'], aim: 'line', range: 22, width: 4, power: 14, healSelf: 0.25 },
     deathBlossom: { for: ['rogue'], aim: 'self', radius: 9, power: 1.5, ticks: 10, interval: 0.2 },
     assassinate: { for: ['rogue'], aim: 'point', range: 10, radius: 4, power: 20, finisher: true },
+    arrowStorm: { for: ['ranger'], aim: 'point', range: 12, radius: 7, power: 1.1, ticks: 14, interval: 0.4 },
+    primalFury: { for: ['ranger'], aim: 'self', radius: 12, armyDamage: 1, damage: 0.3, duration: 12 }, // you and your companion
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -691,6 +700,11 @@ export const CONFIG = {
   // critical one with ambush more damage.
   rogue: { cpMax: 5, cpTime: 4, critPerPoint: 0.04, finisher: 0.3, ambush: 0.6 },
 
+  // Ranger: damage grows with the distance to the enemy, by rangeBonus at rangeTo and farther (nothing
+  // up to rangeFrom). companions = how many companions (one shadow of the army machinery, of companionType
+  // and companionTier); traps = how many traps lie on the ground at most, each for trapLife seconds.
+  ranger: { rangeBonus: 0.35, rangeFrom: 4, rangeTo: 14, companions: 1, companionType: 'gloomfang', companionTier: 1, traps: 4, trapLife: 25 },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -702,7 +716,7 @@ export const CONFIG = {
       warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', cores: ['tank', 'blade', 'slayer', 'delver'] },
       mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.2 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
-      ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },
+      ranger: { role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.12 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.15, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
     },
   },

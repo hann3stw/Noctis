@@ -2,6 +2,14 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  piercingShot: svg('M2 12l16-1-4-5 8 6-8 6 4-5z'),
+  multiShot: svg('M2 4l14 6-1 2zM2 12l14 0v2zM2 20l14-6-1-2zM18 8l4 4-4 4z'),
+  bearTrap: svg('M3 15h18v3H3zM4 15l2-8 3 6 3-8 3 8 3-6 2 8z'),
+  explosiveTrap: svg('M12 6a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM15 2l3 3-3 3zM11 9h2v6h-2z'),
+  huntersFocus: svg('M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2.500a2.500 2.500 0 1 1 0 5 2.500 2.500 0 0 1 0-5zM11 1h2v3h-2zM11 20h2v3h-2z'),
+  beastCommand: svg('M4 12l3-6 3 4 2-6 2 6 3-4 3 6-4 8H8z'),
+  arrowStorm: svg('M4 3l4 8H5zM11 5l4 8h-3zM18 3l4 8h-3zM3 14l4 7zM10 16l4 5zM17 14l4 7z'),
+  primalFury: svg('M12 2c2 4 6 5 6 10a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 3 3 2-1-2-1-3 0-5z'),
   backstab: svg('M4 20L16 4l3 2L7 22zM15 3l5 3-2 3z'),
   fanOfKnives: svg('M12 2l1 8 6-5-4 7 7 1-7 3 5 6-8-3-3 6-2-7-7 2 5-6-5-5 7 1z'),
   eviscerate: svg('M3 3l18 18-2 2L1 5zM21 3l-6 4 2 2zM3 21l6-4-2-2z'),

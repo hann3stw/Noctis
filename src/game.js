@@ -46,6 +46,7 @@ import { skillOk } from './core/classes.js';
 import { Barracks } from './core/barracks.js';
 import { Duel } from './core/duel.js';
 import { Fort } from './core/fort.js';
+import { Ranger } from './core/ranger.js';
 import { ClassPanel } from './ui/classPanel.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
@@ -158,6 +159,7 @@ export class Game {
     this.barracks = new Barracks(this, save && save.barracks); // shadows stationed in the camp (Commander)
     this.duel = new Duel(this, save && save.duel); // the Duel Arena (Blade)
     this.fort = new Fort(this, save && save.fort); // fortified outposts (Tank)
+    this.ranger = new Ranger(this); // the Ranger's companion and traps
 
     // outposts taken in this world
     for (const si of this.discovered) this.markCaptured(si);
@@ -353,6 +355,7 @@ export class Game {
     if (c.startUltimate) { P.learn(c.startUltimate); P.slots[2] = c.startUltimate; if (!P.newSkills.includes(c.startUltimate)) P.newSkills.push(c.startUltimate); }
     this.player.recalc();
     this.quests.fixArise();
+    if (id === 'ranger') this.ranger.welcome();
     this.hud.banner(t('mc.chosen'), t('mc.' + id));
     play('levelup');
     if (c.army && this.tips) this.tips.show('necro');
@@ -581,6 +584,7 @@ export class Game {
     this.path.update(dt);
     this.barracks.update(dt);
     this.fort.update(dt);
+    this.ranger.update(dt);
     this.waypoint.update(dt);
     this.hunts.update(dt);
   }
