@@ -2,6 +2,14 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  shieldBash: svg('M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zM8 9v2h8V9z'),
+  cleave: svg('M4 20L14 6l2 1-9 14zM13 4c4-1 7 1 8 4-3 1-6 0-8-1z'),
+  groundSlam: svg('M12 3l2 6 6 1-5 3 2 7-5-4-5 4 2-7-5-3 6-1z'),
+  shieldRush: svg('M3 12h12l-4-5h3l6 5-6 5h-3l4-5H3z'),
+  challengingRoar: svg('M4 9h4l6-5v16l-6-5H4zM17 8c2 2 2 6 0 8M20 6c3 3 3 9 0 12'),
+  ironWill: svg('M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zm-1 6v3H8v2h3v3h2v-3h3v-2h-3V8z'),
+  earthshatter: svg('M2 20l5-6 3 3 3-8 3 5 6-7v13z'),
+  unbreakable: svg('M12 2l9 5v6c0 5-4 8-9 9-5-1-9-4-9-9V7zm0 5l-3 5h6z'),
   shadowStep: svg('M4 18c3-1 5-3 6-6l2 2 1-5-5 1 2 2c-1 2-3 4-6 5zM14 6a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm1 4h3l2 3-2 5h-2l1-4-2-2z'),
   shadowWave: svg('M3 18c4-9 14-9 18 0l-2 1c-3-7-11-7-14 0zm4 1c2-5 8-5 10 0l-2 1c-1-3-5-3-6 0zm4 1a1.5 1.5 0 1 1 2 0z'),
   rulersGrasp: svg('M7 21v-6L4 11V7h2v3h1V4h2v6h1V3h2v7h1V4h2v7h1V6h2v8l-2 3v4zM11 13l-3-2 1-1 3 2z'),

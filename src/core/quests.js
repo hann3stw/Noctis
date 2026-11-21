@@ -46,6 +46,18 @@ export class Quests {
       this.bonus = !!saved.bonus;
       if (saved.bought && typeof saved.bought === 'object') this.bought = { ...saved.bought };
     }
+    this.fixArise();
+  }
+
+  // a hunter without the shadow army cannot raise shadows: such a quest becomes a kill quest
+  fixArise() {
+    if (this.game.hasArmy()) return;
+    for (const q of this.list) {
+      if (q.kind !== 'arise' || q.done) continue;
+      q.kind = 'kill';
+      q.n = Q.kinds.kill.n[q.d];
+      q.have = 0;
+    }
   }
 
   serialize() {

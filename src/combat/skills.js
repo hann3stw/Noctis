@@ -239,6 +239,73 @@ export function castSkill(game, id, dx, dz, power) {
       game.cam.shake(0.2, 0.2);
       break;
 
+    // ---- Warrior
+    case 'shieldBash':
+      hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base, def.stun);
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0xc8d8ff, EXPAND, 1, 0.3);
+      fx.ring(P.x + dx * def.range * 0.6, P.z + dz * def.range * 0.6, 0.3, 2.4, 0xffffff, 0.3);
+      P.addRage(def.rage || 0);
+      game.cam.shake(0.22, 0.16);
+      game.hitStop(0.05);
+      break;
+    case 'cleave':
+      hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base);
+      fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, 0xffb070, SWEEP, P.combo ? -1 : 1, 0.35);
+      fx.slash(P.x, P.z, yaw, def.range * 0.7, def.arcDeg, 0xffffff, SWEEP, P.combo ? -1 : 1, 0.25);
+      game.cam.shake(0.2, 0.18);
+      break;
+    case 'groundSlam':
+      hitCircle(game, P.x, P.z, def.radius, base, def.stun);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xd0a070, EXPAND, 1, 0.4);
+      fx.ring(P.x, P.z, 0.5, def.radius + 1, 0xffe0b0, 0.4);
+      fx.burst(P.x, 0.6, P.z, 30, 0xd0a070, 7, 0.24, 0.7);
+      game.cam.shake(0.3, 0.25);
+      game.hitStop(0.06);
+      break;
+    case 'shieldRush': {
+      // rushes forward and hits everything on the way, then stands where the rush ended
+      const len = Math.max(2, dist);
+      hitLine(game, P.x, P.z, dx, dz, len, def.width, base);
+      fx.beam(P.x, P.z, dx, dz, len, def.width, 0xc8d8ff);
+      fx.beam(P.x, P.z, dx, dz, len, def.width * 0.4, 0xffffff);
+      if (game.gates.active >= 0) {
+        game.gates.clamp(tx, tz, P.radius);
+        P.x = game.gates.cx;
+        P.z = game.gates.cz;
+      } else {
+        const lim = game.world.radius - 1.5, r = Math.sqrt(tx * tx + tz * tz);
+        if (r > lim) { tx *= lim / r; tz *= lim / r; }
+        game.world.resolve(tx, tz, P.radius);
+        P.x = game.world.rx;
+        P.z = game.world.rz;
+      }
+      P.invuln = Math.max(P.invuln, 0.35);
+      fx.ring(P.x, P.z, 0.4, 3, 0xc8d8ff, 0.3);
+      fx.burst(P.x, 1, P.z, 16, 0xc8d8ff, 6, 0.22, 0.5);
+      game.cam.shake(0.25, 0.2);
+      break;
+    }
+    case 'challengingRoar':
+      E.pull(P.x, P.z, def.radius, 0.7);
+      hitCircle(game, P.x, P.z, def.radius, base);
+      P.guardT = def.duration;
+      P.guardV = def.guard;
+      P.addRage(def.rage || 0);
+      fx.ring(P.x, P.z, 1, def.radius, 0xff6040, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius * 0.6, 0xffd0a0, 0.45, 0.1);
+      fx.burst(P.x, 1.5, P.z, 26, 0xff6040, 8, 0.22, 0.6);
+      game.cam.shake(0.28, 0.3);
+      break;
+    case 'ironWill':
+      P.shield = P.shieldMax = Math.round(P.maxHp * def.shield);
+      P.shieldT = def.duration;
+      P.guardT = def.duration;
+      P.guardV = def.guard;
+      P.heal(P.maxHp * def.healSelf);
+      fx.ring(P.x, P.z, 0.5, 4, 0xc8d8ff, 0.45);
+      fx.burst(P.x, 1.2, P.z, 22, 0xc8d8ff, 4, 0.18, 0.6);
+      break;
+
     // ---- ultimates
     case 'voidStorm':
       // a storm that stays where it was cast
@@ -288,6 +355,27 @@ export function castSkill(game, id, dx, dz, power) {
       fx.ring(P.x, P.z, def.radius, 1, 0xffffff, 0.5, 0.15);
       fx.burst(P.x, 1, P.z, 40, aura, 9, 0.26, 0.9);
       game.cam.shake(0.35, 0.35);
+      break;
+    case 'earthshatter':
+      hitCircle(game, P.x, P.z, def.radius, base, def.stun);
+      P.addRage(30);
+      fx.slash(P.x, P.z, 0, def.radius, 360, 0xd0a070, EXPAND, 1, 0.55);
+      fx.slash(P.x, P.z, 0, def.radius * 0.6, 360, 0xffffff, FLASH, 1, 0.3);
+      fx.ring(P.x, P.z, 1, def.radius + 2, 0xffe0b0, 0.5);
+      fx.ring(P.x, P.z, 1, def.radius * 0.8, 0xffffff, 0.45, 0.1);
+      fx.burst(P.x, 0.6, P.z, 60, 0xd0a070, 12, 0.3, 0.9);
+      game.cam.shake(0.6, 0.45);
+      game.hitStop(0.09);
+      break;
+    case 'unbreakable':
+      P.guardT = def.duration;
+      P.guardV = def.guard;
+      P.rageT = def.duration; // hits harder, like Blood Rage
+      P.heal(P.maxHp * def.healSelf);
+      fx.ring(P.x, P.z, 0.5, 6, 0xffd24a, 0.5);
+      fx.ring(P.x, P.z, 0.5, 9, 0xfff0b0, 0.6, 0.12);
+      fx.burst(P.x, 1.4, P.z, 40, 0xffd24a, 8, 0.24, 0.8);
+      game.cam.shake(0.3, 0.3);
       break;
     case 'eclipse':
       P.eclipseT = def.duration;

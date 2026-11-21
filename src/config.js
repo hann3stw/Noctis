@@ -443,21 +443,30 @@ export const CONFIG = {
     // survival
     umbralShield: { mana: 20, cooldown: 14, aim: 'self', radius: 2, shield: 0.4, duration: 6 },
     lifeLeech: { mana: 20, cooldown: 8, aim: 'arc', range: 6, arcDeg: 120, power: 1.5, heal: 0.5 },
-    darkMend: { mana: 30, cooldown: 16, aim: 'self', radius: 12, healSelf: 0.22, healArmy: 0.35 },
+    darkMend: { for: ['necromancer'], mana: 30, cooldown: 16, aim: 'self', radius: 12, healSelf: 0.22, healArmy: 0.35 },
     // buffs
-    warCry: { mana: 30, cooldown: 20, aim: 'self', radius: 12, armyDamage: 0.4, duration: 8 },
+    warCry: { for: ['necromancer'], mana: 30, cooldown: 20, aim: 'self', radius: 12, armyDamage: 0.4, duration: 8 },
     bloodRage: { mana: 25, cooldown: 18, aim: 'self', radius: 3, damage: 0.3, speed: 0.15, duration: 7 },
+    // Warrior (for = the classes that can use it; rage = Rage it gives; guard = damage taken less while duration runs)
+    shieldBash: { for: ['warrior'], mana: 14, cooldown: 6, aim: 'arc', range: 5, arcDeg: 100, power: 1.8, stun: 1.2, rage: 12 },
+    cleave: { for: ['warrior'], mana: 18, cooldown: 5, aim: 'arc', range: 6.5, arcDeg: 170, power: 2.3 },
+    groundSlam: { for: ['warrior'], mana: 22, cooldown: 9, aim: 'self', radius: 5.5, power: 2, stun: 1.6 },
+    shieldRush: { for: ['warrior'], mana: 20, cooldown: 8, aim: 'point', range: 11, radius: 2.5, width: 2.4, power: 2.2 },
+    challengingRoar: { for: ['warrior'], mana: 25, cooldown: 14, aim: 'self', radius: 9, power: 0.6, guard: 0.3, duration: 6, rage: 25 },
+    ironWill: { for: ['warrior'], mana: 22, cooldown: 16, aim: 'self', radius: 2, shield: 0.3, guard: 0.35, healSelf: 0.15, duration: 6 },
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
   // duration is active, hits do not charge the next one.
   ultimates: {
     nightfall: { aim: 'self', radius: 10, power: 9, stun: 2 },
-    legionsCall: { aim: 'self', radius: 12, armyDamage: 0.6, duration: 12 }, // also revives every fallen shadow
+    legionsCall: { for: ['necromancer'], aim: 'self', radius: 12, armyDamage: 0.6, duration: 12 }, // also revives every fallen shadow
     eclipse: { aim: 'self', radius: 3, duration: 5, damage: 0.2 }, // +20 % damage, attacks cost no charges
     voidStorm: { aim: 'point', range: 10, radius: 6.5, power: 1, ticks: 12, interval: 0.5 },
     umbralAegis: { aim: 'self', radius: 6, healSelf: 0.4, shield: 0.8, duration: 10, stun: 1.5 },
     oblivionRay: { aim: 'line', range: 24, width: 3, power: 16 },
+    earthshatter: { for: ['warrior'], aim: 'self', radius: 12, power: 10, stun: 2.5 },
+    unbreakable: { for: ['warrior'], aim: 'self', radius: 5, duration: 10, guard: 0.5, damage: 0.3, healSelf: 0.3 }, // damage = the bonus of Blood Rage
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -635,6 +644,11 @@ export const CONFIG = {
   // of items.bossTopChance), and the essence grows.
   gateTiers: { max: 10, hp: 1.3, damage: 1.12, luck: 0.3, topChance: 0.03, essence: 0.25 },
 
+  // Warrior: Rage grows with every hit you deal (rageHit) and take (rageHurt + the share of your health
+  // times rageHurtScale), and fades after calm seconds without a fight (decay per second). Every point
+  // gives damage and less damage taken.
+  warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.003, reduction: 0.0015 },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -643,7 +657,7 @@ export const CONFIG = {
     choiceRank: 1,
     list: {
       necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
-      warrior: { role: 'tank', ready: false, army: false, cores: ['tank', 'blade', 'slayer', 'delver'] },
+      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', cores: ['tank', 'blade', 'slayer', 'delver'] },
       mage: { role: 'ranged', ready: false, army: false, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: false, army: false, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { role: 'ranged', ready: false, army: false, cores: ['slayer', 'delver', 'blade', 'tank'] },

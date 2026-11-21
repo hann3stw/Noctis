@@ -41,7 +41,8 @@ import { Runes } from './core/runes.js';
 import { Waypoint } from './core/waypoint.js';
 import { Hunts } from './core/hunts.js';
 import { getRenderer, sizeRenderer, disposeScene } from './render/renderer.js';
-import { setNextItemId, getNextItemId, rollLoot } from './core/items.js';
+import { setNextItemId, getNextItemId, rollLoot, setLootClass } from './core/items.js';
+import { skillOk } from './core/classes.js';
 import { Barracks } from './core/barracks.js';
 import { Duel } from './core/duel.js';
 import { Fort } from './core/fort.js';
@@ -143,6 +144,7 @@ export class Game {
     this.bestiary = new Bestiary(this, save && save.bestiary);
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
+    setLootClass(this.mainClass);
     this.classPanel = new ClassPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
@@ -342,7 +344,15 @@ export class Game {
     const c = CONFIG.classes.list[id];
     if (!c || !c.ready || !this.classDue()) return false;
     this.mainClass = id;
+    setLootClass(id);
+    // skills of other classes are put away; the class brings its own to start with
+    const P = this.player;
+    P.known = P.known.filter((s) => skillOk(s, id));
+    P.slots = P.slots.map((s) => (s && P.known.includes(s) ? s : null));
+    for (const s of c.startSkills || []) { P.learn(s); if (!P.newSkills.includes(s)) P.newSkills.push(s); }
+    if (c.startUltimate) { P.learn(c.startUltimate); P.slots[2] = c.startUltimate; if (!P.newSkills.includes(c.startUltimate)) P.newSkills.push(c.startUltimate); }
     this.player.recalc();
+    this.quests.fixArise();
     this.hud.banner(t('mc.chosen'), t('mc.' + id));
     play('levelup');
     if (c.army && this.tips) this.tips.show('necro');

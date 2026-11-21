@@ -53,6 +53,7 @@ export class Hud {
           <div class="pp-bars">
             <div class="bar hp"><em></em><i></i><span></span></div>
             <div class="bar mp"><i></i><span></span></div>
+            <div class="rage" style="display:none"><div class="bar"><i></i></div></div>
             <div class="xp"><div class="bar"><i></i></div></div>
             <div class="rk"><div class="bar"><i></i></div><span></span></div>
           </div>
@@ -173,6 +174,8 @@ export class Hud {
     this.savingEl = $('.saving');
     this.savingT = 0;
     this.mpFill = $('.bar.mp i');
+    this.rageEl = $('.rage');
+    this.rageFill = $('.rage i');
     this.mpText = $('.bar.mp span');
     this.xpFill = $('.xp .bar i');
     this.xpLabel = $('.lvl-badge b');
@@ -492,6 +495,14 @@ export class Hud {
       this.vMaxMp = P.maxMana;
       this.mpFill.style.transform = 'scaleX(' + (P.mana / P.maxMana).toFixed(3) + ')';
       this.mpText.textContent = mp + ' / ' + P.maxMana;
+    }
+
+    // the Warrior's Rage
+    const warrior = game.mainClass === 'warrior';
+    if (warrior !== this.vRageOn) { this.vRageOn = warrior; this.rageEl.style.display = warrior ? '' : 'none'; }
+    if (warrior) {
+      const r = Math.round(P.rage);
+      if (r !== this.vRage) { this.vRage = r; this.rageFill.style.transform = 'scaleX(' + (r / CONFIG.warrior.rageMax).toFixed(2) + ')'; }
     }
 
     // the army belongs to the Necromancer

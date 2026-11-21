@@ -4,6 +4,7 @@
 //   armour: { id, kind: 'armor', type: 'helmet', set: 'stalker', bonus: 'hp', rarity, level, up }
 // Skills drop as { kind: 'skill', type: 'shadowStep' } and are learned at once.
 import { CONFIG } from '../config.js';
+import { skillOk } from './classes.js';
 import { itemLevelPower, rankProgress, rankOf } from './levels.js';
 import { t } from '../strings.js';
 
@@ -100,14 +101,20 @@ export function uniqueDef(id) {
   return null;
 }
 
+// the main class the skills that drop are for (set by the game)
+let lootClass = '';
+export function setLootClass(c) {
+  lootClass = c || '';
+}
+
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
 export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, topChance = CONFIG.items.topChance) {
   const W = CONFIG.loot.weights;
   const kind = weighted([W.weapon, W.armor, gearOnly ? 0 : W.skill]);
   if (kind === 2) {
     const open = [];
-    for (const id in CONFIG.skills) if (!known.includes(id)) open.push(id);
-    for (const id in CONFIG.ultimates) if (!known.includes(id)) open.push(id);
+    for (const id in CONFIG.skills) if (!known.includes(id) && skillOk(id, lootClass)) open.push(id);
+    for (const id in CONFIG.ultimates) if (!known.includes(id) && skillOk(id, lootClass)) open.push(id);
     if (open.length) return { kind: 'skill', type: pick(open), rarity: 3 };
   }
   const rarity = rollRarity(luck, minRarity, level, topChance);

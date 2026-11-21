@@ -12,6 +12,7 @@ import { msToMidnight, today } from '../core/quests.js';
 import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
+import { skillOk } from '../core/classes.js';
 import { campView, campAct, campSections, campNews } from './camp.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
@@ -771,6 +772,8 @@ export class Menu {
     if (def.heal) row('heal', Math.round(def.heal * 100) + '%');
     if (def.armyDamage) row('army', '+' + Math.round(def.armyDamage * 100) + '%');
     if (def.damage) row('damageUp', '+' + Math.round(def.damage * 100) + '%');
+    if (def.guard) row('guard', '-' + Math.round(def.guard * 100) + '%');
+    if (def.rage) row('rage', '+' + def.rage);
     if (def.duration) row('duration', def.duration + 's');
     return rows.join('');
   }
@@ -797,7 +800,7 @@ export class Menu {
       return `<div class="k-slot${k === 2 ? ' ult' : ''}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
         <i>${SKILL_ICONS[id]}</i><div><small>${t('skills.slot' + k)}</small><b>${t('skill.' + id)}</b><span>${meta}</span></div></div>`;
     }).join('');
-    const skillIds = Object.keys(CONFIG.skills), ultIds = Object.keys(CONFIG.ultimates);
+    const skillIds = Object.keys(CONFIG.skills).filter((s) => skillOk(s, this.game.mainClass)), ultIds = Object.keys(CONFIG.ultimates).filter((s) => skillOk(s, this.game.mainClass));
     const count = (ids) => ids.filter((id) => P.known.includes(id)).length;
     // found ones first
     const order = (ids) => [...ids].sort((x, y) => P.known.includes(y) - P.known.includes(x));

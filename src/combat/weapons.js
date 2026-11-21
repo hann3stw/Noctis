@@ -21,6 +21,7 @@ export function playerHit(game, i, base, kx, kz) {
   if (ai) { crit = true; P.afterimageT = 0; }
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
+  P.addRage(CONFIG.warrior.rageHit);
   play(crit ? 'crit' : 'hit', P.weapon); // every weapon sounds its own way
   const fx = game.effects;
   if (crit) {
@@ -68,7 +69,7 @@ export function echoWave(game, dx, dz, U) {
 }
 
 // All of these return the number of enemies hit.
-export function hitArc(game, x, z, dx, dz, range, arcDeg, base) {
+export function hitArc(game, x, z, dx, dz, range, arcDeg, base, stun = 0) {
   const E = game.enemies;
   const cosHalf = Math.cos(arcDeg * 0.5 * DEG);
   let n = 0;
@@ -81,6 +82,7 @@ export function hitArc(game, x, z, dx, dz, range, arcDeg, base) {
     if (d - r > range) continue;
     // enemies touching the origin are always hit, the rest must be in the arc
     if (d > r + 0.9 && (ex * dx + ez * dz) / d < cosHalf) continue;
+    if (stun > 0) E.applyStun(i, stun);
     playerHit(game, i, base, dx, dz);
     n++;
   }

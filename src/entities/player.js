@@ -86,6 +86,9 @@ export class Player {
     this.bastionCd = 0; // Bastion of Night: time until the next shield
     this.fortT = 0; // Fortified outpost: time left of the damage cut
     this.fortLv = 0;
+    this.rage = 0; // Warrior: Rage 0 .. 100
+    this.guardT = 0; // a skill cuts the damage taken: time left
+    this.guardV = 0; // ... and by how much
     this.afterimageT = 0; // class skill Afterimage: the next hit is a critical one while this runs
     this.bulwarkCd = 0; // class skill Bulwark: time until the next shield
     this.eclipseT = 0;
@@ -260,7 +263,14 @@ export class Player {
     const zi = Math.max(0, this.game.curZone);
     const K = CONFIG.progression.defenseK * Math.pow(CONFIG.levels.itemRank, zi);
     const fort = this.fortT > 0 && this.fortLv > 0 ? 1 - CONFIG.fortify.reduction[this.fortLv - 1] : 1; // Fortified outpost
-    return (K / (K + this.defense)) * this.takenBonus * fort;
+    const guard = (this.guardT > 0 ? 1 - this.guardV : 1) * (1 - this.rage * CONFIG.warrior.reduction); // Warrior: skills and Rage
+    return (K / (K + this.defense)) * this.takenBonus * fort * guard;
+  }
+
+  // the Warrior's Rage
+  addRage(n) {
+    if (this.game.mainClass !== 'warrior' || n <= 0) return;
+    this.rage = Math.min(CONFIG.warrior.rageMax, this.rage + n);
   }
 
   // Eclipse and Blood Rage: more damage while they last
@@ -268,6 +278,7 @@ export class Player {
     let m = 1;
     if (this.eclipseT > 0) m *= 1 + CONFIG.ultimates.eclipse.damage;
     if (this.rageT > 0) m *= 1 + CONFIG.skills.bloodRage.damage;
+    if (this.rage > 0) m *= 1 + this.rage * CONFIG.warrior.damage; // Warrior: Rage
     return m;
   }
 
@@ -552,6 +563,7 @@ export class Player {
     }
     d = Math.max(1, Math.round(d));
     this.hp -= d;
+    this.addRage(CONFIG.warrior.rageHurt + (d / this.maxHp) * CONFIG.warrior.rageHurtScale);
     // Bastion of Night: a shield right after a hit
     const B = this.uq.bastion;
     if (B && this.bastionCd <= 0 && this.hp > 0) {
@@ -576,6 +588,7 @@ export class Player {
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
+      this.rage = 0;
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
@@ -637,6 +650,8 @@ export class Player {
     if (this.ultLockT > 0) this.ultLockT -= dt;
     if (this.bastionCd > 0) this.bastionCd -= dt;
     if (this.bulwarkCd > 0) this.bulwarkCd -= dt;
+    if (this.guardT > 0) this.guardT -= dt;
+    if (this.rage > 0 && this.calmT > CONFIG.warrior.calm) this.rage = Math.max(0, this.rage - CONFIG.warrior.decay * dt); // Rage fades
     if (this.afterimageT > 0) this.afterimageT -= dt;
     if (this.frenzyT > 0) { this.frenzyT -= dt; if (this.frenzyT <= 0) this.frenzy = 0; }
     if (this.shieldT > 0) {
