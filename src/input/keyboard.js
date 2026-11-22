@@ -1,6 +1,7 @@
 // Keyboard controls for testing on a PC: WASD / arrows to move, Space to dodge.
 // The mouse (aim + click to attack) is handled in touch.js via pointer events.
 import { input } from './input.js';
+import { actionOf, keyState } from '../core/keys.js';
 
 const down = new Set();
 
@@ -32,26 +33,24 @@ export function initKeyboard() {
       if (onEscape) onEscape();
       return;
     }
-    if (e.repeat || typing(e)) return;
-    if (e.code === 'Space' || e.code === 'ShiftLeft') {
+    if (e.repeat || typing(e) || keyState.capturing) return;
+    // the keys can be changed in Settings (core/keys.js); Shift also dodges while no other action has it
+    const act = actionOf(e.code);
+    if (act === 'dodge' || (e.code === 'ShiftLeft' && !act)) {
       input.dodge = true;
       e.preventDefault();
       return;
     }
-    if (e.code === 'KeyE') input.arise = true;
-    else if (e.code === 'KeyG') input.enterGate = true;
-    else if (e.code === 'KeyM') input.toggleMap = true;
-    else if (e.code === 'KeyQ') input.keyCast = 1;
-    else if (e.code === 'KeyR') input.keyCast = 2;
-    else if (e.code === 'KeyF') input.keyCast = 3;
-    else if (e.code === 'KeyV') input.keyCast = 4;
-    else if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') {
-      // 1 summon / recall, 2 Attack / Protect, 3 revive
-      const k = Number(e.code.slice(5));
-      if (k === 1) input.armySummon = true;
-      else if (k === 2) input.armyBehavior = true;
-      else input.armyRevive = true;
-    }
+    if (act === 'arise') input.arise = true;
+    else if (act === 'gate') input.enterGate = true;
+    else if (act === 'map') input.toggleMap = true;
+    else if (act === 'cast1') input.keyCast = 1;
+    else if (act === 'cast2') input.keyCast = 2;
+    else if (act === 'cast3') input.keyCast = 3;
+    else if (act === 'cast4') input.keyCast = 4;
+    else if (act === 'summon') input.armySummon = true;
+    else if (act === 'behavior') input.armyBehavior = true;
+    else if (act === 'revive') input.armyRevive = true;
     down.add(e.code);
     refresh();
   });

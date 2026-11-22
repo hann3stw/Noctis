@@ -4,6 +4,7 @@
 // handled by one delegated listener (data-act attributes).
 import { CONFIG } from '../config.js';
 import { usageReport, usageReset } from '../core/usage.js';
+import { ACTIONS, keyOf, keyLabel, setKey, resetKeys, canBind, keyState } from '../core/keys.js';
 import { flashClass, fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
@@ -307,6 +308,10 @@ export class Screens {
       case 'hudEdit': app.hudEditor.open(); break;
       case 'usage': this.showUsage = !this.showUsage; this.render(); break;
       case 'usageReset': usageReset(); this.render(); break;
+      // PC keys: a click waits for the next key press
+      case 'keys': this.showKeys = !this.showKeys; this.stopBind(); this.render(); break;
+      case 'keyBind': this.startBind(b.dataset.k); break;
+      case 'keyReset': this.stopBind(); resetKeys(); this.render(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
       case 'vibrate': setSetting('vibrate', !settings.vibrate); this.render(); break;
       case 'cloud': if (!isLinked()) { setSetting('cloudSave', !settings.cloudSave); this.render(); } break;
@@ -557,6 +562,36 @@ export class Screens {
   }
 
   // the list of what was pressed how often (Settings > Button use)
+  // wait for the next key press and give it to the action
+  startBind(action) {
+    this.stopBind();
+    this.binding = action;
+    keyState.capturing = true;
+    this.onBindKey = (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.code === 'Escape') { this.stopBind(); this.render(); return; }
+      if (!canBind(e.code)) return;
+      setKey(action, e.code);
+      this.stopBind();
+      this.render();
+    };
+    window.addEventListener('keydown', this.onBindKey, true);
+    this.render();
+  }
+
+  stopBind() {
+    if (this.onBindKey) window.removeEventListener('keydown', this.onBindKey, true);
+    this.onBindKey = null;
+    this.binding = '';
+    keyState.capturing = false;
+  }
+
+  keysRows() {
+    const rows = ACTIONS.map(([a]) => `<div class="set-row key-row"><div><b>${t('key.' + a)}</b></div><div class="segs"><button class="seg wide${this.binding === a ? ' on' : ''}" data-act="keyBind" data-k="${a}">${this.binding === a ? t('key.press') : keyLabel(keyOf(a))}</button></div></div>`).join('');
+    return `<div class="set-row"><small>${t('key.fixed')}</small><div class="segs"><button class="seg" data-act="keyReset">${t('key.reset')}</button></div></div>${rows}`;
+  }
+
   usageRow() {
     const { hours, rows } = usageReport();
     if (!rows.length) return `<div class="set-row"><small>${t('set.usageNone')}</small></div>`;
@@ -656,6 +691,8 @@ export class Screens {
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.layout')}</b><small>${t('set.layoutHint')}</small></div><div class="segs"><button class="seg wide" data-act="hudEdit">${t('set.layoutEdit')}</button></div></div>
+        <div class="set-row"><div><b>${t('set.keys')}</b><small>${t('set.keysHint')}</small></div><div class="segs"><button class="seg wide${this.showKeys ? ' on' : ''}" data-act="keys">${t('set.usageShow')}</button></div></div>
+        ${this.showKeys ? this.keysRows() : ''}
         <div class="set-row"><div><b>${t('set.usage')}</b><small>${t('set.usageHint')}</small></div><div class="segs"><button class="seg wide${this.showUsage ? ' on' : ''}" data-act="usage">${t('set.usageShow')}</button></div></div>
         ${this.showUsage ? this.usageRow() : ''}
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>

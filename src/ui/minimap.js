@@ -5,6 +5,7 @@
 // quest zone and the hunter. Inside an arena the minimap shows the arena with
 // the boss and its helpers.
 import { CONFIG } from '../config.js';
+import { keyOf } from '../core/keys.js';
 import { input } from '../input/input.js';
 import { arenaCenter } from '../world/gates.js';
 import { t } from '../strings.js';
@@ -480,7 +481,7 @@ class BigMap {
     });
     window.addEventListener('resize', () => { if (this.isOpen) this.draw(); });
     this.onKey = (e) => {
-      if (e.code === 'KeyM' || e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.close(); }
+      if (e.code === keyOf('map') || e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.close(); }
       else if (e.code === 'Equal' || e.code === 'NumpadAdd') this.zoomBy(1.4, this.W / 2, this.H / 2);
       else if (e.code === 'Minus' || e.code === 'NumpadSubtract') this.zoomBy(1 / 1.4, this.W / 2, this.H / 2);
     };

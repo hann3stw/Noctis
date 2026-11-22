@@ -1,6 +1,7 @@
 // In-game HUD (HTML overlay). Values are only written to the DOM when they
 // change, so the HUD costs almost nothing per frame.
 import { CONFIG } from '../config.js';
+import { keyOf, keyLabel } from '../core/keys.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 import { itemName } from '../core/items.js';
@@ -239,6 +240,15 @@ export class Hud {
     this.onLayout = () => this.applyLayout();
     window.addEventListener('noctis-layout', this.onLayout);
     this.applyLayout();
+    // PC: the key of every button is written on it (Settings > Keys changes them)
+    const KB = [['#btn-skill0', 'cast1'], ['#btn-skill1', 'cast2'], ['#btn-ult', 'cast3'], ['#btn-skill2', 'cast4'], ['#btn-dodge', 'dodge'], ['#btn-arise', 'arise'], ['#btn-gate', 'gate'], ['.sq-summon', 'summon'], ['.sq-chip', 'behavior'], ['.sq-revive', 'revive']];
+    this.onKeys = () => {
+      for (const [sel, act] of KB) { const el = $(sel); if (el) el.dataset.kb = keyLabel(keyOf(act)); }
+      const pc = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      document.documentElement.classList.toggle('kb', pc);
+    };
+    window.addEventListener('noctis-layout', this.onKeys);
+    this.onKeys();
 
     // cached values
     this.vHp = -1;

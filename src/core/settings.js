@@ -14,6 +14,7 @@ export const settings = {
   vibrate: true, // short vibrations on hits, kills and ultimates (Android)
   buttonSize: 1, // 0.8 .. 1.3
   swap: false, // movement on the right, buttons on the left
+  keys: {}, // PC: action -> key code, only what differs from the defaults (core/keys.js)
   layout: null, // where the buttons on the right are and how big (core/hudLayout.js); null = the default
   showFps: false,
   lastSlot: -1, // slot of the world played last ("Continue")
