@@ -1009,7 +1009,7 @@ const STRINGS = {
     'menu.duelArena': 'Duel Arena',
     'menu.runeWorkshop': 'Workshop',
     'menu.fortify': 'Outposts',
-    'menu.huntBoard': 'Hunt Board',
+    'menu.huntBoard': 'Hunts',
     'menu.contracts': 'Contracts',
     'camp.none': 'Nothing unlocked yet. Some classes of the Path unlock camp mechanics.',
     'camp.barracks': 'Barracks',

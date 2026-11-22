@@ -263,10 +263,15 @@ export class Menu {
       return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
     }).join('');
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
+    // like the Supercell games: the page name and what you own on top, the pages as a big bar at the bottom
+    const Pl = this.game.player, Qs = this.game.quests;
+    const chips = [['ess', fmt(Pl.essence)], ...(Qs.seals ? [['seal', Qs.seals]] : []), ...(Qs.respecs ? [['tok', Qs.respecs]] : []), ...(Qs.keys ? [['key', Qs.keys]] : [])]
+      .map(([k, v]) => `<span class="mn-chip c-${k}"><i></i>${v}</span>`).join('');
     this.el.innerHTML = `
-      <div class="mn-head">${tabs}<span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path', ...SECTIONS].includes(this.tab) ? t('menu.campOnly') : ''}</span>
-        <button class="ap-btn ghost" data-act="close">${t('menu.close')}</button></div>
-      <div class="mn-body"></div>`;
+      <div class="mn-head"><button class="mn-x" data-act="close" aria-label="${t('menu.close')}">✕</button><b class="mn-title">${t('menu.' + this.tab)}</b>
+        <span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path', ...SECTIONS].includes(this.tab) ? t('menu.campOnly') : ''}</span><div class="mn-res">${chips}</div></div>
+      <div class="mn-body"></div>
+      <nav class="mn-nav">${tabs}</nav>`;
     this.fitHead();
     const body = this.el.querySelector('.mn-body');
     if (this.tab === 'army') {
@@ -536,7 +541,7 @@ export class Menu {
   // The tab row must fit (tablets have wide but short screens, phones narrow
   // ones): names of the closed tabs are hidden, then the tabs get narrower.
   fitHead() {
-    const head = this.el.querySelector('.mn-head');
+    const head = this.el.querySelector('.mn-nav');
     if (!head) return;
     const over = () => head.scrollWidth > head.clientWidth + 1;
     this.el.classList.remove('compact', 'tiny', 'bare');

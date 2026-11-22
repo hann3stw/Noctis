@@ -1,0 +1,215 @@
+/* Storybook theme, part 2: the menu laid out like the Supercell games (close, page name
+   and what you own on top, the pages as a big bar at the bottom), how buttons feel, and
+   fantasy details drawn as vectors (gold filigree corners with a gem, wood grain,
+   parchment grain). Loaded after theme.css. */
+
+#menu { gap: calc(var(--u) * 1.4); }
+.mn-head { border-bottom: 0; box-shadow: none; padding-bottom: 0; gap: calc(var(--u) * 1.6); }
+.mn-x {
+  flex: none;
+  width: calc(var(--u) * 8.5);
+  height: calc(var(--u) * 8.5);
+  padding: 0;
+  border-radius: 50%;
+  border: var(--ol) solid var(--ink);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 4);
+  line-height: 1;
+  background: linear-gradient(180deg, #ff8a92 0%, var(--ribbon) 55%, #8e1c2a 100%);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.55), 0 calc(var(--u) * 0.7) 0 var(--ink);
+  text-shadow: 0 1px 0 var(--ink);
+}
+.mn-title {
+  flex: none;
+  padding: 0 calc(var(--u) * 4);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: calc(var(--u) * 4.6);
+  line-height: 1.55;
+  color: var(--wood-lo);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, var(--parch-hi), var(--parch) 55%, var(--parch-lo));
+  border-top: var(--ol) solid var(--ink);
+  border-bottom: var(--ol) solid var(--ink);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--u) * 1.6) 50%, 100% 100%, 0 100%, calc(var(--u) * 1.6) 50%);
+}
+.mn-res { display: flex; gap: calc(var(--u) * 1); flex: none; }
+.mn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 0.3) calc(var(--u) * 2) calc(var(--u) * 0.3) calc(var(--u) * 0.6);
+  border-radius: 99px;
+  border: var(--ol) solid var(--ink);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 3);
+  text-shadow: 0 1px 0 var(--ink);
+}
+.mn-chip i {
+  width: calc(var(--u) * 3.6);
+  height: calc(var(--u) * 3.6);
+  border-radius: 50%;
+  background: var(--c, #fff);
+  border: calc(var(--u) * 0.35) solid var(--ink);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.55);
+}
+.mn-chip.c-ess { --c: #b27cff; }
+.mn-chip.c-seal { --c: var(--brass); }
+.mn-chip.c-tok { --c: var(--teal); }
+.mn-chip.c-key { --c: #ffe08a; }
+
+.mn-nav {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 1.4) calc(var(--u) * 1.4) calc(var(--u) * 0.8);
+  border-radius: calc(var(--u) * 2.2);
+  background:
+    repeating-linear-gradient(91deg, rgba(0, 0, 0, 0.09) 0 calc(var(--u) * 0.5), transparent calc(var(--u) * 0.5) calc(var(--u) * 1.8)),
+    linear-gradient(180deg, var(--wood-hi) 0%, var(--wood) 45%, var(--wood-lo) 100%);
+  box-shadow: 0 0 0 var(--ol) var(--ink), inset 0 calc(var(--u) * 0.5) 0 rgba(255, 230, 180, 0.35), 0 calc(var(--u) * 0.9) 0 var(--ink);
+}
+.mn-nav .mn-tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: calc(var(--u) * 0.2);
+  min-height: calc(var(--u) * 11);
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 0.6) calc(var(--u) * 0.4);
+  font-size: calc(var(--u) * 2.4);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #ffe7b8;
+  text-shadow: 0 1px 0 var(--ink);
+  background: rgba(0, 0, 0, 0.22);
+  border: var(--ol) solid rgba(31, 15, 8, 0.7);
+  transition: transform 0.12s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.mn-nav .mn-tab svg { width: calc(var(--u) * 4.6); height: calc(var(--u) * 4.6); filter: drop-shadow(0 1px 0 var(--ink)); }
+.mn-nav .mn-tab > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mn-nav .mn-tab.on {
+  transform: translateY(calc(var(--u) * -1.4)) scale(1.06);
+  min-height: calc(var(--u) * 12.5);
+  color: #4a2300;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.85), 0 calc(var(--u) * 0.7) 0 var(--ink), 0 0 calc(var(--u) * 3) rgba(255, 201, 40, 0.7);
+}
+.mn-nav .mn-tab.on svg { color: var(--wood-lo); filter: none; }
+.mn-nav .mn-tab i {
+  position: absolute;
+  top: calc(var(--u) * -1.2);
+  right: calc(var(--u) * -0.4);
+  padding: 0 calc(var(--u) * 1);
+  border-radius: 99px;
+  font-size: calc(var(--u) * 2.2);
+  line-height: 1.5;
+}
+#menu.compact .mn-nav .mn-tab:not(.on) > span, #menu.tiny .mn-nav .mn-tab:not(.on) > span, #menu.bare .mn-nav .mn-tab > span { display: none; }
+#menu.compact .mn-nav .mn-tab, #menu.tiny .mn-nav .mn-tab, #menu.bare .mn-nav .mn-tab { padding: calc(var(--u) * 0.6) calc(var(--u) * 0.4) calc(var(--u) * 0.4); }
+#menu.compact .mn-nav .mn-tab.on { flex: 1.8 1 0; }
+
+/* =============================== how buttons feel =============================== */
+.ap-btn, .sbtn, .mn-tab, .mn-x, .seg, .btn.pill, .btn.round, .cls-card, .k-card, .tile, [data-act] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+.ap-btn:active, .sbtn:active, .mn-x:active, .seg:active, .btn.pill:active, .cls-card:active, .k-card:active, .tile:active {
+  transform: translateY(calc(var(--u) * 0.6)) scale(0.95);
+}
+.mn-nav .mn-tab:active { transform: translateY(calc(var(--u) * 0.4)) scale(0.93); }
+.btn.round:active, .skill:active, #btn-attack:active { transform: scale(0.93); filter: brightness(1.15); }
+@keyframes pop {
+  0% { transform: scale(0.92); }
+  55% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+.pop { animation: pop 0.24s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.mn-nav .mn-tab.on.pop { animation: none; }
+
+/* ============================= fantasy details (vectors) ============================= */
+:root {
+  --corner-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 38V20Q10 10 20 10H38' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='9' r='5' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.6' fill='%23fff'/%3E%3C/svg%3E");
+  --corner-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='translate(40 0) scale(-1 1)'%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 38V20Q10 10 20 10H38' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='9' r='5' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.6' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='translate(0 40) scale(1 -1)'%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 38V20Q10 10 20 10H38' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='9' r='5' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.6' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='translate(40 40) scale(-1 -1)'%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M3 38V16Q3 3 16 3H38' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 38V20Q10 10 20 10H38' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='9' r='5' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.6' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .1 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.scr-box, .ab-box, .g-left, .g-mid, .g-right, .s-left, .s-right, .k-left, .ap-col {
+  background:
+    var(--corner-tl) left calc(var(--u) * -0.6) top calc(var(--u) * -0.6) / calc(var(--u) * 6.5) no-repeat,
+    var(--corner-tr) right calc(var(--u) * -0.6) top calc(var(--u) * -0.6) / calc(var(--u) * 6.5) no-repeat,
+    var(--corner-bl) left calc(var(--u) * -0.6) bottom calc(var(--u) * -0.6) / calc(var(--u) * 6.5) no-repeat,
+    var(--corner-br) right calc(var(--u) * -0.6) bottom calc(var(--u) * -0.6) / calc(var(--u) * 6.5) no-repeat,
+    var(--glass);
+}
+/* parchment grain on buttons and ribbons */
+.sbtn:not(.ghost):not(.danger), .ap-btn:not(.ghost):not(.danger), .btn.pill:not(.ghost), .mn-title, .pa-head b, .cp-head b, .ab-head h2, .scr-box h2 {
+  background-image: var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%);
+}
+.sbtn.go, .ap-btn.gold, .ap-btn.go, .title-menu .sbtn.main:first-child:not([disabled]) {
+  background-image: var(--grain), linear-gradient(180deg, #fff59a 0%, var(--brass) 45%, var(--brass-lo) 100%);
+}
+.mn-nav .mn-tab.on { background-image: var(--grain), linear-gradient(180deg, #fff59a 0%, var(--brass) 55%, var(--brass-lo) 100%); }
+/* a small gem under the open page */
+.mn-nav .mn-tab.on::after {
+  display: block;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--u) * -1.3);
+  width: calc(var(--u) * 2.2);
+  height: calc(var(--u) * 2.2);
+  transform: translateX(-50%) rotate(45deg);
+  border: var(--ol) solid var(--ink);
+  background: linear-gradient(135deg, #8ff0ff, var(--teal));
+  border-radius: calc(var(--u) * 0.3);
+}
+
+/* the gem sits on top of the open page, not on its label */
+.mn-nav .mn-tab.on::after { bottom: auto; top: calc(var(--u) * -1.9); width: calc(var(--u) * 2); height: calc(var(--u) * 2); }
+
+/* short screens (phones on their side): the pages become a rail on the left like in
+   Brawl Stars, so the page keeps its height; the name of the page is in the top bar */
+@media (max-height: 440px) {
+  #menu.on { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: calc(var(--u) * 1.6); row-gap: calc(var(--u) * 1.2); }
+  .mn-head { grid-column: 2; grid-row: 1; }
+  .mn-body, #menu > .ap-root { grid-column: 2; grid-row: 2; min-height: 0; }
+  .mn-nav {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    flex-direction: column;
+    align-items: stretch;
+    gap: calc(var(--u) * 0.6);
+    padding: calc(var(--u) * 1) calc(var(--u) * 1) calc(var(--u) * 1.4);
+    overflow-y: auto;
+  }
+  .mn-nav .mn-tab, #menu.compact .mn-nav .mn-tab, #menu.tiny .mn-nav .mn-tab, #menu.bare .mn-nav .mn-tab {
+    flex: 1 1 0;
+    min-height: calc(var(--u) * 6);
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: calc(var(--u) * 0.3) calc(var(--u) * 2);
+  }
+  .mn-nav .mn-tab > span, #menu.compact .mn-nav .mn-tab.on > span { display: none; }
+  .mn-nav .mn-tab svg { width: calc(var(--u) * 4.4); height: calc(var(--u) * 4.4); }
+  .mn-nav .mn-tab.on { transform: translateX(calc(var(--u) * 1.2)) scale(1.05); min-height: calc(var(--u) * 6); flex: 1 1 0; }
+  .mn-nav .mn-tab.on::after { top: 50%; left: auto; right: calc(var(--u) * -2); transform: translateY(-50%) rotate(45deg); }
+  .mn-nav .mn-tab i { top: calc(var(--u) * -0.8); right: calc(var(--u) * -0.8); }
+}
+@media (max-height: 440px) {
+  .mn-nav .mn-tab, #menu.compact .mn-nav .mn-tab, #menu.tiny .mn-nav .mn-tab, #menu.bare .mn-nav .mn-tab, .mn-nav .mn-tab.on { min-height: calc(var(--u) * 5.2); }
+  .mn-nav { gap: calc(var(--u) * 0.5); padding: calc(var(--u) * 0.8) calc(var(--u) * 0.8) calc(var(--u) * 1); }
+  .mn-nav .mn-tab svg { width: calc(var(--u) * 4); height: calc(var(--u) * 4); }
+}
+@media (min-height: 441px) {
+  .mn-nav .mn-tab { font-size: calc(var(--u) * 2.1); letter-spacing: 0; }
+  .mn-nav .mn-tab.on { flex: 1.7 1 0; }
+}
