@@ -3,6 +3,7 @@
 // confirmation dialogs. Everything is rendered into #screens; clicks are
 // handled by one delegated listener (data-act attributes).
 import { CONFIG } from '../config.js';
+import { usageReport, usageReset } from '../core/usage.js';
 import { flashClass, fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { settings, setSetting, gfx } from '../core/settings.js';
@@ -304,6 +305,8 @@ export class Screens {
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'hudEdit': app.hudEditor.open(); break;
+      case 'usage': this.showUsage = !this.showUsage; this.render(); break;
+      case 'usageReset': usageReset(); this.render(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
       case 'vibrate': setSetting('vibrate', !settings.vibrate); this.render(); break;
       case 'cloud': if (!isLinked()) { setSetting('cloudSave', !settings.cloudSave); this.render(); } break;
@@ -552,6 +555,14 @@ export class Screens {
       </div></div>`;
   }
 
+  // the list of what was pressed how often (Settings > Button use)
+  usageRow() {
+    const { hours, rows } = usageReport();
+    if (!rows.length) return `<div class="set-row"><small>${t('set.usageNone')}</small></div>`;
+    const list = rows.slice(0, 14).map((r) => `<span class="us-row"><b>${r.id}</b><i>${r.n}</i><em>${r.perHour ? Math.round(r.perHour) + ' / h' : ''}</em></span>`).join('');
+    return `<div class="set-row us"><div class="us-list">${list}</div><div class="segs"><small>${t('set.usageHours', { h: hours.toFixed(1) })}</small><button class="seg" data-act="usageReset">${t('set.usageReset')}</button></div></div>`;
+  }
+
   load() {
     const cards = [0, 1, 2].map((i) => this.worldCard(i)).join('');
     return `<div class="scr-page">${this.header(t('title.worlds'), 'toTitle')}<p class="scr-hint">${this.msg || t('worlds.hint')}</p><div class="wcards">${cards}</div></div>`;
@@ -644,6 +655,8 @@ export class Screens {
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
         <div class="set-row"><div><b>${t('set.layout')}</b><small>${t('set.layoutHint')}</small></div><div class="segs"><button class="seg wide" data-act="hudEdit">${t('set.layoutEdit')}</button></div></div>
+        <div class="set-row"><div><b>${t('set.usage')}</b><small>${t('set.usageHint')}</small></div><div class="segs"><button class="seg wide${this.showUsage ? ' on' : ''}" data-act="usage">${t('set.usageShow')}</button></div></div>
+        ${this.showUsage ? this.usageRow() : ''}
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.vibrate')}</b><small>${t('set.vibrateHint')}</small></div><div class="segs">${toggle('vibrate', settings.vibrate)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>

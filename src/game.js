@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { usageTick } from './core/usage.js';
 import { setMood, duckMusic, sting } from './core/music.js';
 import { CONFIG } from './config.js';
 import { rankOf, rankProgress, tierLevels, levelAt, enemyPower } from './core/levels.js';
@@ -524,6 +525,7 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
+    usageTick(dt);
     const pf = this.profile;
     pf.time += dt;
     if (this.abyss.on) pf.timeAbyss += dt;

@@ -401,8 +401,8 @@ export class Menu {
       }
       rows.unshift(`<p class="uq-box"><b>${t('item.unique')}</b>${t('uqd.' + item.uq)}</p>` + att);
     }
-    return `<h3 style="color:${color}">${itemName(item)}</h3>
-      <small class="sub">${t('rarity.' + item.rarity)} · ${t('item.level', { level: item.level })}${equipped ? ' · ' + t('item.equipped') : ''}</small>
+    return `<div class="d-head">${this.tile(item, ' big')}<div><h3 style="color:${color}">${itemName(item)}</h3>
+      <small class="sub">${t('rarity.' + item.rarity)} · ${t('item.level', { level: item.level })}${equipped ? ' · ' + t('item.equipped') : ''}</small></div></div>
       <div class="d-rows" data-scroll="detail">${rows.join('')}</div><div class="d-btns">${buttons.join('')}</div>`;
   }
 

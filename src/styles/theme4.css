@@ -317,8 +317,90 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 #btn-travel { color: #fff; text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink); background-image: var(--grain), linear-gradient(180deg, #7fe0a8 0%, #2f9b64 55%, #1b6a42 100%) !important; }
 #btn-travel svg { color: #fff !important; filter: drop-shadow(0 calc(var(--u) * 0.4) 0 var(--ink)); }
 
+/* button use list in the settings */
+.set-row.us { flex-direction: column; align-items: stretch; }
+.us-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 30), 1fr)); gap: calc(var(--u) * 0.8); }
+.us-row { display: flex; align-items: baseline; gap: calc(var(--u) * 1); padding: calc(var(--u) * 0.5) calc(var(--u) * 1.4); border-radius: calc(var(--u) * 1); background: rgba(0, 0, 0, 0.3); outline: var(--ol) solid var(--ink); font-size: calc(var(--u) * 2.4); }
+.us-row b { flex: 1; font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.us-row i { font-style: normal; color: #fff; font-family: var(--font-display); }
+.us-row em { font-style: normal; color: var(--brass); font-size: calc(var(--u) * 2); }
 /* the world map (Travel) */
 .bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
 .bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }
 .bm-zone, .bm-hint, .bm-legend, .bm-explored { color: var(--parch); }
 .bm-close { color: var(--wood-lo) !important; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55); background-image: var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%) !important; box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.7), inset 0 calc(var(--u) * -0.7) 0 rgba(120, 70, 20, 0.45), 0 calc(var(--u) * 0.8) 0 var(--ink) !important; }
+
+/* ================================ the Gear page ================================ */
+/* item tiles: a wooden square, a thick frame in the colour of the rarity, small badges on the corners */
+.tile {
+  width: calc(var(--u) * 13);
+  height: calc(var(--u) * 13);
+  border: 0;
+  border-radius: calc(var(--u) * 1.6);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--rc) 40%, #2e1c10), #1a0e06 80%);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.7) var(--rc), inset 0 0 0 calc(var(--u) * 1.1) var(--ink), 0 calc(var(--u) * 0.5) 0 var(--ink);
+  transition: transform 0.1s;
+}
+.tile svg { width: 64%; height: 64%; filter: drop-shadow(0 calc(var(--u) * 0.4) 0 var(--ink)); }
+.tile.r4 { animation: tile-glow 2.2s ease-in-out infinite alternate; }
+.tile.r5 { animation: tile-glow 1.2s ease-in-out infinite alternate; }
+.tile.r6, .tile.r7 { animation: tile-glow 0.9s ease-in-out infinite alternate; }
+@keyframes tile-glow {
+  to { box-shadow: inset 0 0 0 calc(var(--u) * 0.7) var(--rc), inset 0 0 0 calc(var(--u) * 1.1) var(--ink), 0 calc(var(--u) * 0.5) 0 var(--ink), 0 0 calc(var(--u) * 3.2) color-mix(in srgb, var(--rc) 80%, transparent); }
+}
+.tile.sel { outline: calc(var(--u) * 0.9) solid var(--brass); transform: translateY(calc(var(--u) * -0.4)); background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--rc) 55%, #3a2412), #1a0e06 80%); }
+.tile small { left: 5%; bottom: 4%; padding: 0 calc(var(--u) * 0.9); border-radius: calc(var(--u) * 0.8); background: var(--ink); font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 2.2); line-height: 1.35; }
+.tile em {
+  right: calc(var(--u) * -0.7);
+  top: calc(var(--u) * -0.7);
+  width: calc(var(--u) * 3.8);
+  height: calc(var(--u) * 3.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: var(--ol) solid var(--ink);
+  background: linear-gradient(180deg, #8dffa8, #2fb85e);
+  color: #fff;
+  font-size: calc(var(--u) * 1.8);
+  text-shadow: 0 1px 0 var(--ink);
+}
+.tile .nw { left: calc(var(--u) * -0.5); top: calc(var(--u) * -0.7); right: auto; padding: 0 calc(var(--u) * 0.9); border-radius: 99px; font-size: calc(var(--u) * 1.7); line-height: 1.5; }
+.tile.none { box-shadow: inset 0 0 0 calc(var(--u) * 0.45) rgba(241, 215, 154, 0.35), 0 calc(var(--u) * 0.5) 0 var(--ink); background: rgba(0, 0, 0, 0.3); color: rgba(241, 215, 154, 0.5); border-style: dashed; border: calc(var(--u) * 0.4) dashed rgba(241, 215, 154, 0.35); }
+
+/* the worn items: a plate with the tile, the name in the rarity colour and the main value */
+.g-slot { gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 0.8); }
+.g-slot .tile { width: calc(var(--u) * 11); height: calc(var(--u) * 11); }
+.g-slot b { font-size: calc(var(--u) * 3); font-weight: 400; font-family: var(--font-display); text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink); }
+.g-slot small { color: var(--parch-hi); opacity: 1; font-family: var(--font-display); font-size: calc(var(--u) * 2.6); text-shadow: 0 1px 0 var(--ink); }
+.g-slot.empty { opacity: 0.8; }
+.g-slot.empty b { color: var(--parch); }
+
+/* essence: a purple gem chip like in the top bar */
+.g-ess { align-self: flex-start; padding: calc(var(--u) * 0.4) calc(var(--u) * 2.2) calc(var(--u) * 0.4) calc(var(--u) * 5); border-radius: 99px; border: var(--ol) solid var(--ink); background: radial-gradient(circle at calc(var(--u) * 2.4) 50%, #d2bcff 0 calc(var(--u) * 1), #9a6bff calc(var(--u) * 1.1) calc(var(--u) * 1.8), transparent calc(var(--u) * 1.9)), rgba(0, 0, 0, 0.5); color: #fff; font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 2.6); text-shadow: 0 1px 0 var(--ink); }
+
+/* the bag */
+.g-head h3 { font-family: var(--font-display); font-weight: 400; color: var(--brass); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.g-head h3.full { color: #ff8a94; }
+.g-grid { gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 0.8) calc(var(--u) * 0.6); }
+.g-none { margin: auto; padding: calc(var(--u) * 2.4); text-align: center; font-family: var(--font-display); color: var(--parch); text-shadow: 0 1px 0 var(--ink); border: calc(var(--u) * 0.4) dashed rgba(241, 215, 154, 0.35); border-radius: calc(var(--u) * 1.8); background: rgba(0, 0, 0, 0.2); }
+
+/* the details of the chosen item */
+.g-right h3 { font-family: var(--font-display); font-weight: 400; text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.g-right .sub { display: inline-block; align-self: flex-start; padding: 0 calc(var(--u) * 1.6); border-radius: 99px; border: var(--ol) solid var(--ink); background: rgba(0, 0, 0, 0.35); color: var(--parch-hi); font-family: var(--font-display); opacity: 1; }
+.g-right .row { border-bottom: calc(var(--u) * 0.3) dotted rgba(241, 215, 154, 0.3); }
+.g-right .row span { color: var(--parch); }
+.g-right .row b { font-family: var(--font-display); font-weight: 400; color: #fff; text-shadow: 0 1px 0 var(--ink); }
+.g-right .row.main { padding: calc(var(--u) * 0.6) calc(var(--u) * 1.4); border-radius: calc(var(--u) * 1.2); border: 0; background: rgba(0, 0, 0, 0.3); outline: var(--ol) solid var(--ink); }
+.g-right .row.main b { font-size: 1.25em; color: var(--brass); }
+.g-right .up { color: #8dffa8; font-family: var(--font-display); }
+.g-right .down { color: #ff8a94; font-family: var(--font-display); }
+.g-right .bonus { color: var(--parch-hi); font-family: var(--font-display); }
+.g-right p.hint, .g-right p.cmp { color: var(--parch); opacity: 0.9; }
+.d-head { display: flex; align-items: center; gap: calc(var(--u) * 1.8); flex: none; }
+.d-head > div { min-width: 0; display: flex; flex-direction: column; gap: calc(var(--u) * 0.5); }
+.d-head h3 { margin: 0; }
+.tile.big { width: calc(var(--u) * 14); height: calc(var(--u) * 14); pointer-events: none; animation: none; transform: none; outline: none; }
+.d-btns { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1.2); }
+.d-btns .ap-btn { flex: 1 1 calc(var(--u) * 20); min-height: calc(var(--u) * 8); }
+.d-btns .ap-btn:first-child:not([disabled]):not(.danger) { color: #4a2300; background-image: var(--grain), linear-gradient(180deg, #fff59a 0%, var(--brass) 45%, var(--brass-lo) 100%); }
