@@ -7,7 +7,7 @@ export function hints(game) {
   const list = [
     ['stats', pts > 0 ? pts : 0],
     ['gear', P.inventory.some((it) => it.n) ? 1 : 0],
-    ['skills', P.newSkills.length ? 1 : 0],
+    ['skills', P.newSkills.length || (game.mastery && game.mastery.anyPending()) ? 1 : 0],
     ['path', game.classDue() || game.path.due() ? 1 : 0],
     ['quests', game.quests.ready()],
     ['bestiary', game.bestiary.fresh.size ? 1 : 0],

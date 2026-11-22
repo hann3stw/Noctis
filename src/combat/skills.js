@@ -1,6 +1,7 @@
 // Skills and ultimates. Every skill is one case below; its numbers live in
 // CONFIG.skills / CONFIG.ultimates.
 import { CONFIG } from '../config.js';
+import { POWER_PER_LEVEL, COOLDOWN_PER_LEVEL } from '../core/mastery.js';
 import { hitArc, hitCircle, hitLine, playerHit } from './weapons.js';
 import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
 import { RUNE_KINDS } from '../core/runes.js';
@@ -55,6 +56,10 @@ function castGlow(game, id, tx, tz, dx, dz) {
 }
 
 // the runes the hunter wears (set by the game)
+let mastery = null;
+export function setMastery(m) {
+  mastery = m;
+}
 let runes = null;
 export function setRunes(r) {
   runes = r;
@@ -66,15 +71,23 @@ let runedVer = -1; // the rune levels the cache was made for
 export function skillDef(id) {
   const base = CONFIG.skills[id] || CONFIG.ultimates[id];
   const r = runes && base ? runes.of(id) : '';
-  if (!r) return base;
-  if (runes.ver !== runedVer) { runed.clear(); runedVer = runes.ver; }
-  const key = id + ':' + r;
+  const perks = mastery && base ? mastery.perkList(id) : [], mlv = mastery && base ? mastery.level(id) : 0;
+  if (!r && !perks.length && !mlv) return base;
+  const ver = (runes ? runes.ver : 0) * 1000 + (mastery ? mastery.ver : 0);
+  if (ver !== runedVer) { runed.clear(); runedVer = ver; }
+  const key = id + ':' + r + ':' + perks.join('+') + ':' + mlv;
   let d = runed.get(key);
   if (!d) {
     d = { ...base };
-    for (const kind of r.split('+')) {
+    // mastery: every level a little more power and a shorter cooldown
+    if (mlv) {
+      if (typeof d.power === 'number') d.power = Math.round(d.power * (1 + POWER_PER_LEVEL * mlv) * 100) / 100;
+      if (typeof d.cooldown === 'number') d.cooldown = Math.round(d.cooldown * (1 - COOLDOWN_PER_LEVEL * mlv) * 100) / 100;
+    }
+    // the kinds: the runes worn, then the perks picked by mastery (as strong as a rune without Rune Workshop levels)
+    for (const kind of [...(r ? r.split('+') : []), ...perks]) {
       const mods = RUNE_KINDS[kind] || {};
-      const lvl = 1 + CONFIG.runeWorkshop.levelBonus * runes.level(id, kind); // Rune Workshop
+      const lvl = 1 + CONFIG.runeWorkshop.levelBonus * (runes && r.split('+').includes(kind) ? runes.level(id, kind) : 0); // Rune Workshop
       for (const k in mods) {
         if (typeof d[k] !== 'number') continue;
         d[k] = d[k] * (1 + (mods[k] - 1) * lvl);

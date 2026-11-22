@@ -1,6 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
+import { DODGE_CD_PER_LEVEL } from '../core/mastery.js';
 import { playerPower, playerHpPower, enemyPower, rankOf, hunterXpNeed } from '../core/levels.js';
 import { fmt } from '../core/format.js';
 import { input } from '../input/input.js';
@@ -249,7 +250,7 @@ export class Player {
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
     this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit);
     this.critDmg = G.critDamage + st.per * S.per.critDamage + (this.uq.insight ? this.uq.insight.critDamage : 0);
-    this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge);
+    this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge) * (1 - DODGE_CD_PER_LEVEL * (this.game.mastery ? this.game.mastery.dodgeLv : 0)); // dodge mastery
     // drop = extra drop chance, luck = better rarities (Perception's part capped)
     const diffLuck = this.game.diff ? this.game.diff().luck : 0;
     this.drop = st.per * S.per.drop + diffLuck + M.loot * ms.loot;
@@ -895,6 +896,7 @@ export class Player {
     if (!id || this.dodgeT > 0) return;
     if (slot === 3 && this.game.path.skillSlots() < 3) return;
     this.game.profile.casts++;
+    this.game.mastery.onCast(id);
     const def = skillDef(id);
     const hud = this.game.hud;
     if (slot === 2) {

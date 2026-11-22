@@ -362,6 +362,17 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 .co-code small { font-family: var(--font-display); color: var(--parch); }
 .co-code b { font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 9); letter-spacing: 0.25em; color: var(--brass); text-shadow: 0 calc(var(--u) * 0.8) 0 var(--ink); }
 .cls-grid { grid-template-columns: repeat(auto-fit, minmax(calc(var(--u) * 30), 1fr)); }
+/* mastery */
+.mp-bar { height: calc(var(--u) * 2); border-radius: 99px; border: var(--ol) solid var(--ink); background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.mp-bar i { display: block; height: 100%; background: linear-gradient(180deg, #fff59a, var(--brass) 50%, var(--brass-lo)); }
+.mp-note { display: block; color: var(--parch); margin: calc(var(--u) * 0.6) 0; }
+.mp-perks { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 0.8); }
+.mp-perks .mp { padding: 0 calc(var(--u) * 1.6); border-radius: 99px; border: var(--ol) solid var(--ink); background: rgba(255, 201, 40, 0.25); color: var(--parch-hi); font-family: var(--font-display); }
+.mp-pick { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 1); margin-top: calc(var(--u) * 1); padding: calc(var(--u) * 1); border-radius: calc(var(--u) * 1.4); outline: var(--ol) solid var(--brass); }
+.mp-pick > small { width: 100%; color: var(--brass); font-family: var(--font-display); }
+.mp-dodge { margin-top: calc(var(--u) * 1.2); padding: calc(var(--u) * 1) calc(var(--u) * 1.6); border-radius: calc(var(--u) * 1.4); background: rgba(0, 0, 0, 0.3); outline: var(--ol) solid var(--ink); }
+.mp-dodge b { display: block; font-family: var(--font-display); font-weight: 400; color: var(--brass); }
+.mp-dodge small { color: var(--parch); }
 /* the world map (Travel) */
 .bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
 .bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }

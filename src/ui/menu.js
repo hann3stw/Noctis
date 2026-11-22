@@ -219,6 +219,8 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(Number(target.dataset.id));
+    } else if (act === 'mPerk') {
+      this.game.mastery.pick(target.dataset.skill, target.dataset.k);
     } else if (act === 'runeWear') {
       this.game.runes.wear(target.dataset.skill, target.dataset.r);
     } else if (act === 'titlePick') {
@@ -252,7 +254,7 @@ export class Menu {
     const news = {
       stats: P.points + P.mastery.pts > 0 ? P.points + P.mastery.pts : '',
       gear: P.inventory.some((it) => it.n) ? '!' : '',
-      skills: P.newSkills.length ? '!' : '',
+      skills: P.newSkills.length || this.game.mastery.anyPending() ? '!' : '',
       quests: this.game.quests.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
       path: this.game.classDue() || this.game.path.due() ? '!' : '',
@@ -819,6 +821,24 @@ export class Menu {
   }
 
   // the runes of a skill: the ones found can be worn, the others are unknown
+  // mastery of a skill: level, progress, the perks and the pick that waits
+  masteryRow(id) {
+    const M = this.game.mastery, lv = M.level(id), need = M.need(id);
+    const perks = M.perkList(id).map((k) => `<span class="mp on">${t('rune.' + k)}</span>`).join('');
+    let pick = '';
+    if (M.pending(id) > 0) pick = `<div class="mp-pick"><small>${t('mastery.pick')}</small>${M.options(id).map((k) => `<button class="rune" data-act="mPerk" data-skill="${id}" data-k="${k}"><b>${t('rune.' + k)}</b><small>${t('rune.' + k + '.desc')}</small></button>`).join('')}</div>`;
+    return `<h4 class="rune-h">${t('mastery.heading', { lv })}</h4>
+      <div class="mp-bar"><i style="width:${Math.round(M.progress(id) * 100)}%"></i></div>
+      <small class="mp-note">${need ? t('mastery.need', { n: need }) : t('mastery.max')} · ${t('mastery.how')}</small>
+      <div class="mp-perks">${perks}</div>${pick}`;
+  }
+
+  // the dodge grows with every dodge
+  dodgeCard() {
+    const M = this.game.mastery, lv = M.dodgeLevel(), n = M.dodgeNeed();
+    return `<div class="mp-dodge"><b>${t('mastery.dodge', { lv })}</b><small>${t('mastery.dodgeNote', { pct: Math.round(lv * 5) })}${n ? ' · ' + t('mastery.dodgeNeed', { n }) : ''}</small></div>`;
+  }
+
   runeRow(id) {
     const R = this.game.runes, list = runesOf(id);
     if (!list.length) return '';
@@ -870,11 +890,11 @@ export class Menu {
       }
       detail = `<div class="k-head${ult ? ' ult' : ''}${known ? '' : ' locked'}"><i>${known ? SKILL_ICONS[id] : LOCK}</i>
           <div><h3>${t('skill.' + id)}</h3><small class="sub">${ult ? t('skills.typeUlt') : t('skills.typeSkill')}</small></div></div>
-        <div class="d-rows" data-scroll="kd"><p>${t('skill.' + id + '.desc')}</p>${this.skillStats(id)}${known ? this.runeRow(id) : ''}</div>
+        <div class="d-rows" data-scroll="kd"><p>${t('skill.' + id + '.desc')}</p>${this.skillStats(id)}${known ? this.masteryRow(id) + this.runeRow(id) : ''}</div>
         <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">
-      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}</div>
+      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}</div>
       <div class="k-mid" data-scroll="skills">${list}</div>
       <div class="g-right">${detail}</div></div>`;
   }

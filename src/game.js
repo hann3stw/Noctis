@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { Mastery } from './core/mastery.js';
 import { baseOf } from './core/classes.js';
 import { classOffers } from './core/style.js';
 import { usageTick } from './core/usage.js';
@@ -30,7 +31,7 @@ import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
 import { Abyss } from './world/abyss.js';
 import { AbyssPanel } from './ui/abyssPanel.js';
-import { skillDef, setRunes } from './combat/skills.js';
+import { skillDef, setRunes, setMastery } from './combat/skills.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
@@ -135,6 +136,8 @@ export class Game {
     setNextItemId(save ? save.nextItemId || 1 : 1);
     this.runes = new Runes(this, save && save.runes); // skill runes
     setRunes(this.runes);
+    this.mastery = new Mastery(this, save && save.mastery); // skills grow with use (core/mastery.js)
+    setMastery(this.mastery);
     this.profile = new Profile(save && save.profile); // how the hunter plays (the Path uses it)
     this.path = new Paths(this, save && save.path); // the class tree (before the player: it adds bonuses)
     this.player = new Player(this, this.appearance);
@@ -272,6 +275,7 @@ export class Game {
       profile: this.profile.serialize(),
       titles: this.titles.serialize(),
       runes: this.runes.serialize(),
+      mastery: this.mastery.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
@@ -639,6 +643,7 @@ export class Game {
     this.ranger.update(dt);
     this.waypoint.update(dt);
     this.hunts.update(dt);
+    this.mastery.update(dt);
   }
 
   // Entering the camp or an outpost: discover it, make it the respawn point
@@ -1004,7 +1009,7 @@ export class Game {
     // Path rule of the Soul Mage: kills (also by shadows) give mana back
     const km = this.path.rule('killMana');
     if (km && !this.player.dead) this.player.mana = Math.min(this.player.maxMana, this.player.mana + this.player.maxMana * km);
-    if (src < 0) this.player.onKill();
+    if (src < 0) { this.player.onKill(); this.mastery.onKill(); }
     this.path.onKill(tier); // class skill Rally
     // Volatile: enemies in gates explode when they die
     const ex = this.modOn('explode');
