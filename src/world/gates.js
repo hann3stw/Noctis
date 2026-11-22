@@ -8,6 +8,7 @@
 // the player leaves with the Leave button.
 // The boss brain (attack patterns, phases, exhaustion) lives here too.
 import * as THREE from 'three';
+import { track } from '../core/track.js';
 import { CONFIG } from '../config.js';
 import { flatMaterial } from '../render/geo.js';
 import { gateFrameGeometry, arenaPillarGeometry } from '../render/models/props.js';
@@ -244,6 +245,8 @@ export class Gates {
     const game = this.game, P = game.player, E = game.enemies;
     if (this.active >= 0 || P.dead || gi < 0 || !this.list[gi].open) return;
     const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
+    this.t0 = performance.now();
+    track('gate_enter', { z: g.zone, d: g.diff, tr: g.trial ? 1 : 0, ab: g.abyss ? 1 : 0, key: g.keyed ? 1 : 0, co: game.coop && game.coop.active ? 1 : 0 });
     if (g.trial) this.setupTrial(gi);
     else if (!g.abyss) this.close(gi); // one try: the gate is gone afterwards
     // deadly gates: the tier of their zone (Deadly +1, +2 ...)
@@ -375,6 +378,7 @@ export class Gates {
     const gi = this.active;
     if (gi < 0) return;
     const game = this.game, P = game.player, E = game.enemies;
+    track('gate_leave', { died: toCamp ? 1 : 0, sec: Math.round((performance.now() - (this.t0 || performance.now())) / 1000) });
     this.active = -1;
     this.exitOpen = false;
     this.exit.visible = false;
@@ -449,6 +453,7 @@ export class Gates {
       game.hud.toast(t('toast.essence', { n: ess }));
       if (!game.defeatedGates.includes(zone.id)) game.defeatedGates.push(zone.id);
       game.quests.add('gate', { diff: gate.diff });
+      track('gate_clear', { z: gate.zone, d: gate.diff, tier: tier || 0, sec: Math.round((performance.now() - (this.t0 || performance.now())) / 1000) });
       if (this.contractRun) {
         const s = Math.floor(this.runMods.length * CONFIG.contracts.seals); // Gate Contracts: Soul Seals
         if (s > 0) { game.quests.seals += s; game.hud.toast(t('quest.sealsGot', { n: s })); }

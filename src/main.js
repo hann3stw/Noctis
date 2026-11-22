@@ -1,4 +1,5 @@
 import '@fontsource/cinzel/latin-700.css';
+import { initTrack } from './core/track.js';
 import '@fontsource/cinzel/latin-900.css';
 import '@fontsource/exo-2/latin-500.css';
 import '@fontsource/exo-2/latin-700.css';
@@ -24,6 +25,7 @@ import { initUsage } from './core/usage.js';
 blockZoom();
 initFeel();
 initUsage();
+initTrack();
 
 const params = new URLSearchParams(location.search);
 const debug = import.meta.env.DEV || params.has('debug');

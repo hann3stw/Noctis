@@ -2,6 +2,7 @@
 // (level and stat points), Skills and Army. The game is paused while it is
 // open. Equipment, skills and the army can only be changed in the camp.
 import { CONFIG } from '../config.js';
+import { track } from '../core/track.js';
 import { FORMS, ELEMENTS, EFFECTS, buildDef, spellName } from '../core/forge.js';
 import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
@@ -96,6 +97,7 @@ export class Menu {
     const P = this.game.player;
     this.isOpen = true;
     this.opens++;
+    track('menu_open', { tab: tab || '' });
     this.locked = !P.inCamp;
     this.army.locked = false; // the army can be changed anywhere
     this.army.reset();

@@ -1,8 +1,11 @@
-// How often the player uses what, kept on this device only (nothing is sent anywhere). Every press of a
+// How often the player uses what, kept on this device. The totals are not sent anywhere; the counts of a play session are
+// sent as one anonymous 'usage' event (core/track.js, can be switched off in Settings). Every press of a
 // button in the game is counted under a short name (attack, dodge, skill0, arise, menu, tab:stats ...) and the
 // seconds played are added up, so the settings can show presses per hour. It tells which buttons are used the
 // most, to put those where the thumb is (see core/hudLayout.js, the order of the menu bar in ui/menu.js).
 const KEY = 'noctis.usage';
+let sentSec = 0; // what core/track.js has taken already
+let sentN = {};
 let data = { sec: 0, n: {} };
 let dirty = false;
 let saveT = 0;
@@ -44,6 +47,8 @@ function nameOf(target) {
 
 export function initUsage() {
   load();
+  sentSec = data.sec; // only what happens from now on goes into the play data
+  sentN = { ...data.n };
   document.addEventListener('pointerdown', (e) => {
     const id = nameOf(e.target);
     if (!id) return;
@@ -73,4 +78,14 @@ export function usageReset() {
   data = { sec: 0, n: {} };
   dirty = true;
   save();
+}
+
+// the presses and seconds since the last call (sent once per play session by core/track.js)
+export function usageDelta() {
+  const n = {};
+  for (const k in data.n) { const d = data.n[k] - (sentN[k] || 0); if (d > 0) n[k] = d; }
+  const sec = Math.round(data.sec - sentSec);
+  sentSec = data.sec;
+  sentN = { ...data.n };
+  return { sec: Math.max(0, sec), n };
 }

@@ -5,6 +5,7 @@
 // Every floor makes the enemies stronger; the deepest cleared floor is saved.
 // Unique items drop only here.
 import { CONFIG } from '../config.js';
+import { track } from '../core/track.js';
 import { arenaCenter } from './gates.js';
 import { ST_CHASE } from '../entities/enemies.js';
 import { rollLoot, makeUnique } from '../core/items.js';
@@ -177,6 +178,7 @@ export class Abyss {
     }
     const ess = Math.round(A.essencePerFloor * this.floor * (1 + game.gates.runMods.length * CONFIG.modifiers.luck));
     P.essence += ess;
+    track('abyss_floor', { floor: this.floor, rec: record ? 1 : 0 });
     game.hud.banner(t('abyss.cleared', { n: this.floor }), record && this.floor > 1 ? t('abyss.record', { n: this.floor }) : t('toast.essence', { n: ess }));
     game.gates.exitOpen = true;
     game.gates.exit.visible = true;

@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { track, setTrackCtx } from './core/track.js';
 import { Forge } from './core/forge.js';
 import { Mastery } from './core/mastery.js';
 import { baseOf } from './core/classes.js';
@@ -74,6 +75,10 @@ export class Game {
     this.seed = save ? save.seed : opts.seed;
     this.created = save ? save.created : Date.now();
     this.playTime = save ? save.playTime || 0 : 0;
+    this.progT = this.playTime;
+    // what every play-data event carries about this world (core/track.js)
+    setTrackCtx(() => { const P = this.player; return P ? { lvl: P.level, rk: RANKS[this.rankIndex], cls: this.mainClass || '', df: this.difficulty, pt: Math.round(this.playTime) } : {}; });
+    { const sl = (app.slots || []).filter(Boolean); track('world', { new: save ? 0 : 1, worlds: sl.length, best: Math.max(0, ...sl.map((x) => Number(x.level || (x.player && x.player.level) || 0))) }); }
     this.saveT = 0;
     this.fpsT = 0;
     this.fpsN = 0;
@@ -376,6 +381,7 @@ export class Game {
     const C = CONFIG.classes, c = C.list[id];
     if (!this.specDue() || !c || !C.spec[this.mainClass].includes(id) || !classOffers(this).some((o) => o.id === id)) return false;
     this.specDone = true;
+    track('spec', { id, from: this.mainClass });
     if (id === this.mainClass) { this.save(); return true; }
     const old = C.list[this.mainClass], P = this.player;
     this.mainClass = id;
@@ -398,6 +404,7 @@ export class Game {
     const c = CONFIG.classes.list[id];
     if (!c || !c.ready || !this.classDue()) return false;
     this.mainClass = id;
+    track('class', { id });
     setLootClass(id);
     document.documentElement.dataset.cls = id;
     this.player.model.setClass(this.mech); // a hat, a hood, pauldrons ...
@@ -476,6 +483,7 @@ export class Game {
     this.rankIndex = r;
     P.points += pts;
     this.hud.banner(t('toast.rankUp', { rank: RANKS[r] }), t('toast.rankUpSub', { n: pts }));
+    track('rank_up', { rank: RANKS[r], pt: Math.round(this.playTime) });
     this.effects.ring(P.x, P.z, 0.5, 8, 0xffd24a, 0.8);
     // a new pick of the Path: the window opens (in the arena of the trial it waits for the Leave button)
     if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
@@ -506,6 +514,8 @@ export class Game {
   // Leaves the world: stops the loop and frees everything it created.
   destroy() {
     this.running = false;
+    track('world_end', { sec: Math.round(this.playTime) });
+    setTrackCtx(null);
     this.coop.quit();
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('orientationchange', this.resize);
@@ -554,7 +564,7 @@ export class Game {
       if (this.fpsT >= measureEvery()) {
         // one stall (shader compile, a piece of the world loading) says nothing about the frame rate
         const stall = this.fpsMax > 0.1 && this.fpsMax > (6 * this.fpsT) / this.fpsN;
-        if (!stall) reportFps(this.fpsN / this.fpsT);
+        if (!stall) { reportFps(this.fpsN / this.fpsT); if (this.playTime - (this.perfT || 0) > 240) { this.perfT = this.playTime; track('perf', { fps: Math.round(this.fpsN / this.fpsT), gfx: gfx.level, scale: gfx.renderScale }); } }
         this.fpsT = this.fpsN = this.fpsMax = 0;
       }
     }
@@ -576,6 +586,8 @@ export class Game {
   update(dt) {
     const P = this.player;
     this.playTime += dt;
+    // a snapshot of how the hunter plays every five minutes: the curve of a world over time
+    if (this.playTime - this.progT >= 300) { this.progT = this.playTime; track('progress', { ...this.profile.serialize(), items: P.inventory.length, ess: Math.round(P.essence) }); }
     usageTick(dt);
     const pf = this.profile;
     pf.time += dt;

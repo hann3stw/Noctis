@@ -17,6 +17,8 @@ export const settings = {
   keys: {}, // PC: action -> key code, only what differs from the defaults (core/keys.js)
   layout: null, // where the buttons on the right are and how big (core/hudLayout.js); null = the default
   showFps: false,
+  analytics: true, // anonymous play data (core/track.js); Settings > Share play data
+  devDevice: false, // marks the events of the developer's own devices (hidden list in Settings)
   lastSlot: -1, // slot of the world played last ("Continue")
   hunterName: '', // name on the Abyss leaderboard
   cloudSave: true, // copy of every save slot online

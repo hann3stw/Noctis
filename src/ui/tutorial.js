@@ -5,6 +5,7 @@
 // Only the basics are taught here; gates, outposts, zones, gear and stats are
 // explained by tips (ui/tips.js) the moment the player first meets them.
 import { t } from '../strings.js';
+import { track } from '../core/track.js';
 import { input } from '../input/input.js';
 import { rollLoot } from '../core/items.js';
 import { play } from '../core/sfx.js';
@@ -70,6 +71,7 @@ export class Tutorial {
     // steps about the army are left out for a hunter without one
     while (STEPS[this.step].need && !STEPS[this.step].need(this.game) && this.step < STEPS.length - 1) this.step++;
     const s = STEPS[this.step], g = this.game, P = g.player;
+    track('tut_step', { id: s.id });
     this.c = this.snapshot();
     this.doneT = 0;
     this.el.classList.remove('ok');
@@ -103,6 +105,7 @@ export class Tutorial {
   finish() {
     if (this.finished) return;
     this.finished = true;
+    track('tut_end', { step: STEPS[this.step] ? STEPS[this.step].id : '', skipped: this.step < STEPS.length - 1 ? 1 : 0 });
     this.highlight(null);
     this.el.remove();
     this.game.tutorial = null;

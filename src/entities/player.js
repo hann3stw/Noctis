@@ -1,6 +1,7 @@
 // The player: movement, dodge, attack charges, skills, health, mana, levels,
 // stat points, equipment and inventory.
 import { CONFIG } from '../config.js';
+import { track } from '../core/track.js';
 import { DODGE_CD_PER_LEVEL } from '../core/mastery.js';
 import { playerPower, playerHpPower, enemyPower, rankOf, hunterXpNeed } from '../core/levels.js';
 import { fmt } from '../core/format.js';
@@ -628,6 +629,7 @@ export class Player {
     if (this.hp <= 0) {
       this.hp = 0;
       this.dead = true;
+      track('death', { gate: this.game.gates.active >= 0 ? 1 : 0, abyss: this.game.abyss.on ? 1 : 0 });
       this.rage = 0;
       this.arcane = 0;
       this.surgeT = 0;

@@ -307,7 +307,8 @@ export class Screens {
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'hudEdit': app.hudEditor.open(); break;
       // developer: five taps on the heading show the button-use list
-      case 'devTap': this.devTaps = (this.devTaps || 0) + 1; if (this.devTaps >= 5) { this.devTaps = 0; this.devUsage = !this.devUsage; this.showUsage = false; this.render(); } break;
+      case 'devTap': this.devTaps = (this.devTaps || 0) + 1; if (this.devTaps >= 5) { this.devTaps = 0; this.devUsage = !this.devUsage; this.showUsage = false; setSetting('devDevice', this.devUsage); this.render(); } break;
+      case 'analytics': setSetting('analytics', !settings.analytics); this.render(); break;
       case 'usage': this.showUsage = !this.showUsage; this.render(); break;
       case 'usageReset': usageReset(); this.render(); break;
       // PC keys: a click waits for the next key press
@@ -699,6 +700,7 @@ export class Screens {
         ${this.showUsage ? this.usageRow() : ''}
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.vibrate')}</b><small>${t('set.vibrateHint')}</small></div><div class="segs">${toggle('vibrate', settings.vibrate)}</div></div>
+        <div class="set-row"><div><b>${t('set.analytics')}</b><small>${t('set.analyticsHint')}</small></div><div class="segs">${toggle('analytics', settings.analytics)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>
         <div class="set-row"><div><b>${t('set.online')}</b><small>${t('set.onlineHint')}</small></div>
           <div class="segs"><button class="seg wide" data-act="online">${t('set.onlineOpen')}</button></div></div>

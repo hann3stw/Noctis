@@ -5,6 +5,7 @@
 // - pairing: a device joins the account of another one (5-character code,
 //   valid 10 minutes) and shares its worlds, hunter name and leaderboard
 //   entry until it disconnects
+// - play data: batches of anonymous events (core/track.js) go to the table `events` (insert only)
 // Everything fails quietly: without internet the game simply plays offline.
 // The publishable key below is meant to be public; the database rules
 // (row level security) decide what it may do.
@@ -101,6 +102,29 @@ async function rest(path, { method = 'GET', body, prefer, auth = true } = {}) {
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
   if (!r.ok) throw Object.assign(new Error((data && data.message) || 'request failed'), { status: r.status });
   return { data, range: r.headers.get('content-range') };
+}
+
+// ---- play data (core/track.js) ------------------------------------------------------
+// the access token while it is still valid, without waiting for anything (for a send while the app closes)
+export function cachedToken() {
+  return session && session.exp - 30 > Date.now() / 1000 ? session.access : null;
+}
+
+// rows = [{ cid, cts, sid, name, props, ctx }]; quick = fetch that may outlive the page
+export async function sendEvents(rows, quick) {
+  const body = rows.map((r) => ({ cid: r.cid, cts: r.cts, sid: r.sid, name: r.name, props: r.props, ctx: r.ctx }));
+  if (quick) {
+    const tok = cachedToken();
+    if (!tok) return false;
+    const r = await fetch(URL_BASE + '/rest/v1/events', {
+      method: 'POST', keepalive: true,
+      headers: { apikey: KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(body),
+    });
+    return r.ok;
+  }
+  await rest('events', { method: 'POST', body, prefer: 'return=minimal' });
+  return true;
 }
 
 // ---- hunter name ---------------------------------------------------------------------
