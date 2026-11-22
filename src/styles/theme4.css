@@ -374,7 +374,7 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 .mp-dodge b { display: block; font-family: var(--font-display); font-weight: 400; color: var(--brass); }
 .mp-dodge small { color: var(--parch); }
 /* Spell Forge */
-.forge { display: grid; grid-template-columns: 0.8fr 1.6fr 1fr; gap: calc(var(--u) * 1.6); height: 100%; min-height: 0; }
+.forge { display: grid; grid-template-columns: 1.1fr 1.6fr 1fr; gap: calc(var(--u) * 1.6); height: 100%; min-height: 0; }
 .forge > div { min-height: 0; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: calc(var(--u) * 0.8); }
 .forge h4 { margin: calc(var(--u) * 0.6) 0 0; font-family: var(--font-display); font-weight: 400; color: var(--brass); text-shadow: 0 1px 0 var(--ink); }
 .fg-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 24), 1fr)); gap: calc(var(--u) * 0.8); }
@@ -383,11 +383,16 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 .fg-chip small { color: var(--parch); opacity: 0.9; font-size: calc(var(--u) * 2); }
 .fg-chip.on { box-shadow: inset 0 0 0 calc(var(--u) * 0.6) var(--brass), 0 calc(var(--u) * 0.5) 0 var(--ink), 0 0 calc(var(--u) * 2.5) rgba(255, 201, 40, 0.4); }
 .fg-chip[disabled] { opacity: 0.45; }
-.fg-mine { display: flex; align-items: center; gap: calc(var(--u) * 1); padding: calc(var(--u) * 0.6); border-radius: calc(var(--u) * 1.2); outline: var(--ol) solid var(--ink); background: rgba(0, 0, 0, 0.25); }
+.fg-mine { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 1); padding: calc(var(--u) * 0.6); border-radius: calc(var(--u) * 1.2); outline: var(--ol) solid var(--ink); background: rgba(0, 0, 0, 0.25); }
 .fg-mine i { width: calc(var(--u) * 5); height: calc(var(--u) * 5); display: block; }
 .fg-mine i svg { width: 100%; height: 100%; }
-.fg-mine b { flex: 1; font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); }
+.fg-mine b { flex: 1 1 calc(var(--u) * 18); font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); }
 .fg-fusing { margin: 0; color: var(--brass); font-family: var(--font-display); }
+/* a pressed button gets bigger: inside a list that scrolls this made a scroll bar appear for a moment. In scrolling
+   lists the press shows by a brighter button instead of a bigger one, and the lists never scroll sideways. */
+[data-scroll], .set-list, .cls-grid, .g-grid, .k-grid, .k-mid, .k-left, .g-left, .s-left, .s-right, .d-rows, .scr-box, .tv-list, .fg-row, .forge > div { overflow-x: hidden; }
+[data-scroll] *:active, .set-list *:active, .cls-grid *:active, .g-grid *:active, .k-grid *:active, .k-mid *:active, .k-left *:active, .g-left *:active, .s-left *:active, .scr-box *:active, .tv-list *:active, .fg-row *:active, .forge > div *:active,
+[data-scroll] .pop, .set-list .pop, .cls-grid .pop, .g-grid .pop, .k-grid .pop, .k-mid .pop, .k-left .pop, .g-left .pop, .s-left .pop, .scr-box .pop, .tv-list .pop, .fg-row .pop, .forge > div .pop { transform: none !important; animation: none !important; filter: brightness(1.18); }
 /* the world map (Travel) */
 .bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
 .bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }
