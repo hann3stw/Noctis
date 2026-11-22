@@ -306,6 +306,8 @@ export class Screens {
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
       case 'hudEdit': app.hudEditor.open(); break;
+      // developer: five taps on the heading show the button-use list
+      case 'devTap': this.devTaps = (this.devTaps || 0) + 1; if (this.devTaps >= 5) { this.devTaps = 0; this.devUsage = !this.devUsage; this.showUsage = false; this.render(); } break;
       case 'usage': this.showUsage = !this.showUsage; this.render(); break;
       case 'usageReset': usageReset(); this.render(); break;
       // PC keys: a click waits for the next key press
@@ -680,7 +682,7 @@ export class Screens {
       ? `<div class="set-row"><div><b>${t('set.difficulty')}</b><small>${t('diff.' + g.difficulty + '.desc')}</small></div>
           <div class="segs">${diffSegs(g.difficulty)}</div></div>`
       : '';
-    return `<div class="scr-page">${this.header(t('title.settings'), 'setBack')}
+    return `<div class="scr-page">${this.header(t('title.settings'), 'setBack').replace('<h2>', '<h2 data-act="devTap">')}
       <div class="set-list" data-scroll="set">${diff}
         <div class="set-row"><div><b>${t('set.graphics')}</b><small>${settings.graphics === 'auto' ? t('set.autoNow', { level: t('set.' + gfx.level), pct: Math.round(gfx.renderScale * 100) }) : t('set.graphicsHint')}</small></div>
           <div class="segs">${seg('gfx', [['auto', t('set.auto')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')], ['ultra', t('set.ultra')]], settings.graphics)}</div></div>
@@ -693,7 +695,7 @@ export class Screens {
         <div class="set-row"><div><b>${t('set.layout')}</b><small>${t('set.layoutHint')}</small></div><div class="segs"><button class="seg wide" data-act="hudEdit">${t('set.layoutEdit')}</button></div></div>
         <div class="set-row"><div><b>${t('set.keys')}</b><small>${t('set.keysHint')}</small></div><div class="segs"><button class="seg wide${this.showKeys ? ' on' : ''}" data-act="keys">${t('set.usageShow')}</button></div></div>
         ${this.showKeys ? this.keysRows() : ''}
-        <div class="set-row"><div><b>${t('set.usage')}</b><small>${t('set.usageHint')}</small></div><div class="segs"><button class="seg wide${this.showUsage ? ' on' : ''}" data-act="usage">${t('set.usageShow')}</button></div></div>
+        ${this.devUsage ? `<div class="set-row"><div><b>${t('set.usage')}</b><small>${t('set.usageHint')}</small></div><div class="segs"><button class="seg wide${this.showUsage ? ' on' : ''}" data-act="usage">${t('set.usageShow')}</button></div></div>` : ''}
         ${this.showUsage ? this.usageRow() : ''}
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.vibrate')}</b><small>${t('set.vibrateHint')}</small></div><div class="segs">${toggle('vibrate', settings.vibrate)}</div></div>
