@@ -271,6 +271,11 @@ export class Menu {
     else if (secs.length > 1) groups.push({ id: 'camp', pages: ['camp', ...secs], label: 'camp', icon: 'camp', badge: news.barracks });
     if (this.game.hasArmy()) groups.push({ id: 'army', pages: ['army'], label: 'army', icon: 'army', badge: '' });
     groups.push({ id: 'quests', pages: ['quests', 'bestiary'], label: 'quests', icon: 'quests', badge: news.quests || news.bestiary });
+    // the pages in the bar are ordered by how often they are needed while playing (the first is the easiest to
+    // reach): gear and stat points at every level-up and drop, the army, skills, camp, the daily quests, and the
+    // Path only once per rank
+    const FREQ = ['hero', 'army', 'skills', 'camp', 'quests', 'path'];
+    groups.sort((a, b) => FREQ.indexOf(a.id) - FREQ.indexOf(b.id));
     const cur = groups.find((gr) => gr.pages.includes(this.tab)) || groups[0];
     if (!this.lastPage) this.lastPage = {};
     this.lastPage[cur.id] = this.tab;

@@ -278,3 +278,47 @@
   filter: none !important;
   text-shadow: 0 calc(var(--u) * 0.9) 0 var(--ink), 0 calc(var(--u) * -0.5) 0 var(--ink), calc(var(--u) * 0.6) 0 0 var(--ink), calc(var(--u) * -0.6) 0 0 var(--ink), 0 0 calc(var(--u) * 4) rgba(255, 176, 48, 0.7);
 }
+
+/* ---------------------- leaderboard, inputs, pages without a frame ---------------------- */
+.board-box, .path, .quests {
+  border: 0;
+  border-radius: calc(var(--u) * 2.2);
+  background:
+    var(--corner-tl) left calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-tr) right calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-bl) left calc(var(--u) * 0.6) bottom calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-br) right calc(var(--u) * 0.6) bottom calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--scratch) 0 0 / calc(var(--u) * 40) auto repeat,
+    var(--glass);
+  box-shadow: var(--frame), 0 calc(var(--u) * 1.2) calc(var(--u) * 3) rgba(0, 0, 0, 0.5);
+}
+.path, .quests { padding: calc(var(--u) * 2.6) calc(var(--u) * 3); }
+input[type='text'], input[type='number'], input:not([type]) {
+  color: var(--parch-hi);
+  font-family: var(--font-display);
+  border: var(--ol) solid var(--ink);
+  border-radius: calc(var(--u) * 1.4);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(40, 22, 10, 0.55));
+  box-shadow: inset 0 calc(var(--u) * 0.5) calc(var(--u) * 0.8) rgba(0, 0, 0, 0.6), 0 0 0 calc(var(--u) * 0.3) rgba(241, 215, 154, 0.35);
+}
+input:focus { outline: none; box-shadow: inset 0 calc(var(--u) * 0.5) calc(var(--u) * 0.8) rgba(0, 0, 0, 0.6), 0 0 0 calc(var(--u) * 0.5) var(--brass); }
+input::placeholder { color: rgba(241, 215, 154, 0.45); }
+
+/* the top bar of the game: the menu is the one used most, so it is the biggest; pause is small */
+#btn-menu { min-height: calc(var(--u) * 9.4 * var(--btn)); padding-left: calc(var(--u) * 3); padding-right: calc(var(--u) * 3); font-size: calc(var(--u) * 3.4); background-image: var(--grain), linear-gradient(180deg, #fff59a 0%, var(--brass) 55%, var(--brass-lo) 100%) !important; color: #4a2300; }
+#btn-menu svg { color: var(--wood-lo) !important; width: calc(var(--u) * 4.6); height: calc(var(--u) * 4.6); }
+#btn-pause { width: calc(var(--u) * 7.6 * var(--btn)); min-height: calc(var(--u) * 7.6 * var(--btn)); }
+#btn-travel { font-size: calc(var(--u) * 2.6); }
+
+.pa-top .pa-head { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: calc(var(--u) * 1.4); justify-items: start; }
+.pa-top .pa-head small { grid-column: 1 / -1; }
+
+#btn-pause svg, .top-right #btn-pause svg { color: var(--wood-lo); filter: none; }
+#btn-travel { color: #fff; text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink); background-image: var(--grain), linear-gradient(180deg, #7fe0a8 0%, #2f9b64 55%, #1b6a42 100%) !important; }
+#btn-travel svg { color: #fff !important; filter: drop-shadow(0 calc(var(--u) * 0.4) 0 var(--ink)); }
+
+/* the world map (Travel) */
+.bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
+.bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }
+.bm-zone, .bm-hint, .bm-legend, .bm-explored { color: var(--parch); }
+.bm-close { color: var(--wood-lo) !important; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55); background-image: var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%) !important; box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.7), inset 0 calc(var(--u) * -0.7) 0 rgba(120, 70, 20, 0.45), 0 calc(var(--u) * 0.8) 0 var(--ink) !important; }
