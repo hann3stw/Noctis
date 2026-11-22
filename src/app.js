@@ -78,6 +78,16 @@ export class App {
     return saveSlot(slot, data);
   }
 
+  // the look of a world, changed in the Worlds screen
+  setLook(slot, look) {
+    const s = this.slots[slot];
+    if (!s) return;
+    s.appearance = { ...look };
+    s.updated = Date.now();
+    if (this.game && this.game.slot === slot) this.game.setAppearance(look);
+    this.store(slot, s);
+  }
+
   async removeSlot(slot) {
     const old = this.slots[slot];
     if (old) await backupSlot(slot, old, true); // can be brought back (Worlds, Backups)

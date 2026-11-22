@@ -1005,6 +1005,7 @@ const STRINGS = {
     'path.r.manaRegenMult': 'Mana regenerates {v}% faster',
     'menu.army': 'Army',
     'menu.camp': 'Camp',
+    'wc.look': 'Look',
     'menu.hero': 'Hero',
     'camp.sum.runes': '{n} runes found',
     'camp.sum.fort': '{n} of {max} outposts fortified',

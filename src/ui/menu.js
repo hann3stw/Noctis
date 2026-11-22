@@ -264,7 +264,7 @@ export class Menu {
     if (this.tab === 'camp' && secs.length === 1) this.tab = secs[0];
     if (this.tab === 'camp' && secs.length === 0) this.tab = 'gear';
     const groups = [
-      { id: 'hero', pages: ['gear', 'stats', 'look'], label: 'hero', icon: 'hero', badge: news.stats || news.gear },
+      { id: 'hero', pages: ['gear', 'stats'], label: 'hero', icon: 'hero', badge: news.stats || news.gear },
       { id: 'skills', pages: ['skills'], label: 'skills', icon: 'skills', badge: news.skills },
       { id: 'path', pages: ['path'], label: 'path', icon: 'path', badge: news.path },
     ];

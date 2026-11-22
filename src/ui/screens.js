@@ -212,6 +212,12 @@ export class Screens {
         else this.show('title');
         break;
       case 'newIn': this.show('editor', { mode: 'new', slot }); break;
+      // the look of a world is changed here, in the Worlds screen, not while playing
+      case 'lookSlot': {
+        const s = app.slots[slot];
+        if (s) this.show('editor', { mode: 'slot', slot, appearance: { ...CONFIG.defaultAppearance, ...(s.appearance || {}) }, equip: (s.player && s.player.equip) || null });
+        break;
+      }
       case 'continue': app.continueLast(); break;
       case 'newWorld': this.show('newSlot'); break;
       case 'loadGame': this.show('load'); break;
@@ -283,6 +289,7 @@ export class Screens {
         break;
       case 'edDone':
         if (this.params.mode === 'camp') app.closeEditorInCamp({ ...this.ed.look });
+        else if (this.params.mode === 'slot') { app.setLook(this.params.slot, { ...this.ed.look }); this.show('load'); }
         else app.startNew(this.params.slot, this.worldName(), { ...this.ed.look }, this.ed.diff, this.ed.tutorial);
         break;
       case 'tutorial': this.ed.tutorial = !this.ed.tutorial; this.render(); break;
@@ -539,7 +546,7 @@ export class Screens {
         <div class="wc-stats">${stat(t('wc.abyss'), best || '–')}${stat(t('wc.shadows'), army)}${stat(t('wc.kills'), fmt(s.kills || 0))}${stat(t('wc.played'), formatPlayTime(s.playTime || 0))}</div>
         ${this.cloudPart(i)}
         <button class="sbtn go" data-act="load" data-slot="${i}">${t('title.continue')}</button>
-        <div class="wc-more"><button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('wc.backup')}</button>${this.bkButton(i)}
+        <div class="wc-more"><button class="sbtn small" data-act="lookSlot" data-slot="${i}">${t('wc.look')}</button><button class="sbtn ghost small" data-act="export" data-slot="${i}">${t('wc.backup')}</button>${this.bkButton(i)}
           <button class="sbtn danger small" data-act="delete" data-slot="${i}">${t('slot.delete')}</button></div>
       </div></div>`;
   }
