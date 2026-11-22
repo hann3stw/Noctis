@@ -205,6 +205,9 @@ export const CONFIG = {
     // perfect gear; early ranks stay quick. Kills give sqrt(this) more XP and
     // shadows deal sqrt(this) more damage, so they keep up.
     enemyHpRank: [1, 1.3, 1.8, 2.6, 3.6, 4.6, 4.4, 5, 4.8, 4.4],
+    // XP for a level x this, per rank E ... M: the early ranks take longer, so the class, the Path and the
+    // first gear have time to matter (the last ranks keep their pace).
+    xpRank: [1, 2, 2, 1.8, 1.5, 1.3, 1.1, 1, 1, 1],
     // The hunter from levels alone: damage x6 and health x8 per rank. Enemies
     // grow x10, so gear, stat points and the army must close the gap.
     playerRank: 6,
@@ -297,7 +300,7 @@ export const CONFIG = {
     luckStep: 0.4,
     // The best rarity a rank can drop is rarer than its weight says, except
     // from gate bosses: you work towards it over the whole rank.
-    topChance: 0.2,
+    topChance: 0.1,
     bossTopChance: 0.7,
     // Rarity counts more than the item level: a rarer item is nearly always
     // better than a more common one from the next zone.
@@ -414,10 +417,10 @@ export const CONFIG = {
   },
 
   loot: {
-    dropChance: [0.05, 1, 1, 1], // normal enemy, elite, champion, boss
+    dropChance: [0.035, 0.6, 1, 1], // normal enemy, elite, champion, boss
     weights: { weapon: 30, armor: 50, skill: 20 },
     pickupRange: 1.8,
-    chest: { items: [1, 2], respawn: 180, openRange: 2.4 }, // count per zone: see zones
+    chest: { items: [1, 2], respawn: 240, openRange: 2.4 }, // count per zone: see zones
   },
 
   // ---- skills ---------------------------------------------------------------
@@ -464,8 +467,8 @@ export const CONFIG = {
     // Cleric (faith = Faith it gives; healSelf = share of your health healed; a skill with ticks and healSelf heals over duration)
     smite: { for: ['cleric'], mana: 12, cooldown: 3.5, aim: 'point', range: 11, radius: 3, power: 2.6, healSelf: 0.02 },
     holyNova: { for: ['cleric'], mana: 22, cooldown: 9, aim: 'self', radius: 6, power: 1.8, healSelf: 0.06 },
-    consecration: { for: ['cleric'], mana: 26, cooldown: 12, aim: 'self', radius: 5, power: 0.7, ticks: 6, interval: 0.8, healSelf: 0.14, duration: 5, faith: 10 },
-    mend: { for: ['cleric'], mana: 25, cooldown: 12, aim: 'self', radius: 3, healSelf: 0.25, faith: 12 },
+    consecration: { for: ['cleric'], mana: 26, cooldown: 12, aim: 'self', radius: 5, power: 0.7, ticks: 6, interval: 0.8, healSelf: 0.1, duration: 5, faith: 10 },
+    mend: { for: ['cleric'], mana: 25, cooldown: 12, aim: 'self', radius: 3, healSelf: 0.2, faith: 12 },
     divineShield: { for: ['cleric'], mana: 24, cooldown: 15, aim: 'self', radius: 2, shield: 0.4, guard: 0.2, duration: 6 },
     judgement: { for: ['cleric'], mana: 30, cooldown: 11, aim: 'point', range: 11, radius: 3.5, power: 4.2, stun: 0.8 },
     // Rogue (combo = Combo Points it gives; finisher = spends all Combo Points for more damage)
@@ -683,7 +686,7 @@ export const CONFIG = {
   // Warrior: Rage grows with every hit you deal (rageHit) and take (rageHurt + the share of your health
   // times rageHurtScale), and fades after calm seconds without a fight (decay per second). Every point
   // gives damage and less damage taken.
-  warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.004, reduction: 0.0015 },
+  warrior: { rageMax: 100, rageHit: 2, rageHurt: 3, rageHurtScale: 60, decay: 6, calm: 4, damage: 0.005, reduction: 0.0015 },
 
   // Mage: every skill you cast gives an Arcane Charge (up to arcaneMax); each adds arcaneDamage
   // to your skill damage. All charges are lost after arcaneTime seconds without a cast.
@@ -712,12 +715,12 @@ export const CONFIG = {
   classes: {
     choiceRank: 1,
     list: {
-      necromancer: { role: 'summoner', ready: true, army: true, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
-      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
+      necromancer: { role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
+      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
       mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
-      ranger: { role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.12 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
-      cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.15, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
+      ranger: { role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
+      cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
     },
   },
 
@@ -754,7 +757,7 @@ export const CONFIG = {
         unlocks: [{ id: 'duelArena', stage: 3 }],
       },
       commander: {
-        bonus: { armySlots: 1.5, armyHp: 0.08, armyDamage: 0.05 },
+        bonus: { armySlots: 1.1, armyHp: 0.08, armyDamage: 0.04 },
         rule: { slotCapPlus: 1.5, armyKillXp: 0.15, reviveCostMult: -0.03 },
         like: { army: 0.6, hunter: -0.25, officers: 0.15 },
         skill: { id: 'rally', value: [0.15, 0.25, 0.4], time: [5, 7, 9], cooldown: 8 }, // value = army damage after an elite or boss kill

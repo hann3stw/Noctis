@@ -5,7 +5,7 @@ import { playerPower, playerHpPower, enemyPower, rankHp, itemLevelPower, hunterX
 
 const L = CONFIG.levels, I = CONFIG.items, G = CONFIG.progression;
 const RANKS = L.rankNames;
-const KILLS_PER_H = 750, ITEMS_PER_H = 330; // from the saves
+const KILLS_PER_H = 750, ITEMS_PER_H = 250; // kills from the saves; items: 330 in the saves, about a quarter fewer since elites drop 75 % and normal enemies 4 %
 const mid = (r) => Math.round((L.rankLevels[r] + (L.rankLevels[r + 1] || L.maxLevel + 1) - 1) / 2);
 const pad = (s, n) => String(s).padStart(n);
 const f1 = (x) => (Math.round(x * 10) / 10).toString();
@@ -126,8 +126,9 @@ for (let r = 0; r < 10; r++) {
   }
 }
 
-// ---- D: the classes against each other -----------------------------------------------------------
-const P = CONFIG.paths, RM = P.rarityMult[2];
+// ---- D: the classes against each other (every number comes from the config) --------------------------
+const P = CONFIG.paths, RM = P.rarityMult[2]; // a Rare class
+const CL = CONFIG.classes.list, Mo = CONFIG.shadows.monarch;
 function pathTotals(core, picks) {
   const t = {};
   for (let st = 1; st <= picks; st++) {
@@ -137,48 +138,69 @@ function pathTotals(core, picks) {
   }
   return t;
 }
-const Mo = CONFIG.shadows.monarch;
 function armyDps(h, level, rho, up, t) {
   const slots = Math.min(CONFIG.shadows.maxSlots + 30, CONFIG.shadows.baseSlots + h.st.int * G.stats.int.slots + Math.round(t.armySlots || 0));
   const fac = itemLevelPower(level) * I.rarityStat[rho] * (1 + I.upgradeBonus * up);
   const dmgMult = playerPower(level) * (1 + G.stats.str.damage * h.st.str) * 1.15;
   const mp = CONFIG.skillBase * fac * dmgMult;
   const unit = mp * Mo.share * (1 + Mo.levelBonus * Math.min(40, level / 3)) * Math.sqrt(rankHp(level)) * (1 + (t.armyDamage || 0)) / 1.5;
-  return { dps: unit * slots, slots };
+  return unit * slots;
 }
-function profile(name, level, rho, cfg) {
-  const up = 5, b = {};
+// average effect of the class mechanic while fighting (about 60 % Rage / Faith, 3.5 Arcane Charges, 3 Combo Points, enemies at 70 % of the range)
+function mech(cls, h) {
+  const m = { dps: 1, skill: 1, taken: 1, heal: 0, pet: 0, crit: 0, rate: 1 };
+  if (cls === 'warrior') { const r = 60; m.dps = 1 + r * CONFIG.warrior.damage; m.taken = 1 - r * CONFIG.warrior.reduction; m.rate = 1.2; }
+  if (cls === 'mage') { m.skill = 1 + 3.5 * CONFIG.mage.arcaneDamage; m.rate = 2; }
+  if (cls === 'rogue') { m.crit = 3 * CONFIG.rogue.critPerPoint; m.dps = 1 + 0.4 * CONFIG.rogue.finisher * 3; m.rate = 1.2; }
+  if (cls === 'ranger') { m.dps = 1 + CONFIG.ranger.rangeBonus * 0.7; m.pet = 0.15; m.rate = 1.2; }
+  if (cls === 'cleric') {
+    const C = CONFIG.cleric, S = CONFIG.skills;
+    m.dps = 1 + 60 * C.damage; m.rate = 1.3;
+    m.heal = 60 * C.hitHeal / C.healGap * 0.6 + S.mend.healSelf / S.mend.cooldown + S.consecration.healSelf / S.consecration.cooldown; // faith heals about 60 % of the time; Mend and Consecration on their cooldowns
+  }
+  return m;
+}
+function profile(label, level, rho, cfg) {
+  const up = 5, cls = cfg.cls, cb = cls ? CL[cls].bonus || {} : {};
   const t = cfg.core ? pathTotals(cfg.core, rankOf(level)) : {};
-  for (const k of ['damage', 'hp', 'crit', 'reload', 'skillDamage', 'damageTaken']) b[k] = (t[k] || 0) + ((cfg.bonus && cfg.bonus[k]) || 0);
+  for (const k of ['armyDamage', 'armySlots']) t[k] = (t[k] || 0) + (cb[k] || 0);
+  const b = {};
+  for (const k of ['damage', 'hp', 'crit', 'reload', 'skillDamage', 'damageTaken']) b[k] = (t[k] || 0) + (cb[k] || 0);
+  const m = mech(cls, null);
+  b.crit += m.crit;
+  b.skillDamage = (1 + b.skillDamage) * m.skill - 1;
   const h = hunter(level, rho, up, b), e = enemy(level);
-  let dps = h.dps * (cfg.dpsMul || 1);
-  const taken = h.taken * (cfg.takenMul || 1);
-  let slots = 0;
-  if (cfg.army) { const a = armyDps(h, level, rho, up, t); dps += a.dps; slots = a.slots; }
-  if (cfg.pet) dps += 0.15 * h.dps;
+  // skills: how many of them are cast, and a faster cooldown casts more
+  const cdBoost = 1 + (cb.cooldown || 0) + (t.cooldown || 0);
+  let dps = h.dps * m.dps;
+  dps += 0.8 * (m.rate * cdBoost - 1) * (CONFIG.skillBase * itemLevelPower(level) * I.rarityStat[rho] * 1.5 * playerPower(level)) * 0.4 * 0 + 0; // (skills are inside h.dps already)
+  if (m.rate !== 1 || cdBoost !== 1) dps *= 1 + 0.45 * (m.rate * cdBoost - 1); // skills are about 45 % of the damage
+  if (cfg.army) dps += armyDps(h, level, rho, up, t);
+  if (m.pet) dps += m.pet * h.dps;
+  const taken = h.taken * m.taken;
   const inDps = (4 * e.dmgHit) / e.cd * taken;
-  let net = inDps - (cfg.healPerSec ? cfg.healPerSec * h.maxHp : 0);
-  net = Math.max(net, inDps * 0.2);
-  return { name, dps, ttd: h.maxHp / net, ttk: e.hp / dps, bossTtk: e.bossHp / dps, slots };
+  const net = Math.max(inDps - m.heal * h.maxHp, inDps * 0.5); // healing never makes you more than twice as sturdy
+  const surv = h.maxHp / net;
+  return { label, dps, surv, boss: e.bossHp / dps };
 }
 const CLASSES = [
   ['Neutral (no class, no path)', {}],
-  ['Necromancer (Commander core)', { core: 'commander', army: true }],
-  ['Necromancer (Blade core)', { core: 'blade', army: true }],
-  ['Warrior (Tank core)', { core: 'tank', bonus: { damage: 0.15 }, dpsMul: 1.24, takenMul: 0.91 }],
-  ['Mage (Mage core)', { core: 'mage', bonus: { skillDamage: 0.5, cooldown: 0.15 }, dpsMul: 1.15 }],
-  ['Rogue (Blade core)', { core: 'blade', bonus: { crit: 0.22, damage: 0.1 }, dpsMul: 1.15 }],
-  ['Ranger (Slayer core)', { core: 'slayer', bonus: { crit: 0.06, damage: 0.12 }, dpsMul: 1.245, pet: true }],
-  ['Cleric (Tank core)', { core: 'tank', bonus: { hp: 0.15, skillDamage: 0.1 }, dpsMul: 1.12, healPerSec: 0.011 }],
+  ['Necromancer (Commander core)', { cls: 'necromancer', core: 'commander', army: true }],
+  ['Necromancer (Blade core)', { cls: 'necromancer', core: 'blade', army: true }],
+  ['Warrior (Tank core)', { cls: 'warrior', core: 'tank' }],
+  ['Mage (Mage core)', { cls: 'mage', core: 'mage' }],
+  ['Rogue (Blade core)', { cls: 'rogue', core: 'blade' }],
+  ['Ranger (Slayer core)', { cls: 'ranger', core: 'slayer' }],
+  ['Cleric (Tank core)', { cls: 'cleric', core: 'tank' }],
 ];
 log();
-log('D) Classes against each other (same gear; relative to Neutral = 1.00; bigger survival = lives longer)');
-for (const [lv, rho, label] of [[mid(3), 4, 'Rank B (3 picks)'], [mid(5), 5, 'Rank S (5 picks)'], [mid(8), 7, 'Rank L (8 picks)']]) {
-  log(label + ':                             DPS x   survival x   boss kill (s)   army slots');
+log('D) Classes against each other, same gear, relative to Neutral. power = damage x sqrt(survival); the aim is about the same power for every class');
+for (const [lv, rho, label] of [[mid(1), 3, 'Rank D (1 pick)'], [mid(3), 4, 'Rank B (3 picks)'], [mid(5), 5, 'Rank S (5 picks)'], [mid(8), 7, 'Rank L (8 picks)']]) {
+  log(label + ':'.padEnd(26) + 'damage x  survival x   power   boss kill (s)');
   const base = profile('Neutral', lv, rho, {});
   for (const [name, cfg] of CLASSES) {
-    const p = profile(name, lv, rho, cfg);
-    log('  ' + name.padEnd(32) + pad(f1(p.dps / base.dps * 100) / 100, 6) + pad(f1(p.ttd / base.ttd * 100) / 100, 12) + pad(f1(p.bossTtk), 14) + pad(p.slots || '-', 14));
+    const p = profile(name, lv, rho, cfg), d = p.dps / base.dps, sv = p.surv / base.surv;
+    log('  ' + name.padEnd(30) + pad(d.toFixed(2), 8) + pad(sv.toFixed(2), 12) + pad((d * Math.sqrt(sv)).toFixed(2), 9) + pad(f1(p.boss), 10));
   }
 }
-console.log(out.join('\n'));
+console.log(out.join(String.fromCharCode(10)));
