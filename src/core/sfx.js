@@ -305,6 +305,12 @@ function crit(w) {
   tone('sine', 2637, 2600, 0.24, 0.045, 0.02, 0.6);
 }
 
+// the new weapons sound like their relatives
+ATTACK.crossbow = ATTACK.bow; HIT.crossbow = HIT.bow;
+ATTACK.javelin = ATTACK.spear; HIT.javelin = HIT.spear;
+ATTACK.wand = ATTACK.staff; HIT.wand = HIT.grimoire;
+ATTACK.orb = ATTACK.scythe; HIT.orb = HIT.staff;
+
 const SOUNDS = {
   swing: (w) => (ATTACK[w] || ATTACK.sword)(),
   hit: (w) => (HIT[w] || HIT.sword)(),

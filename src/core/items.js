@@ -103,8 +103,11 @@ export function uniqueDef(id) {
 
 // the main class the skills that drop are for (set by the game)
 let lootClass = '';
+let lootWeapons = ''; // melee | ranged | magic: the weapons the main class gets most of
 export function setLootClass(c) {
   lootClass = c || '';
+  const cl = CONFIG.classes.list[lootClass];
+  lootWeapons = (cl && cl.weapons) || '';
 }
 
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
@@ -119,7 +122,11 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, to
     if (open.length) return { kind: 'skill', type: pick(open), rarity: 3 };
   }
   const rarity = rollRarity(luck, minRarity, level, topChance);
-  if (kind === 0) return makeWeapon(pick(Object.keys(CONFIG.weapons)), rarity, level);
+  if (kind === 0) {
+    const all = Object.keys(CONFIG.weapons);
+    const mine = lootWeapons ? all.filter((w) => CONFIG.weapons[w].group === lootWeapons) : all;
+    return makeWeapon(pick(mine.length && Math.random() < CONFIG.classes.weaponPick ? mine : all), rarity, level);
+  }
   return makeArmor(pick(ARMOR_SLOTS), pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), rarity, level);
 }
 

@@ -13,7 +13,7 @@ import { play } from '../core/sfx.js';
 
 const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false, rate: 1 };
 // how fast the attack animation plays per weapon (1 / seconds)
-const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4, spear: 5, hammer: 2.8, grimoire: 4 };
+const SWING_RATE = { daggers: 8, sword: 4.5, bow: 4, scythe: 3.4, staff: 3.4, spear: 5, hammer: 2.8, grimoire: 4, crossbow: 3.2, javelin: 4.5, wand: 6, orb: 4 };
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'per'];
 
 export class Player {

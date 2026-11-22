@@ -102,6 +102,8 @@ export class Game {
     // shadows, is a Necromancer; a younger one chooses at rank D
     this.mainClass = save ? (CONFIG.classes.list[save.mainClass] ? save.mainClass : save.mainClass === '' ? '' // saved as "not chosen yet": stays open
       : (save.rankIndex || 0) >= CONFIG.classes.choiceRank || (save.army && save.army.units && save.army.units.length) || (save.profile && save.profile.raised > 0) ? 'necromancer' : '') : '';
+    // the second choice (rank C: the class or its sibling). Older worlds: only worlds below rank C still get it
+    this.specDone = save ? (typeof save.specDone === 'boolean' ? save.specDone : (save.rankIndex || 0) >= CONFIG.classes.specRank) : false;
     this.xpBoostT = save ? Math.max(0, save.xpBoostT || 0) : 0; // seconds of Double XP left
     this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
@@ -281,6 +283,7 @@ export class Game {
       tips: this.tips.serialize(),
       quests: this.quests.serialize(),
       mainClass: this.mainClass,
+      specDone: this.specDone,
       barracks: this.barracks.serialize(),
       duel: this.duel.serialize(),
       fort: this.fort.serialize(),
@@ -346,6 +349,35 @@ export class Game {
   // the rank for the choice of the main class is reached
   classDue() {
     return !this.mainClass && this.rankIndex >= CONFIG.classes.choiceRank;
+  }
+
+  // the second choice: at rank C the class can become its sibling (Warrior or Rogue, Mage or Cleric)
+  specDue() {
+    const C = CONFIG.classes;
+    return !!this.mainClass && !this.specDone && this.rankIndex >= C.specRank && !!C.spec[this.mainClass];
+  }
+
+  // switch to another class of the same group (the skills of the old class that do not fit are put away)
+  changeClass(id) {
+    const C = CONFIG.classes, c = C.list[id];
+    if (!this.specDue() || !c || !C.spec[this.mainClass].includes(id)) return false;
+    this.specDone = true;
+    if (id === this.mainClass) { this.save(); return true; }
+    const old = C.list[this.mainClass], P = this.player;
+    this.mainClass = id;
+    setLootClass(id);
+    document.documentElement.dataset.cls = id;
+    P.model.setClass(id);
+    P.known = P.known.filter((s) => skillOk(s, id));
+    P.slots = P.slots.map((s) => (s && P.known.includes(s) ? s : null));
+    for (const s of c.startSkills || []) { P.learn(s); if (!P.newSkills.includes(s)) P.newSkills.push(s); }
+    if (c.startUltimate) { P.learn(c.startUltimate); if (!P.slots[2] || P.slots[2] === (old && old.startUltimate)) P.slots[2] = c.startUltimate; if (!P.newSkills.includes(c.startUltimate)) P.newSkills.push(c.startUltimate); }
+    P.recalc();
+    this.quests.fixArise();
+    this.hud.banner(t('mc.chosen'), t('mc.' + id));
+    play('levelup');
+    this.save();
+    return true;
   }
 
   chooseClass(id) {
@@ -538,6 +570,7 @@ export class Game {
     else if (this.player.inCamp) pf.timeCamp += dt;
     if (this.player.sprint) pf.sprintTime += dt;
     if (this.classDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open(); // the choice of the main class
+    if (this.specDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open('spec'); // the second choice
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;

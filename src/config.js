@@ -266,15 +266,22 @@ export const CONFIG = {
   //   staff     ranged area blast after a short delay
   //   grimoire  bolt that finds its target and jumps to enemies nearby
   weapons: {
-    daggers: { shape: 'arc', damage: 10, range: 3.2, arcDeg: 80, cooldown: 0.12, reload: 0.6 },
-    sword: { shape: 'arc', damage: 22, range: 4.6, arcDeg: 110, cooldown: 0.3, reload: 1.3 },
-    spear: { shape: 'thrust', damage: 23, range: 7.5, width: 1.5, cooldown: 0.3, reload: 1.25 },
-    hammer: { shape: 'slam', damage: 38, range: 3, radius: 3.3, stun: 0.5, cooldown: 0.55, reload: 2.2 },
-    scythe: { shape: 'circle', damage: 19, range: 4.4, cooldown: 0.4, reload: 1.5 },
-    bow: { shape: 'line', damage: 31, range: 17, width: 0.7, speed: 40, cooldown: 0.35, reload: 1.5 },
-    staff: { shape: 'blast', damage: 26, range: 11, radius: 3, delay: 0.35, cooldown: 0.4, reload: 1.7 },
+    // group: melee / ranged / magic: the main class gets mostly the weapons of its group (items.js)
+    daggers: { group: 'melee', shape: 'arc', damage: 10, range: 3.2, arcDeg: 80, cooldown: 0.12, reload: 0.6 },
+    sword: { group: 'melee', shape: 'arc', damage: 22, range: 4.6, arcDeg: 110, cooldown: 0.3, reload: 1.3 },
+    spear: { group: 'melee', shape: 'thrust', damage: 23, range: 7.5, width: 1.5, cooldown: 0.3, reload: 1.25 },
+    hammer: { group: 'melee', shape: 'slam', damage: 38, range: 3, radius: 3.3, stun: 0.5, cooldown: 0.55, reload: 2.2 },
+    scythe: { group: 'melee', shape: 'circle', damage: 19, range: 4.4, cooldown: 0.4, reload: 1.5 },
+    bow: { group: 'ranged', shape: 'line', damage: 31, range: 17, width: 0.7, speed: 40, cooldown: 0.35, reload: 1.5 },
+    // crossbow: the hardest and slowest shot, the longest range; javelin: thrown, short range, quick
+    crossbow: { group: 'ranged', shape: 'line', damage: 46, range: 19, width: 0.6, speed: 46, cooldown: 0.5, reload: 2.2 },
+    javelin: { group: 'ranged', shape: 'line', damage: 24, range: 12, width: 1.1, speed: 30, cooldown: 0.3, reload: 1.15 },
+    staff: { group: 'magic', shape: 'blast', damage: 26, range: 11, radius: 3, delay: 0.35, cooldown: 0.4, reload: 1.7 },
     // jumps: how often the bolt jumps on, each time with jumpDamage of the hit before
-    grimoire: { shape: 'chain', damage: 19, range: 12, coneDeg: 50, jumps: 3, jumpRange: 6.5, jumpDamage: 0.7, cooldown: 0.35, reload: 1.3 },
+    // wand: quick bolts; orb: a pulse of power around you
+    wand: { group: 'magic', shape: 'line', damage: 12, range: 13, width: 0.6, speed: 50, cooldown: 0.18, reload: 0.7 },
+    orb: { group: 'magic', shape: 'circle', damage: 18, range: 5, cooldown: 0.35, reload: 1.2 },
+    grimoire: { group: 'magic', shape: 'chain', damage: 19, range: 12, coneDeg: 50, jumps: 3, jumpRange: 6.5, jumpDamage: 0.7, cooldown: 0.35, reload: 1.3 },
   },
 
   // ---- items ----------------------------------------------------------------
@@ -717,13 +724,24 @@ export const CONFIG = {
   // others are shown as coming soon); cores = the Path cores its classes get.
   classes: {
     choiceRank: 1,
+    // The first choice (rank D) is one of four groups; the group brings its first class and mostly the weapons of
+    // its kind. At rank specRank the class can turn into its sibling (spec). Later: by the way you play (core/style.js).
+    groups: {
+      fighter: { class: 'warrior' },
+      ranged: { class: 'ranger' },
+      mage: { class: 'mage' },
+      necromancer: { class: 'necromancer' },
+    },
+    specRank: 2,
+    spec: { warrior: ['warrior', 'rogue'], mage: ['mage', 'cleric'] },
+    weaponPick: 0.7, // chance that a weapon drop is of the weapons of the class group
     list: {
-      necromancer: { role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
-      warrior: { role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
-      mage: { role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
-      rogue: { role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
-      ranger: { role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
-      cleric: { role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
+      necromancer: { group: 'necromancer', weapons: '', role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
+      warrior: { group: 'fighter', weapons: 'melee', role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
+      mage: { group: 'mage', weapons: 'magic', role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
+      rogue: { group: 'fighter', weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
+      ranger: { group: 'ranged', weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
+      cleric: { group: 'mage', weapons: 'magic', role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
     },
   },
 

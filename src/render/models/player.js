@@ -297,6 +297,34 @@ function buildWeapon(type, glow) {
     g.add(mesh(0.4, 0.02, 0.04, glowMat, 0, 0.08, -0.08));
     g.position.set(0, 0.12, 0.12);
     g.rotation.x = -Math.PI / 2; // lies open on the hand
+  } else if (type === 'crossbow') {
+    // a stock with a short bow across it, held like the bow
+    g.add(mesh(0.1, 0.9, 0.14, mat(WOOD), 0, 0, 0.05));
+    g.add(mesh(0.8, 0.07, 0.07, mat(STEEL), 0, 0.42, 0.08));
+    g.add(mesh(0.8, 0.02, 0.02, glowMat, 0, 0.32, 0.05));
+    g.add(mesh(0.04, 0.5, 0.04, glowMat, 0, 0.2, 0.12));
+    g.rotation.x = -Math.PI / 2;
+  } else if (type === 'javelin') {
+    // a short thrown spear
+    g.add(mesh(0.06, 1.5, 0.06, mat(WOOD), 0, 0.4, 0));
+    cone(g, mat(STEEL), 0.1, 0.45, 0, 1.4, 0, 0, 0, 4);
+    g.add(mesh(0.08, 0.1, 0.08, glowMat, 0, 1.12, 0));
+  } else if (type === 'wand') {
+    g.add(mesh(0.06, 0.7, 0.06, mat(WOOD), 0, 0.3, 0));
+    const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), glowMat);
+    tip.position.set(0, 0.78, 0);
+    g.add(tip);
+    g.add(mesh(0.1, 0.05, 0.1, mat(DARK), 0, 0.62, 0));
+  } else if (type === 'orb') {
+    // a glowing sphere that floats above the hand in a cage of rings
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 0), glowMat);
+    ball.position.set(0, 0.5, 0);
+    g.add(ball);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 6, 20), mat(DARK));
+    ring.position.set(0, 0.5, 0);
+    ring.rotation.x = Math.PI / 2 - 0.4;
+    g.add(ring);
+    g.add(mesh(0.1, 0.3, 0.1, mat(DARK), 0, 0.1, 0));
   } else {
     // staff
     g.add(mesh(0.09, 1.9, 0.09, mat(WOOD), 0, 0.6, 0));
@@ -926,7 +954,9 @@ export function createPlayerModel(appearance, cls = '') {
   const ease = (t) => 1 - Math.pow(1 - t, 3);
 
   // p: 0 -> 1 through the attack
+  const POSE = { crossbow: 'bow', javelin: 'spear', wand: 'grimoire', orb: 'grimoire' }; // the new weapons move like their relatives
   function attackPose(weapon, p, combo) {
+    weapon = POSE[weapon] || weapon;
     const side = combo ? -1 : 1;
     if (weapon === 'daggers') {
       // quick stab, left and right hand in turn

@@ -22,10 +22,11 @@ export class ClassPanel {
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
 
-  open() {
+  // mode: 'group' = the first choice (fighter, ranged, mage, necromancer); 'spec' = the class or its sibling
+  open(mode = 'group') {
     if (this.isOpen) return;
-    const list = CONFIG.classes.list;
-    this.sel = Object.keys(list).find((id) => list[id].ready) || '';
+    this.mode = mode;
+    this.sel = mode === 'spec' ? this.game.mainClass : 'fighter';
     this.isOpen = true;
     this.game.setPaused(true);
     this.el.classList.add('on');
@@ -48,22 +49,29 @@ export class ClassPanel {
     else if (b.dataset.act === 'confirm') {
       const id = this.sel;
       this.close();
-      this.game.chooseClass(id);
+      if (this.mode === 'spec') this.game.changeClass(id);
+      else this.game.chooseClass(CONFIG.classes.groups[id].class);
       return;
     }
     this.render();
   }
 
   render() {
-    const list = CONFIG.classes.list;
-    const cards = Object.keys(list).map((id) => {
-      const c = list[id], on = id === this.sel;
-      return `<button class="cls-card${on ? ' on' : ''}${c.ready ? '' : ' soon'}" data-act="pick" data-id="${id}"${c.ready ? '' : ' disabled'}>
-        <i class="emb" data-c="${id}"></i><em>${t('mc.role.' + c.role)}</em><b>${t('mc.' + id)}</b><p>${t('mc.' + id + '.desc')}</p><small class="mech">${t('mc.' + id + '.mech')}</small>${c.ready ? '' : `<small>${t('mc.soon')}</small>`}</button>`;
+    const list = CONFIG.classes.list, spec = this.mode === 'spec';
+    // first choice: the four groups (their emblem is the one of their first class); second: the class or its sibling
+    const ids = spec ? CONFIG.classes.spec[this.game.mainClass] : Object.keys(CONFIG.classes.groups);
+    const cards = ids.map((id) => {
+      const cid = spec ? id : CONFIG.classes.groups[id].class, c = list[cid], on = id === this.sel;
+      const name = spec ? t('mc.' + id) : t('mc.group.' + id);
+      const desc = spec ? t('mc.' + id + '.desc') : t('mc.group.' + id + '.desc');
+      const mech = spec ? t('mc.' + id + '.mech') : t('mc.group.' + id + '.mech');
+      return `<button class="cls-card${on ? ' on' : ''}" data-act="pick" data-id="${id}">
+        <i class="emb" data-c="${cid}"></i><em>${t('mc.role.' + c.role)}</em><b>${name}</b><p>${desc}</p><small class="mech">${mech}</small></button>`;
     }).join('');
+    const name = this.sel ? (spec ? t('mc.' + this.sel) : t('mc.group.' + this.sel)) : '';
     this.el.innerHTML = `<div class="ab-box mods">
-      <div class="ab-head"><h2>${t('mc.title')}</h2><small>${t('mc.hint')}</small></div>
+      <div class="ab-head"><h2>${spec ? t('mc.specTitle') : t('mc.title')}</h2><small>${spec ? t('mc.specHint') : t('mc.hint')}</small></div>
       <div class="cls-grid">${cards}</div>
-      <div class="ab-btns"><button class="ap-btn go" data-act="confirm"${this.sel ? '' : ' disabled'}>${this.sel ? t('mc.confirm', { name: t('mc.' + this.sel) }) : t('mc.pick')}</button></div></div>`;
+      <div class="ab-btns"><button class="ap-btn go" data-act="confirm"${this.sel ? '' : ' disabled'}>${this.sel ? t('mc.confirm', { name }) : t('mc.pick')}</button></div></div>`;
   }
 }
