@@ -575,7 +575,7 @@ export class Menu {
     const mine = !Pa.chosen.length ? `<p class="pa-none">${t('path.none')}</p>`
       : Pa.chosen.map((c, i) => `<span class="pa-pill l-${c.core} r-${c.rarity}">${Pa.chosenName(i)}</span>`).join('');
     const sk = Pa.skill(), unl = Pa.unlockedList();
-    const info = sk ? `<div class="pa-info"><p>${this.skillText(sk.core, sk.level)}</p>${unl.length ? `<p class="pa-unl">${unl.map((id) => t('unlock.' + id)).join(' · ')}</p>` : ''}<ul class="pa-tot">${this.pathLines(Pa.totals(), Pa.rules())}</ul></div>` : '';
+    const info = sk ? `<div class="pa-info"><p>${this.skillText(sk.core, sk.level)}</p>${unl.length ? `<ul class="pa-tot pa-unl">${unl.map((id) => `<li class="rule">${t('unlock.' + id)}</li>`).join('')}</ul>` : ''}<ul class="pa-tot">${this.pathLines(Pa.totals(), Pa.rules())}</ul></div>` : '';
     const respec = Pa.chosen.length ? `<div class="pa-respec"><button class="ap-btn ghost" data-act="pathRespec"${Q.respecs ? '' : ' disabled'}>${t('path.respecToken', { n: Q.respecs })}</button>${Q.respecs ? '' : `<small>${t('path.noToken')}</small>`}</div>` : '';
     const titles = Object.keys(TITLES).filter((id) => this.game.titles.has(id)).map((id) => {
       const worn = this.game.titles.worn === id;

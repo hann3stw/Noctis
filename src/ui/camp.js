@@ -56,7 +56,7 @@ function barracksView(menu) {
         const parts = [t('barracks.exp.essence', { n: fmt(R.essence) })];
         if (R.seals) parts.push(t('barracks.exp.seals', { n: R.seals }));
         if (R.items) parts.push(t('barracks.exp.items', { n: R.items, rarity: t('rarity.' + R.rarity) }));
-        return `<div class="cp-mis"><b>${t('barracks.exp.' + k)}</b><small>${dur(M.time)} · ${t('barracks.exp.need', { n: M.party })}</small><small>${parts.join(', ')}</small><small>${t('barracks.exp.risk', { n: Math.round(M.injury * 100) })}</small>
+        return `<div class="cp-mis"><b>${t('barracks.exp.' + k)}</b><small>${dur(M.time)} · ${t('barracks.exp.need', { n: M.party })} · ${t('barracks.exp.risk', { n: Math.round(M.injury * 100) })}</small><small>${parts.join(', ')}</small>
           <button class="ap-btn gold" data-act="campSend" data-kind="${k}"${ok ? '' : ' disabled'}>${t('barracks.exp.send', { n: B.party.size })}</button></div>`;
       }).join('');
       missions = `<div class="cp-exp"><b>${t('barracks.exp')}</b><small>${t('barracks.exp.hint')}</small><div class="cp-mis-row">${cards}</div></div>`;
@@ -80,16 +80,16 @@ function workshopView(menu) {
   const g = menu.game, R = g.runes, P = g.player, W = CONFIG.runeWorkshop;
   const skills = P.known.filter((id) => (CONFIG.skills[id] || CONFIG.ultimates[id]) && runesOf(id).length);
   const rows = skills.map((id) => {
-    const runes = runesOf(id).map((r) => {
+    const cards = runesOf(id).map((r) => {
       if (!R.has(id, r)) {
         const c = R.craftCost();
-        return `<div class="cp-row"><div><b>${t('rune.' + r)}</b><small>${t('workshop.unknown')}</small></div><button class="ap-btn ghost" data-act="campCraft" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.craft', { n: fmt(c) })}</button></div>`;
+        return `<div class="cp-rune lock"><b>${t('rune.' + r)}</b><small>${t('workshop.unknown')}</small><button class="ap-btn ghost" data-act="campCraft" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.craft', { n: fmt(c) })}</button></div>`;
       }
       const lv = R.level(id, r), c = R.infuseCost(id, r);
       const pips = '◆'.repeat(lv) + '◇'.repeat(W.max - lv);
-      return `<div class="cp-row"><div><b>${t('rune.' + r)} <span class="cp-pips">${pips}</span></b><small>${t('rune.' + r + '.desc')}</small></div>${c ? `<button class="ap-btn ghost" data-act="campInfuse" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.infuse', { n: fmt(c) })}</button>` : `<small>${t('workshop.max')}</small>`}</div>`;
+      return `<div class="cp-rune"><b>${t('rune.' + r)} <span class="cp-pips">${pips}</span></b><small>${t('rune.' + r + '.desc')}</small>${c ? `<button class="ap-btn ghost" data-act="campInfuse" data-skill="${id}" data-r="${r}"${P.essence >= c ? '' : ' disabled'}>${t('workshop.infuse', { n: fmt(c) })}</button>` : `<small class="cp-max">${t('workshop.max')}</small>`}</div>`;
     }).join('');
-    return `<div class="pa-sub">${t('skill.' + id)}</div>${runes}`;
+    return `<div class="cp-skill"><div class="pa-sub">${t('skill.' + id)}</div><div class="cp-runes">${cards}</div></div>`;
   }).join('');
   return `<div class="cp-head"><b>${t('workshop.title')}</b><span>${t('workshop.hint', { b: Math.round(W.levelBonus * 100) })}</span></div>
     <div class="cp-list cp-wide" data-scroll="cpWork">${rows || `<p class="cp-none">${t('workshop.none')}</p>`}</div>`;

@@ -56,7 +56,7 @@ export class ClassPanel {
     const cards = Object.keys(list).map((id) => {
       const c = list[id], on = id === this.sel;
       return `<button class="cls-card${on ? ' on' : ''}${c.ready ? '' : ' soon'}" data-act="pick" data-id="${id}"${c.ready ? '' : ' disabled'}>
-        <em>${t('mc.role.' + c.role)}</em><b>${t('mc.' + id)}</b><p>${t('mc.' + id + '.desc')}</p>${c.ready ? '' : `<small>${t('mc.soon')}</small>`}</button>`;
+        <em>${t('mc.role.' + c.role)}</em><b>${t('mc.' + id)}</b><p>${t('mc.' + id + '.desc')}</p><small class="mech">${t('mc.' + id + '.mech')}</small>${c.ready ? '' : `<small>${t('mc.soon')}</small>`}</button>`;
     }).join('');
     this.el.innerHTML = `<div class="ab-box mods">
       <div class="ab-head"><h2>${t('mc.title')}</h2><small>${t('mc.hint')}</small></div>
