@@ -373,6 +373,21 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 .mp-dodge { margin-top: calc(var(--u) * 1.2); padding: calc(var(--u) * 1) calc(var(--u) * 1.6); border-radius: calc(var(--u) * 1.4); background: rgba(0, 0, 0, 0.3); outline: var(--ol) solid var(--ink); }
 .mp-dodge b { display: block; font-family: var(--font-display); font-weight: 400; color: var(--brass); }
 .mp-dodge small { color: var(--parch); }
+/* Spell Forge */
+.forge { display: grid; grid-template-columns: 0.8fr 1.6fr 1fr; gap: calc(var(--u) * 1.6); height: 100%; min-height: 0; }
+.forge > div { min-height: 0; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: calc(var(--u) * 0.8); }
+.forge h4 { margin: calc(var(--u) * 0.6) 0 0; font-family: var(--font-display); font-weight: 400; color: var(--brass); text-shadow: 0 1px 0 var(--ink); }
+.fg-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 24), 1fr)); gap: calc(var(--u) * 0.8); }
+.fg-chip { display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.2); padding: calc(var(--u) * 1) calc(var(--u) * 1.4); border-radius: calc(var(--u) * 1.4); border: var(--ol) solid var(--ink); color: var(--parch-hi); font: inherit; text-align: left; background: linear-gradient(180deg, rgba(255, 240, 196, 0.14), rgba(255, 240, 196, 0.04)); box-shadow: inset 0 0 0 calc(var(--u) * 0.35) rgba(241, 215, 154, 0.3), 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.fg-chip b { font-family: var(--font-display); font-weight: 400; }
+.fg-chip small { color: var(--parch); opacity: 0.9; font-size: calc(var(--u) * 2); }
+.fg-chip.on { box-shadow: inset 0 0 0 calc(var(--u) * 0.6) var(--brass), 0 calc(var(--u) * 0.5) 0 var(--ink), 0 0 calc(var(--u) * 2.5) rgba(255, 201, 40, 0.4); }
+.fg-chip[disabled] { opacity: 0.45; }
+.fg-mine { display: flex; align-items: center; gap: calc(var(--u) * 1); padding: calc(var(--u) * 0.6); border-radius: calc(var(--u) * 1.2); outline: var(--ol) solid var(--ink); background: rgba(0, 0, 0, 0.25); }
+.fg-mine i { width: calc(var(--u) * 5); height: calc(var(--u) * 5); display: block; }
+.fg-mine i svg { width: 100%; height: 100%; }
+.fg-mine b { flex: 1; font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); }
+.fg-fusing { margin: 0; color: var(--brass); font-family: var(--font-display); }
 /* the world map (Travel) */
 .bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
 .bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }

@@ -703,6 +703,58 @@ export function castSkill(game, id, dx, dz, power) {
       game.cam.shake(0.3, 0.3);
       game.hitStop(0.06);
       break;
+    default:
+      if (def.custom) castCustom(game, def, dx, dz, tx, tz, base, yaw);
   }
   castGlow(game, id, tx, tz, dx, dz);
+}
+
+// enemies near a line stand still for a moment
+function stunLine(game, x, z, dx, dz, len, width, secs) {
+  const E = game.enemies;
+  for (let k = 0; k < E.activeCount; k++) {
+    const i = E.active[k];
+    if (!E.alive[i]) continue;
+    const ex = E.x[i] - x, ez = E.z[i] - z;
+    const along = ex * dx + ez * dz;
+    if (along < 0 || along > len + E.radius[i]) continue;
+    if (Math.abs(ex * dz - ez * dx) < width + E.radius[i]) E.applyStun(i, secs);
+  }
+}
+
+// A spell of the Spell Forge (core/forge.js): the form decides how it hits, the element the colour and a bonus, the
+// effects what comes on top.
+function castCustom(game, def, dx, dz, tx, tz, base, yaw) {
+  const P = game.player, E = game.enemies, fx = game.effects, col = def.color;
+  let n = 0, cx = P.x, cz = P.z, cr = def.radius || 6;
+  if (def.aim === 'arc') {
+    n = hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base, def.stun || 0);
+    fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, col, EXPAND, 1, 0.4);
+    fx.slash(P.x, P.z, yaw, def.range * 0.75, def.arcDeg, 0xffffff, EXPAND, 1, 0.3);
+    cx = P.x + dx * def.range * 0.5; cz = P.z + dz * def.range * 0.5; cr = def.range * 0.5;
+  } else if (def.aim === 'line') {
+    n = hitLine(game, P.x, P.z, dx, dz, def.range, def.width, base);
+    if (def.stun) stunLine(game, P.x, P.z, dx, dz, def.range, def.width, def.stun);
+    fx.beam(P.x, P.z, dx, dz, def.range, def.width, col);
+    fx.beam(P.x, P.z, dx, dz, def.range, def.width * 0.35, 0xffffff);
+    fx.ring(P.x + dx * def.range, P.z + dz * def.range, 0.4, 2.4, col, 0.25);
+    cx = P.x + dx * def.range * 0.5; cz = P.z + dz * def.range * 0.5; cr = def.range * 0.4;
+  } else if (def.aim === 'self') {
+    n = hitCircle(game, P.x, P.z, def.radius, base, def.stun || 0);
+    fx.slash(P.x, P.z, 0, def.radius, 360, col, EXPAND, 1, 0.45);
+    fx.ring(P.x, P.z, 0.5, def.radius + 1, col, 0.45);
+  } else {
+    game.zones.add(tx, tz, def.radius, 0.45, 1, 0, base, def.stun || 0, col);
+    fx.ring(tx, tz, def.radius + 1, 0.4, col, 0.4);
+    fx.burst(tx, 1.2, tz, 34, col, 8, 0.26, 0.8);
+    cx = tx; cz = tz;
+  }
+  // a second element adds its colour
+  if (def.colors && def.colors[1]) fx.burst(cx, 1.2, cz, 22, def.colors[1], 6, 0.22, 0.7);
+  if (def.pull) E.pull(cx, cz, cr, def.pull);
+  if (def.mark) E.markArea(cx, cz, cr, def.mark);
+  if (def.healSelf) { P.heal(P.maxHp * def.healSelf); fx.burst(P.x, 1.4, P.z, 14, 0x5cf08a, 4, 0.18, 0.6); }
+  if (def.shield) { P.shield = Math.max(P.shield, Math.round(P.maxHp * def.shield)); P.shieldMax = P.shield; P.shieldT = 4; fx.ring(P.x, P.z, 0.5, 3, 0x6aa8ff, 0.4); }
+  if (def.leech && n > 0) P.heal(Math.min(P.maxHp * 0.3, base * def.leech * n * 0.5));
+  game.cam.shake(0.18, 0.18);
 }

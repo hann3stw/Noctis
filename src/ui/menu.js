@@ -2,6 +2,7 @@
 // (level and stat points), Skills and Army. The game is paused while it is
 // open. Equipment, skills and the army can only be changed in the camp.
 import { CONFIG } from '../config.js';
+import { FORMS, ELEMENTS, EFFECTS, buildDef, spellName } from '../core/forge.js';
 import { fmt, flashClass } from '../core/format.js';
 import { t } from '../strings.js';
 import { ArmyPanel } from './armyPanel.js';
@@ -219,6 +220,35 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(Number(target.dataset.id));
+    } else if (act === 'forgeOpen') {
+      this.forgeOn = true;
+    } else if (act === 'forgeClose') {
+      this.forgeOn = false;
+    } else if (act === 'fgForm') {
+      this.fg = this.fg || { form: 'wave', elements: [], effects: [], from: '' };
+      this.fg.form = target.dataset.k;
+    } else if (act === 'fgEl' || act === 'fgFx') {
+      const fg = this.fg = this.fg || { form: 'wave', elements: [], effects: [], from: '' };
+      const list = act === 'fgEl' ? fg.elements : fg.effects, lim = this.game.forge.limits(!!fg.from)[act === 'fgEl' ? 'el' : 'fx'], k = target.dataset.k;
+      const at = list.indexOf(k);
+      if (at >= 0) list.splice(at, 1);
+      else if (list.length < lim) list.push(k);
+      else if (lim === 1) list[0] = k;
+    } else if (act === 'fgFuse') {
+      const s = this.game.forge.get(target.dataset.id);
+      if (s) this.fg = { form: s.form, elements: [...s.elements], effects: [...s.effects], from: s.id };
+    } else if (act === 'fgCancel') {
+      this.fg = { form: 'wave', elements: [], effects: [], from: '' };
+    } else if (act === 'fgCraft') {
+      const fg = this.fg, G = this.game, from = fg.from ? G.forge.get(fg.from) : null;
+      const s = G.forge.make({ form: fg.form, elements: fg.elements, effects: fg.effects }, from);
+      if (s) {
+        G.hud.toast(t('forge.made', { name: t('skill.' + s.id) }));
+        play('levelup');
+        this.fg = { form: 'wave', elements: [], effects: [], from: '' };
+        this.selSkill = s.id;
+        this.forgeOn = false;
+      }
     } else if (act === 'mPerk') {
       this.game.mastery.pick(target.dataset.skill, target.dataset.k);
     } else if (act === 'runeWear') {
@@ -805,6 +835,9 @@ export class Menu {
     if (def.arcDeg) row('cone', def.arcDeg + '°');
     if (def.width) row('width', def.width);
     if (def.stun) row('stun', def.stun + 's');
+    if (def.mark) row('mark', def.mark + 's');
+    if (def.pull) row('pull', '✓');
+    if (def.leech) row('leech', '✓');
     if (def.shield) row('shield', Math.round(def.shield * 100) + '%');
     if (def.heal) row('heal', Math.round(def.heal * 100) + '%');
     if (def.armyDamage) row('army', '+' + Math.round(def.armyDamage * 100) + '%');
@@ -848,7 +881,50 @@ export class Menu {
     return `<h4 class="rune-h">${t('rune.heading', { n: R.count(id), max: list.length, s: R.sockets() })}</h4><div class="rune-list">${cards}</div>`;
   }
 
+  // the Spell Forge (Mage only): pick a form, an element and an effect, craft; fuse a spell into a new one
+  forge() {
+    const G = this.game, F = G.forge, fg = this.fg || (this.fg = { form: 'wave', elements: [], effects: [], from: '' });
+    const from = fg.from ? F.get(fg.from) : null, L = F.limits(!!from);
+    const spec = { form: fg.form, elements: fg.elements, effects: fg.effects };
+    const rk = (u) => RANKS[u];
+    const chip = (kind, tbl, key, on, act) => {
+      const open = F.unlocked(kind, key);
+      return `<button class="fg-chip${on ? ' on' : ''}" data-act="${act}" data-k="${key}"${open ? '' : ' disabled'}><b>${t('forge.' + (kind === 'form' ? 'form.' : kind === 'el' ? 'el.' : 'fx.') + key)}</b><small>${open ? t('forge.' + (kind === 'form' ? 'form.' : kind === 'el' ? 'el.' : 'fx.') + key + '.d') : t('forge.rank', { r: rk(tbl[key].unlock) })}</small></button>`;
+    };
+    const forms = Object.keys(FORMS).map((k) => chip('form', FORMS, k, fg.form === k, 'fgForm')).join('');
+    const els = Object.keys(ELEMENTS).map((k) => chip('el', ELEMENTS, k, fg.elements.includes(k), 'fgEl')).join('');
+    const fxs = Object.keys(EFFECTS).map((k) => chip('fx', EFFECTS, k, fg.effects.includes(k), 'fgFx')).join('');
+    let preview = `<p class="k-hint">${t('forge.need')}</p>`;
+    if (fg.elements.length && fg.effects.length) {
+      const def = buildDef(spec), P = G.player;
+      const rows = [['mana', def.mana], ['cooldown', def.cooldown + 's'], ['damage', fmt(Math.round(P.skillPower() * def.power))]];
+      if (def.range) rows.push(['range', def.range]);
+      if (def.radius) rows.push(['radius', def.radius]);
+      if (def.stun) rows.push(['stun', def.stun + 's']);
+      if (def.mark) rows.push(['mark', def.mark + 's']);
+      if (def.pull) rows.push(['pull', '✓']);
+      if (def.healSelf) rows.push(['healSelf', Math.round(def.healSelf * 100) + '%']);
+      if (def.shield) rows.push(['shield', Math.round(def.shield * 100) + '%']);
+      if (def.leech) rows.push(['leech', '✓']);
+      preview = `<h3>${spellName(spec)}</h3>${rows.map(([k, v]) => `<div class="row"><span>${t('ks.' + k)}</span><b>${v}</b></div>`).join('')}`;
+    }
+    const err = fg.elements.length && fg.effects.length ? F.check(spec, from) : '';
+    const mine = F.spells.map((s) => `<div class="fg-mine"><i>${SKILL_ICONS[s.id]}</i><b>${t('skill.' + s.id)}</b><button class="ap-btn small" data-act="fgFuse" data-id="${s.id}">${t('forge.fuse')}</button></div>`).join('');
+    return `<div class="forge">
+      <div class="k-left"><h4>${t('forge.mine')}</h4>${mine || `<p class="k-hint">${t('forge.none')}</p>`}<small class="mp-note">${t('forge.fuseHint')}</small>
+        <button class="ap-btn ghost" data-act="forgeClose">${t('forge.back')}</button></div>
+      <div class="k-mid" data-scroll="forge">
+        ${from ? `<p class="fg-fusing">${t('forge.fusing', { name: t('skill.' + from.id) })} <button class="ap-btn small ghost" data-act="fgCancel">${t('forge.cancelFuse')}</button></p>` : ''}
+        <h4>${t('forge.form')}</h4><div class="fg-row">${forms}</div>
+        <h4>${t('forge.element')} (${fg.elements.length}/${L.el})</h4><div class="fg-row">${els}</div>
+        <h4>${t('forge.effect')} (${fg.effects.length}/${L.fx})</h4><div class="fg-row">${fxs}</div></div>
+      <div class="g-right">${preview}<div class="d-btns">
+        ${err ? `<p class="k-hint">${t(err)}</p>` : ''}
+        <button class="ap-btn" data-act="fgCraft"${fg.elements.length && fg.effects.length && !err ? '' : ' disabled'}>${t('forge.craft', { n: fg.elements.length && fg.effects.length ? F.cost(spec) : '-' })}</button></div></div></div>`;
+  }
+
   skills() {
+    if (this.forgeOn && this.game.forge.open) return this.forge();
     const P = this.game.player;
     if (!this.selSkill) this.selSkill = P.slots[0] || P.known[0];
     const third = this.game.path.skillSlots() >= 3;
@@ -894,7 +970,7 @@ export class Menu {
         <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">
-      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}</div>
+      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}${this.game.forge.open ? `<button class="ap-btn" data-act="forgeOpen">${t('forge.open')}</button>` : ''}</div>
       <div class="k-mid" data-scroll="skills">${list}</div>
       <div class="g-right">${detail}</div></div>`;
   }

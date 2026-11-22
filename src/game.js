@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { Forge } from './core/forge.js';
 import { Mastery } from './core/mastery.js';
 import { baseOf } from './core/classes.js';
 import { classOffers } from './core/style.js';
@@ -140,6 +141,7 @@ export class Game {
     setMastery(this.mastery);
     this.profile = new Profile(save && save.profile); // how the hunter plays (the Path uses it)
     this.path = new Paths(this, save && save.path); // the class tree (before the player: it adds bonuses)
+    this.forge = new Forge(this, save && save.forge); // the spells of the Mage's forge (they are skills: before the player loads)
     this.player = new Player(this, this.appearance);
     this.enemies = new Enemies(this);
     this.army = new Army(this);
@@ -276,6 +278,7 @@ export class Game {
       titles: this.titles.serialize(),
       runes: this.runes.serialize(),
       mastery: this.mastery.serialize(),
+      forge: this.forge.serialize(),
       xpBoostT: Math.round(this.xpBoostT),
       gateTiers: [...this.gateTiers],
       defeatedGates: [...this.defeatedGates],
