@@ -303,6 +303,7 @@ export class Screens {
       case 'gfx': setSetting('graphics', v); this.render(); break;
       case 'btnSize': setSetting('buttonSize', Number(v)); this.render(); break;
       case 'swap': setSetting('swap', !settings.swap); this.render(); break;
+      case 'hudEdit': app.hudEditor.open(); break;
       case 'fps': setSetting('showFps', !settings.showFps); app.fpsChanged(); this.render(); break;
       case 'vibrate': setSetting('vibrate', !settings.vibrate); this.render(); break;
       case 'cloud': if (!isLinked()) { setSetting('cloudSave', !settings.cloudSave); this.render(); } break;
@@ -642,6 +643,7 @@ export class Screens {
           <div class="segs"><input type="range" min="0" max="100" step="5" value="${mus}" data-act="music"><span class="mus-val">${mus}%</span></div></div>
         <div class="set-row"><div><b>${t('set.buttons')}</b></div>
           <div class="segs">${seg('btnSize', BUTTON_SIZES.map((s, i) => [s, t('set.size' + i)]), settings.buttonSize)}</div></div>
+        <div class="set-row"><div><b>${t('set.layout')}</b><small>${t('set.layoutHint')}</small></div><div class="segs"><button class="seg wide" data-act="hudEdit">${t('set.layoutEdit')}</button></div></div>
         <div class="set-row"><div><b>${t('set.swap')}</b><small>${t('set.swapHint')}</small></div><div class="segs">${toggle('swap', settings.swap)}</div></div>
         <div class="set-row"><div><b>${t('set.vibrate')}</b><small>${t('set.vibrateHint')}</small></div><div class="segs">${toggle('vibrate', settings.vibrate)}</div></div>
         <div class="set-row"><div><b>${t('set.fps')}</b></div><div class="segs">${toggle('fps', settings.showFps)}</div></div>

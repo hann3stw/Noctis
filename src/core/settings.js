@@ -14,6 +14,7 @@ export const settings = {
   vibrate: true, // short vibrations on hits, kills and ultimates (Android)
   buttonSize: 1, // 0.8 .. 1.3
   swap: false, // movement on the right, buttons on the left
+  layout: null, // where the buttons on the right are and how big (core/hudLayout.js); null = the default
   showFps: false,
   lastSlot: -1, // slot of the world played last ("Continue")
   hunterName: '', // name on the Abyss leaderboard
@@ -157,6 +158,7 @@ export function applySettings() {
   input.swap = settings.swap;
   const hud = document.getElementById('hud');
   if (hud) hud.classList.toggle('swap', settings.swap);
+  window.dispatchEvent(new Event('noctis-layout')); // the HUD places its buttons again
   skip = 1;
   if (onGraphics) onGraphics();
 }

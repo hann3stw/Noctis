@@ -1,6 +1,7 @@
 // The app around the game: title screen, save slots, starting and leaving
 // worlds, pause menu and the skin editor in the camp.
 import { Game } from './game.js';
+import { HudEditor } from './ui/hudEditor.js';
 import { Screens } from './ui/screens.js';
 import { settings, loadSettings, saveSettings, setSetting, onGraphicsChange } from './core/settings.js';
 import { listSlots, saveSlot, deleteSlot, keepStorage, readSaveText, backupSlot, readBackup } from './core/storage.js';
@@ -21,6 +22,7 @@ export class App {
     this.slots = [null, null, null];
     this.uiRoot = document.getElementById('ui');
     this.screens = new Screens(this);
+    this.hudEditor = new HudEditor(document.body); // moves and resizes the buttons on the right
     this.cloud = new CloudSync();
     this.syncing = null; // the running world sync (paired devices)
   }

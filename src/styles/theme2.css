@@ -251,3 +251,52 @@
   .mn-nav .mn-tab.on { transform: translateX(calc(var(--u) * 1)) scale(1.04); }
 }
 @media (min-height: 441px) { .mn-nav .mn-tab.on { flex: 1.2 1 0; } }
+
+/* ============================ the buttons on the right ============================ */
+/* the buttons place themselves (core/hudLayout.js), the box around them is the whole screen */
+.actions, #hud.swap .actions { inset: 0; width: auto; height: auto; pointer-events: none; }
+
+#hud-editor { position: fixed; inset: 0; z-index: 90; display: none; background: radial-gradient(ellipse at 50% 30%, rgba(60, 40, 90, 0.96), rgba(12, 8, 20, 0.98)); touch-action: none; user-select: none; }
+#hud-editor.on { display: block; }
+.he-zone { position: absolute; bottom: 0; border: calc(var(--u) * 0.5) dashed rgba(255, 201, 40, 0.55); border-bottom: 0; border-right: 0; border-radius: calc(var(--u) * 3) 0 0 0; background: rgba(255, 201, 40, 0.05); pointer-events: none; }
+#hud-editor .he-zone[style*="left"] { border-left: 0; border-right: calc(var(--u) * 0.5) dashed rgba(255, 201, 40, 0.55); border-radius: 0 calc(var(--u) * 3) 0 0; }
+.he-btn {
+  position: absolute;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 5);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--c) 55%, #000), color-mix(in srgb, var(--c) 25%, #000));
+  border: calc(var(--u) * 0.9) solid var(--ink);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--c), 0 calc(var(--u) * 0.8) 0 var(--ink);
+  cursor: grab;
+  touch-action: none;
+}
+.he-btn b { font-weight: 400; text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink); pointer-events: none; }
+.he-btn.sel { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) #fff, 0 0 calc(var(--u) * 3) #fff, 0 calc(var(--u) * 0.8) 0 var(--ink); }
+.he-panel {
+  position: absolute;
+  left: calc(var(--sl) + var(--u) * 3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(var(--u) * 52);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 1.2);
+  padding: calc(var(--u) * 2.4);
+  border-radius: calc(var(--u) * 2.2);
+  background: var(--glass);
+  box-shadow: var(--frame);
+}
+.he-panel.right { left: auto; right: calc(var(--sr) + var(--u) * 3); }
+.he-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 4.4); color: var(--parch-hi); text-shadow: 0 var(--ol) 0 var(--ink); }
+.he-panel p { margin: 0; font-size: calc(var(--u) * 2.5); color: #e9ddff; }
+.he-sel { font-family: var(--font-display); font-size: calc(var(--u) * 4); color: var(--brass); text-shadow: 0 var(--ol) 0 var(--ink); }
+.he-row { display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 1.2); }
+.he-row .ap-btn { flex: 1; min-height: calc(var(--u) * 8); }
+.he-size { flex: none; min-width: calc(var(--u) * 12); text-align: center; font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 4); color: #fff; }
+.he-msg { min-height: calc(var(--u) * 3); color: #ff9a9a; font-size: calc(var(--u) * 2.3); }
+#hud-editor { background: radial-gradient(ellipse at 50% 30%, #3c2a5a, #0c0814); }

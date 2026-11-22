@@ -10,6 +10,8 @@ import { skillDef } from '../combat/skills.js';
 import { RANKS } from '../world/gates.js';
 import { fmt } from '../core/format.js';
 import { SKILL_ICONS, UI_ICONS } from './icons.js';
+import { settings } from '../core/settings.js';
+import { IDS, SELECTORS, layout } from '../core/hudLayout.js';
 
 const ICON_SWORD =
   '<svg viewBox="0 0 48 48"><path d="M36 6l6 0 0 6-20 20-6-6z" fill="currentColor"/><path d="M12 26l10 10-4 4-4-4-6 6-4-4 6-6-4-4z" fill="currentColor" opacity=".8"/></svg>';
@@ -40,6 +42,20 @@ function onTap(el, fn) {
 }
 
 export class Hud {
+  // every button is a circle at a place (x, y from the edges, in u) with a diameter; the global
+  // button size scales all alike, so buttons that did not overlap still do not
+  applyLayout() {
+    const L = layout(), k = settings.buttonSize || 1, sw = settings.swap;
+    for (const [id, el] of this.layoutEls) {
+      if (!el) continue;
+      const c = L[id];
+      el.style.inset = 'auto';
+      el.style.width = el.style.height = `calc(var(--u) * ${c.d * k})`;
+      el.style[sw ? 'left' : 'right'] = `calc(var(--${sw ? 'sl' : 'sr'}) + var(--u) * ${(c.x - c.d / 2) * k})`;
+      el.style.bottom = `calc(var(--sb) + var(--u) * ${(c.y - c.d / 2) * k})`;
+    }
+  }
+
   constructor(root, game) {
     this.game = game;
     root.innerHTML = `
@@ -217,6 +233,11 @@ export class Hud {
     onTap($('#btn-travel'), () => game.app.openTravel());
     onTap($('#btn-pause'), () => game.app.openPause());
     this.hud.classList.toggle('swap', input.swap);
+    // the buttons on the right: where the player put them (Settings > Button layout)
+    this.layoutEls = IDS.map((id) => [id, this.hud.querySelector(SELECTORS[id])]);
+    this.onLayout = () => this.applyLayout();
+    window.addEventListener('noctis-layout', this.onLayout);
+    this.applyLayout();
 
     // cached values
     this.vHp = -1;
