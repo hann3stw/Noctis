@@ -58,7 +58,7 @@ import { ClassPanel } from './ui/classPanel.js';
 import { CoopPanel } from './ui/coopPanel.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
-import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
+import { submitScore, publicLook, publicGear, publicStats, inSeason } from './net/online.js';
 
 const _v = new THREE.Vector3();
 const _col = new THREE.Color();
@@ -78,7 +78,7 @@ export class Game {
     this.progT = this.playTime;
     // what every play-data event carries about this world (core/track.js)
     setTrackCtx(() => { const P = this.player; return P ? { lvl: P.level, rk: RANKS[this.rankIndex], cls: this.mainClass || '', df: this.difficulty, pt: Math.round(this.playTime) } : {}; });
-    { const sl = (app.slots || []).filter(Boolean); track('world', { new: save ? 0 : 1, worlds: sl.length, best: Math.max(0, ...sl.map((x) => Number(x.level || (x.player && x.player.level) || 0))) }); }
+    { const sl = (app.slots || []).filter(Boolean); track('world', { old: inSeason(this.created) ? 0 : 1, new: save ? 0 : 1, worlds: sl.length, best: Math.max(0, ...sl.map((x) => Number(x.level || (x.player && x.player.level) || 0))) }); }
     this.saveT = 0;
     this.fpsT = 0;
     this.fpsN = 0;
@@ -236,12 +236,13 @@ export class Game {
     this.world.update(this.player.x, this.player.z, true);
     this.cam.snap(this.player.x, this.player.z);
     this.submitRecords(); // records from before the leaderboards existed
+    if (this.slot >= 0 && !inSeason(this.created)) setTimeout(() => this.hud && this.hud.toast(t('toast.season1')), 6000);
   }
 
   // Sends level and Abyss record to the leaderboards (waits offline or without
   // a hunter name). Floor 0 = not in the Abyss yet: on the level board only.
   submitRecords() {
-    if (this.slot < 0) return;
+    if (this.slot < 0 || !inSeason(this.created)) return; // Season 2: only worlds started after the reset
     const P = this.player;
     const look = publicLook(this.appearance), gear = publicGear(P.equip), stats = publicStats(P, this.army), title = this.titles.worn;
     this.shownKey = JSON.stringify([look, gear, stats, title]);

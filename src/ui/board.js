@@ -155,7 +155,7 @@ export class Board {
 
   // hasRecord: the player has a record for the board shown (for the note below the list)
   html(hasRecord) {
-    const kinds = ['level', 'abyss'].map((k) => `<button class="seg${this.kind === k ? ' on' : ''}" data-act="lbKind" data-v="${k}">${t('lb.kind.' + k)}</button>`).join('');
+    const kinds = ['level', 'abyss', 's1'].map((k) => `<button class="seg${this.kind === k ? ' on' : ''}" data-act="lbKind" data-v="${k}">${t('lb.kind.' + k)}</button>`).join('');
     return `<div class="lb-kinds">${kinds}</div>${this.body(hasRecord)}`;
   }
 
@@ -169,7 +169,7 @@ export class Board {
     }
     if (this.state === 'loading' && !this.data) return `<div class="lb-msg"><i class="lb-spin"></i>${t('lb.loading')}</div>`;
     if (this.state === 'error' || !this.data) return `<div class="lb-msg">${t('lb.offline')}</div>`;
-    const id = myId(), D = CONFIG.difficulty.levels, lv = this.kind === 'level';
+    const id = myId(), D = CONFIG.difficulty.levels, lv = this.kind === 'level' || this.kind === 's1';
     const dif = (r) => (D[r.difficulty] ? ` · <i class="dif-${r.difficulty}">${t('diff.' + r.difficulty)}</i>` : '');
     const mas = (r) => (r.mastery ? ' · ' + t('lb.mastery', { n: fmt(r.mastery) }) : '');
     // a title of another hunter: only the ones this version knows
@@ -183,8 +183,8 @@ export class Board {
     const me = this.data.me;
     const mine = me
       ? (me.place > this.data.rows.length ? `<div class="lb-mine">${row(me.row, me.place)}</div>` : '')
-      : `<p class="lb-note">${hasRecord ? t('lb.pending') : t(lv ? 'lb.notYetLevel' : 'lb.notYet')}</p>`;
+      : this.kind === 's1' ? '' : `<p class="lb-note">${hasRecord ? t('lb.pending') : t(lv ? 'lb.notYetLevel' : 'lb.notYet')}</p>`;
     return `<div class="lb"><div class="lb-head"><span>${t('lb.as', { name: esc(name) })}</span><button class="ap-btn small ghost" data-act="lbRename">${t('lb.rename')}</button></div>
-      <div class="lb-list" data-scroll="lb">${rows}</div>${mine}</div>`;
+      ${this.kind === 's1' ? `<p class="lb-note">${t('lb.s1')}</p>` : `<p class="lb-note">${t('lb.s2')}</p>`}<div class="lb-list" data-scroll="lb">${rows}</div>${mine}</div>`;
   }
 }

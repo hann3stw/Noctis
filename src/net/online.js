@@ -22,6 +22,12 @@ function lsSet(k, v) {
   try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* blocked */ }
 }
 
+// Season 2 of the leaderboards: only worlds created after SEASON_START are on the board (the table checks the
+// season too). Season 1 stays readable as a hall of fame (table abyss_scores_s1).
+export const SEASON = 2;
+export const SEASON_START = Date.parse('2026-11-22T23:40:00Z');
+export const inSeason = (created) => Number(created) >= SEASON_START;
+
 let session = lsGet(LS_SESSION);
 let link = lsGet(LS_LINK);
 let signing = null;
@@ -172,7 +178,7 @@ export function publicGear(equip) {
 // floor and level are separate records: each keeps the better one
 export function submitScore(entry, name) {
   const old = lsGet(LS_SCORE);
-  const e = { ...entry, name };
+  const e = { ...entry, name, s: SEASON };
   if (old) {
     if ((old.floor || 0) > (e.floor || 0)) { e.floor = old.floor; e.difficulty = old.difficulty; }
     if (old.level > e.level || (old.level === e.level && old.mastery > e.mastery)) {
@@ -194,6 +200,7 @@ let flushT = 0;
 let flushing = false;
 export async function flushScore() {
   const e = lsGet(LS_SCORE);
+  if (e && e.s !== SEASON) { lsSet(LS_SCORE, null); return; } // an entry of Season 1 that was waiting: dropped
   if (!e || flushing || !navigator.onLine) return;
   if (!e.name || e.name.length < 2) return; // waits for a hunter name
   flushing = true;
@@ -206,8 +213,8 @@ export async function flushScore() {
     if (e.gear) row.gear = e.gear;
     if (e.stats) row.stats = e.stats;
     if (e.title !== undefined) row.title = e.title || null; // null takes the title off
-    const up = await rest('abyss_scores?user_id=eq.' + accountId(), { method: 'PATCH', body: row, prefer: 'return=representation' });
-    if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: row, prefer: 'return=minimal' });
+    const up = await rest('abyss_scores?season=eq.' + SEASON + '&user_id=eq.' + accountId(), { method: 'PATCH', body: row, prefer: 'return=representation' });
+    if (!up.data || !up.data.length) await rest('abyss_scores', { method: 'POST', body: { ...row, season: SEASON }, prefer: 'return=minimal' });
     const now = lsGet(LS_SCORE);
     if (sameScore(now, e)) lsSet(LS_SCORE, null);
     else if (now) flushT = setTimeout(flushScore, 6000); // changed meanwhile (the server takes one every 5 s)
@@ -223,9 +230,13 @@ export async function flushScore() {
 // 'level' board (highest level, then mastery). { rows, me: { place, row } | null }
 export async function loadBoard(kind = 'abyss') {
   const sel = 'user_id,name,floor,level,mastery,rank,difficulty,look,gear,stats,title';
+  if (kind === 's1') {
+    const old = await rest(`abyss_scores_s1?select=${sel}&order=level.desc,mastery.desc,updated_at.asc&limit=50`, { auth: false });
+    return { rows: old.data || [], me: null };
+  }
   const lv = kind === 'level';
   const order = lv ? 'level.desc,mastery.desc,updated_at.asc' : 'floor.desc,updated_at.asc';
-  const top = await rest(`abyss_scores?select=${sel}${lv ? '' : '&floor=gt.0'}&order=${order}&limit=50`, { auth: false });
+  const top = await rest(`abyss_scores?select=${sel}&season=eq.${SEASON}${lv ? '' : '&floor=gt.0'}&order=${order}&limit=50`, { auth: false });
   const rows = top.data || [];
   const id = myId();
   let me = null;
@@ -233,11 +244,11 @@ export async function loadBoard(kind = 'abyss') {
     const i = rows.findIndex((r) => r.user_id === id);
     if (i >= 0) me = { place: i + 1, row: rows[i] };
     else {
-      const mine = await rest(`abyss_scores?select=${sel}&user_id=eq.${id}`, { auth: false });
+      const mine = await rest(`abyss_scores?select=${sel}&season=eq.${SEASON}&user_id=eq.${id}`, { auth: false });
       const row = mine.data && mine.data[0];
       if (row && (lv || row.floor > 0)) {
         const better = lv ? `or=(level.gt.${row.level},and(level.eq.${row.level},mastery.gt.${row.mastery}))` : `floor=gt.${row.floor}`;
-        const c = await rest(`abyss_scores?select=user_id&${better}`, { auth: false, prefer: 'count=exact', method: 'HEAD' });
+        const c = await rest(`abyss_scores?select=user_id&season=eq.${SEASON}&${better}`, { auth: false, prefer: 'count=exact', method: 'HEAD' });
         const n = Number(String(c.range || '').split('/')[1]) || 0;
         me = { place: n + 1, row };
       }

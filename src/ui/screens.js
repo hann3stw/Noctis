@@ -11,7 +11,7 @@ import { settings, setSetting, gfx } from '../core/settings.js';
 import { play } from '../core/sfx.js';
 import { Preview } from './preview.js';
 import { readSaveText, listBackups } from '../core/storage.js';
-import { cloudList, cloudGet, cleanName, flushScore, submitScore, publicLook, publicGear, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
+import { inSeason, cloudList, cloudGet, cleanName, flushScore, submitScore, publicLook, publicGear, net, linkInfo, isLinked, refreshLink } from '../net/online.js';
 import { WorldStages } from './worldStages.js';
 import { Board } from './board.js';
 import { UI_ICONS } from './icons.js';
@@ -552,7 +552,7 @@ export class Screens {
     const last = this.app.lastSave() === s;
     const stat = (label, v) => `<span><small>${label}</small><b>${v}</b></span>`;
     return `<div class="wcard${last ? ' last' : ''}">
-      <div class="wc-stage" data-slot="${i}">${last ? `<em class="wc-badge">${t('wc.last')}</em>` : ''}</div>
+      <div class="wc-stage" data-slot="${i}">${last ? `<em class="wc-badge">${t('wc.last')}</em>` : ''}${inSeason(s.created) ? '' : `<em class="wc-badge old">${t('wc.season1')}</em>`}</div>
       <div class="wc-info">
         <b class="wc-name">${esc(s.name)}</b>
         <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })} · <em class="dif-${dk}">${t('diff.' + dk)}</em></span>
@@ -610,7 +610,7 @@ export class Screens {
   // the records of every world on this device (the server keeps the best ones)
   submitSlots() {
     for (const x of this.app.slots) {
-      if (!x || !x.player) continue;
+      if (!x || !x.player || !inSeason(x.created)) continue;
       submitScore({
         floor: (x.abyss && x.abyss.best) || 0, level: x.player.level || 1, mastery: (x.player.mastery && x.player.mastery.lv) || 0,
         rank: RANKS[x.rankIndex || 0] || 'E', difficulty: x.difficulty || 'normal',
@@ -621,7 +621,8 @@ export class Screens {
 
   // the leaderboard from the main menu
   boardPage() {
-    const anyBest = this.board.kind === 'level' ? this.app.slots.some(Boolean) : this.app.slots.some((x) => x && x.abyss && x.abyss.best > 0);
+    const fresh = this.app.slots.filter((x) => x && inSeason(x.created)); // Season 2: only these can be on the board
+    const anyBest = this.board.kind === 'level' ? fresh.length > 0 : fresh.some((x) => x.abyss && x.abyss.best > 0);
     return `<div class="scr-page">${this.header(t('board.title'), 'toTitle')}
       <div class="board-box">${this.board.html(anyBest)}</div>
       <div class="scr-row end"><button class="sbtn" data-act="lbRefresh"${this.board.canRefresh() ? '' : ' disabled'}>${t('lb.refresh')}</button></div></div>`;

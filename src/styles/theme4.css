@@ -481,3 +481,6 @@ html.kb .sq-summon[data-kb]::after, html.kb .sq-chip[data-kb]::after, html.kb .s
 html.kb #btn-dodge[data-kb]::after { top: auto; bottom: 6%; right: auto; left: 50%; transform: translateX(-50%); }
 html.kb #btn-gate[data-kb]::after { top: -0.6em; right: 4%; }
 .key-row .seg.wide { min-width: calc(var(--u) * 16); }
+
+/* worlds from before the leaderboard reset: a grey tag under "last played" */
+.wc-badge.old { top: auto; bottom: calc(var(--u) * 1.2); left: calc(var(--u) * 1.2); max-width: calc(100% - var(--u) * 2.4); white-space: normal; text-transform: none; font-size: calc(var(--u) * 1.7); background: linear-gradient(180deg, #8a8a94, #55555f); color: #fff; }
