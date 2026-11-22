@@ -1546,6 +1546,8 @@ const STRINGS = {
     'forge.new': 'New spell',
     'forge.fusing': 'Fusing from {name}: add a second element and more effects',
     'forge.fuse': 'Fuse',
+    'forge.delete': 'Delete',
+    'forge.sure': 'Sure? +{n}',
     'forge.fuseHint': 'Fuse a spell with more blocks into a new spell (the old one stays)',
     'forge.craft': 'Craft for {n} essence',
     'forge.cancelFuse': 'Cancel fusion',

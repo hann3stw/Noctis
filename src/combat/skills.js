@@ -31,10 +31,24 @@ const GLOW = {
   eclipse: { at: 'self', color: 0xffd24a, light: 180, big: true, rise: 4 },
 };
 
+// the glow of a spell of the Forge, made from its blocks: where it shines, in the colour of its element, bigger
+// with more blocks, more sparks for lightning, higher for fire and shadow
+function glowFor(def) {
+  const blocks = def.els.length + def.fxs.length;
+  return {
+    at: def.aim === 'arc' ? 'front' : def.aim === 'line' ? 'line' : def.aim === 'point' ? 'target' : 'self',
+    color: def.color,
+    light: 60 + blocks * 25,
+    big: blocks >= 5,
+    sparks: def.els.includes('lightning') ? 50 : def.els.includes('frost') ? 30 : 24,
+    rise: def.els.includes('fire') || def.els.includes('shadow') ? 4 : 2,
+  };
+}
+
 function castGlow(game, id, tx, tz, dx, dz) {
-  const G = GLOW[id];
-  if (!G) return;
   const P = game.player, fx = game.effects, def = skillDef(id);
+  const G = GLOW[id] || (def && def.custom ? glowFor(def) : null);
+  if (!G) return;
   const col = G.color || game.appearance.aura;
   const big = !!G.big;
   let x = P.x, z = P.z;

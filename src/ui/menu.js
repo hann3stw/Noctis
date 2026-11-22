@@ -237,6 +237,14 @@ export class Menu {
     } else if (act === 'fgFuse') {
       const s = this.game.forge.get(target.dataset.id);
       if (s) this.fg = { form: s.form, elements: [...s.elements], effects: [...s.effects], from: s.id };
+    } else if (act === 'fgDel') {
+      const id = target.dataset.id;
+      if (this.fgSure === id) {
+        this.game.forge.remove(id);
+        this.fgSure = '';
+        if (this.fg && this.fg.from === id) this.fg = { form: 'wave', elements: [], effects: [], from: '' };
+        if (this.selSkill === id) this.selSkill = null;
+      } else this.fgSure = id;
     } else if (act === 'fgCancel') {
       this.fg = { form: 'wave', elements: [], effects: [], from: '' };
     } else if (act === 'fgCraft') {
@@ -909,7 +917,7 @@ export class Menu {
       preview = `<h3>${spellName(spec)}</h3>${rows.map(([k, v]) => `<div class="row"><span>${t('ks.' + k)}</span><b>${v}</b></div>`).join('')}`;
     }
     const err = fg.elements.length && fg.effects.length ? F.check(spec, from) : '';
-    const mine = F.spells.map((s) => `<div class="fg-mine"><i>${SKILL_ICONS[s.id]}</i><b>${t('skill.' + s.id)}</b><button class="ap-btn small" data-act="fgFuse" data-id="${s.id}">${t('forge.fuse')}</button></div>`).join('');
+    const mine = F.spells.map((s) => `<div class="fg-mine"><i>${SKILL_ICONS[s.id]}</i><b>${t('skill.' + s.id)}</b><button class="ap-btn small" data-act="fgFuse" data-id="${s.id}">${t('forge.fuse')}</button><button class="ap-btn small danger" data-act="fgDel" data-id="${s.id}">${this.fgSure === s.id ? t('forge.sure', { n: Math.round(F.cost(s) * 0.5) }) : t('forge.delete')}</button></div>`).join('');
     return `<div class="forge">
       <div class="k-left"><h4>${t('forge.mine')}</h4>${mine || `<p class="k-hint">${t('forge.none')}</p>`}<small class="mp-note">${t('forge.fuseHint')}</small>
         <button class="ap-btn ghost" data-act="forgeClose">${t('forge.back')}</button></div>

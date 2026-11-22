@@ -5,6 +5,7 @@
 // from the settings. Audio starts after the first touch or key press, as
 // browsers require. The music (core/music.js) uses the same audio graph.
 import { settings } from './settings.js';
+import { CONFIG } from '../config.js';
 import { buzz } from './haptics.js';
 
 let ctx = null;
@@ -311,6 +312,34 @@ ATTACK.javelin = ATTACK.spear; HIT.javelin = HIT.spear;
 ATTACK.wand = ATTACK.staff; HIT.wand = HIT.grimoire;
 ATTACK.orb = ATTACK.scythe; HIT.orb = HIT.staff;
 
+// The sound of a spell of the Spell Forge, put together from its blocks: the form is the movement of the sound
+// (a sweep, a zip, a burst, a rise and a blow), the element its material, the effects a signature on top.
+function spellSound(d) {
+  const els = d.els || [], fxs = d.fxs || [];
+  // the form
+  if (d.form === 'wave') hiss(vary(500), 3200, 0.3, 0.3, 1.2, 0, 0.3);
+  else if (d.form === 'bolt') { tone('sawtooth', vary(500), 2600, 0.14, 0.09, 0, 0.3); hiss(1500, 7000, 0.12, 0.16, 2); }
+  else if (d.form === 'nova') { thump(vary(150), 40, 0.4, 0.55); hiss(3000, 300, 0.4, 0.3, 0.8, 0, 0.4, 'lowpass'); }
+  else { riser(0.3, 0.2); thump(vary(130), 35, 0.4, 0.6, 0.3); }
+  // the elements
+  for (const e of els) {
+    if (e === 'fire') { hiss(vary(2400), 600, 0.35, 0.25, 0.7, 0.02, 0.3); warm('sawtooth', 110, 0.4, 0.12, 0, 0.3, 1800, 150); }
+    else if (e === 'frost') { tone('sine', vary(1900), 2700, 0.5, 0.08, 0, 0.6); tone('triangle', vary(2850), 3600, 0.4, 0.04, 0.04, 0.6); hiss(8000, 11000, 0.3, 0.08, 3, 0.02); }
+    else if (e === 'arcane') { tone('sine', vary(440), 1320, 0.4, 0.1, 0, 0.5); tone('triangle', vary(660), 1980, 0.35, 0.05, 0.05, 0.5); }
+    else if (e === 'lightning') { hiss(7000, 1500, 0.18, 0.3, 2.5, 0, 0.2); tone('square', vary(1800), 200, 0.12, 0.06, 0.01); tone('square', vary(2400), 260, 0.1, 0.04, 0.09); }
+    else if (e === 'shadow') { warm('sawtooth', 73, 0.5, 0.16, 0, 0.35, 1400, 120); hiss(900, 200, 0.4, 0.2, 0.8, 0, 0.4, 'lowpass'); }
+  }
+  // the effects
+  for (const x of fxs) {
+    if (x === 'heal') [1, 1.25, 1.5].forEach((m, i) => tone('triangle', 660 * m, 660 * m, 0.3, 0.05, 0.1 + i * 0.07, 0.5));
+    else if (x === 'shield') tone('sine', vary(330), 330, 0.7, 0.08, 0.05, 0.5, 0.08);
+    else if (x === 'mark') tone('square', vary(1400), 1400, 0.05, 0.04, 0.12);
+    else if (x === 'pull') hiss(3500, 300, 0.4, 0.2, 1.5, 0.05, 0.3);
+    else if (x === 'haste') [0, 1, 2].forEach((i) => tone('square', 900 + i * 300, 900 + i * 300, 0.03, 0.03, 0.06 + i * 0.04));
+    else if (x === 'damage') thump(vary(120), 45, 0.2, 0.35, 0.02);
+  }
+}
+
 const SOUNDS = {
   swing: (w) => (ATTACK[w] || ATTACK.sword)(),
   hit: (w) => (HIT[w] || HIT.sword)(),
@@ -332,7 +361,7 @@ const SOUNDS = {
     hiss(6000, 11000, 0.6, 0.07, 2, 0.08, 0.7, 'bandpass', 0.1);
   },
   hurt: () => { thump(160, 60, 0.15, 0.4); warm('sawtooth', 196, 0.2, 0.12, 0, 0.1, 1800, 200); hiss(1200, 300, 0.12, 0.2, 1); },
-  skill: (id) => (SKILL[FAMILY[id]] || SKILL.shadow)(),
+  skill: (id) => { const d = CONFIG.skills[id]; if (d && d.custom) spellSound(d); else (SKILL[FAMILY[id]] || SKILL.shadow)(); },
   ult: (id) => ult(FAMILY[id]),
   arise: () => {
     tone('sine', 110, 330, 0.8, 0.2, 0, 0.5, 0.05);

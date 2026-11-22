@@ -68,6 +68,9 @@ export function buildDef(spec) {
   if (heal) d.healSelf = heal;
   if (shield) d.shield = shield;
   d.custom = true;
+  d.form = spec.form;
+  d.els = [...spec.elements];
+  d.fxs = [...spec.effects];
   d.for = ['mage'];
   d.color = ELEMENTS[spec.elements[0]].color;
   d.colors = spec.elements.map((k) => ELEMENTS[k].color);
@@ -160,5 +163,23 @@ export class Forge {
 
   get(id) {
     return this.spells.find((s) => s.id === id);
+  }
+
+  // delete a spell: half of the essence comes back
+  remove(id) {
+    const i = this.spells.findIndex((s) => s.id === id);
+    if (i < 0) return false;
+    const G = this.game, P = G.player, s = this.spells[i];
+    P.essence += Math.round(this.cost(s) * 0.5);
+    this.spells.splice(i, 1);
+    delete CONFIG.skills[id];
+    delete SKILL_ICONS[id];
+    P.known = P.known.filter((k) => k !== id);
+    P.slots = P.slots.map((k) => (k === id ? null : k));
+    P.newSkills = P.newSkills.filter((k) => k !== id);
+    if (G.mastery) { delete G.mastery.xp[id]; delete G.mastery.perks[id]; G.mastery.ver++; }
+    if (G.runes) { delete G.runes.worn[id]; G.runes.owned = G.runes.owned.filter((k) => !k.startsWith(id + ':')); }
+    G.save();
+    return true;
   }
 }
