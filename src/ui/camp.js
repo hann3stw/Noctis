@@ -4,6 +4,7 @@ import { CONFIG } from '../config.js';
 import { fmt } from '../core/format.js';
 import { t } from '../strings.js';
 import { runesOf } from '../core/runes.js';
+import { TAB_ICONS } from './icons.js';
 
 // the unlocks that are a section of the Camp tab
 export const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'];
@@ -133,7 +134,25 @@ function contractsView(menu) {
     <button class="ap-btn gold" data-act="campMods">${t('contracts.open', { n: g.mods.length, max: g.modsMax() })}</button></div>`;
 }
 
-// one section of the camp; every unlocked mechanic has a tab of its own in the menu
+// a line about the state of a mechanic, for its card in the Camp page
+function summary(g, id) {
+  if (id === 'barracks') return t('barracks.cap', { n: g.barracks.garrison.length, max: g.barracks.capacity() });
+  if (id === 'duelArena') return t('duel.record', { won: g.duel.won, best: g.duel.best });
+  if (id === 'runeWorkshop') return t('camp.sum.runes', { n: g.runes.owned.length });
+  if (id === 'fortify') { const all = g.fort.outposts(); return t('camp.sum.fort', { n: all.filter((si) => g.fort.level(si) > 0).length, max: all.length }); }
+  if (id === 'huntBoard') return t('camp.sum.hunt', { n: g.hunts.trophyCount() });
+  if (id === 'contracts') return t('camp.sum.contracts', { n: g.mods.length, max: g.modsMax() });
+  return '';
+}
+
+// the Camp page when several mechanics are unlocked: a big card for each
+export function campHub(menu) {
+  const g = menu.game;
+  const cards = campSections(g).map((id) => `<button class="cp-hub" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<b>${t('menu.' + id)}</b><small>${summary(g, id)}</small></button>`).join('');
+  return `<div class="camp"><div class="cp-hubs">${cards}</div></div>`;
+}
+
+// one section of the camp (its own page in the menu, or one card of the Camp page)
 export function campView(menu, sec) {
   const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView, huntBoard: boardView, contracts: contractsView };
   if (!views[sec]) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;

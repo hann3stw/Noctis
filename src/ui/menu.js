@@ -13,7 +13,7 @@ import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 import { skillOk } from '../core/classes.js';
-import { campView, campAct, campSections, campNews, SECTIONS } from './camp.js';
+import { campView, campHub, campAct, campSections, campNews, SECTIONS } from './camp.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
 import { STAT_KEYS } from '../entities/player.js';
@@ -256,20 +256,40 @@ export class Menu {
       barracks: campNews(this.game),
     };
     if (this.tab === 'army' && !this.game.hasArmy()) this.tab = 'gear'; // no army without the Necromancer
-    const secs = campSections(this.game); // the camp mechanics the classes unlocked: a tab each
+    // The bar at the bottom has few big pages; related pages share one (chips in the top bar switch
+    // between them): Hero = Gear, Stats, Look; Quests = Quests, Bestiary; the camp mechanics the
+    // classes unlocked are one page each when there is one, else a Camp page that shows them as cards.
+    const secs = campSections(this.game);
     if (SECTIONS.includes(this.tab) && !secs.includes(this.tab)) this.tab = 'gear';
-    const tabs = TABS.flatMap((id) => (id === 'camp' ? secs : [id])).filter((id) => id !== 'army' || this.game.hasArmy()).map((id) => {
-      const badge = news[id] ? `<i>${news[id]}</i>` : '';
-      return `<button class="mn-tab${id === this.tab ? ' on' : ''}" data-act="tab" data-tab="${id}">${TAB_ICONS[id]}<span>${t('menu.' + id)}</span>${badge}</button>`;
+    if (this.tab === 'camp' && secs.length === 1) this.tab = secs[0];
+    if (this.tab === 'camp' && secs.length === 0) this.tab = 'gear';
+    const groups = [
+      { id: 'hero', pages: ['gear', 'stats', 'look'], label: 'hero', icon: 'hero', badge: news.stats || news.gear },
+      { id: 'skills', pages: ['skills'], label: 'skills', icon: 'skills', badge: news.skills },
+      { id: 'path', pages: ['path'], label: 'path', icon: 'path', badge: news.path },
+    ];
+    if (secs.length === 1) groups.push({ id: 'camp', pages: [secs[0]], label: secs[0], icon: secs[0], badge: news.barracks && secs[0] === 'barracks' ? news.barracks : '' });
+    else if (secs.length > 1) groups.push({ id: 'camp', pages: ['camp', ...secs], label: 'camp', icon: 'camp', badge: news.barracks });
+    if (this.game.hasArmy()) groups.push({ id: 'army', pages: ['army'], label: 'army', icon: 'army', badge: '' });
+    groups.push({ id: 'quests', pages: ['quests', 'bestiary'], label: 'quests', icon: 'quests', badge: news.quests || news.bestiary });
+    const cur = groups.find((gr) => gr.pages.includes(this.tab)) || groups[0];
+    if (!this.lastPage) this.lastPage = {};
+    this.lastPage[cur.id] = this.tab;
+    const tabs = groups.map((gr) => {
+      const to = gr.id === 'camp' && gr.pages.length > 1 ? 'camp' : this.lastPage[gr.id] && gr.pages.includes(this.lastPage[gr.id]) ? this.lastPage[gr.id] : gr.pages[0];
+      return `<button class="mn-tab${gr === cur ? ' on' : ''}" data-act="tab" data-tab="${to}">${TAB_ICONS[gr.icon]}<span>${t('menu.' + gr.label)}</span>${gr.badge ? `<i>${gr.badge}</i>` : ''}</button>`;
     }).join('');
+    let subs = '';
+    if (cur.id === 'hero' || cur.id === 'quests') subs = cur.pages.map((p) => `<button class="seg${p === this.tab ? ' on' : ''}" data-act="tab" data-tab="${p}">${t('menu.' + p)}</button>`).join('');
+    else if (cur.id === 'camp' && cur.pages.length > 1 && this.tab !== 'camp') subs = `<button class="seg" data-act="tab" data-tab="camp">‹ ${t('menu.camp')}</button>`;
     const scroll = [...this.el.querySelectorAll('[data-scroll]')].map((l) => [l.dataset.scroll, l.scrollTop]);
     // like the Supercell games: the page name and what you own on top, the pages as a big bar at the bottom
     const Pl = this.game.player, Qs = this.game.quests;
     const chips = [['ess', fmt(Pl.essence)], ...(Qs.seals ? [['seal', Qs.seals]] : []), ...(Qs.respecs ? [['tok', Qs.respecs]] : []), ...(Qs.keys ? [['key', Qs.keys]] : [])]
       .map(([k, v]) => `<span class="mn-chip c-${k}"><i></i>${v}</span>`).join('');
     this.el.innerHTML = `
-      <div class="mn-head"><button class="mn-x" data-act="close" aria-label="${t('menu.close')}">✕</button><b class="mn-title">${t('menu.' + this.tab)}</b>
-        <span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path', ...SECTIONS].includes(this.tab) ? t('menu.campOnly') : ''}</span><div class="mn-res">${chips}</div></div>
+      <div class="mn-head"><button class="mn-x" data-act="close" aria-label="${t('menu.close')}">✕</button><b class="mn-title">${t('menu.' + this.tab)}</b><div class="mn-sub">${subs}</div>
+        <span class="mn-note">${this.locked && !['army', 'quests', 'bestiary', 'path', 'camp', ...SECTIONS].includes(this.tab) ? t('menu.campOnly') : ''}</span><div class="mn-res">${chips}</div></div>
       <div class="mn-body"></div>
       <nav class="mn-nav">${tabs}</nav>`;
     this.fitHead();
@@ -279,7 +299,7 @@ export class Menu {
       this.army.render();
     } else {
       const views = { gear: () => this.gear(), stats: () => this.stats(), skills: () => this.skills(), look: () => this.look(),
-        quests: () => this.questsView(), bestiary: () => this.bestiaryView(), path: () => this.pathView() };
+        quests: () => this.questsView(), bestiary: () => this.bestiaryView(), path: () => this.pathView(), camp: () => campHub(this) };
       body.innerHTML = views[this.tab] ? views[this.tab]() : campView(this, this.tab);
       if (this.tab === 'bestiary') this.showBeast(body);
     }

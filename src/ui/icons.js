@@ -84,6 +84,8 @@ export const TAB_ICONS = {
   skills: svg('M13 2L5 14h6l-2 8 8-12h-6z'),
   army: svg('M12 2c3 2 5 5 5 8 0 2-1 4-2 5l-1 5h-4l-1-5c-1-1-2-3-2-5 0-3 2-6 5-8zm-2 8a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'),
   look: svg('M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm-7 16a7 7 0 0 1 14 0z'),
+  camp: svg('M12 3L2 20h20zm0 6l5 9H7z'),
+  hero: svg('M12 2l3 3h4v4l3 3-3 3v4h-4l-3 3-3-3H5v-4l-3-3 3-3V5h4zm0 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'),
   path: svg('M12 2l3 6h6l-5 4 2 7-6-4-6 4 2-7-5-4h6z'),
   barracks: svg('M3 20V9l3-2v3l3-2v3l3-2v3l3-2v3l3-2V20zM10 14h4v6h-4z'),
   duelArena: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm-1 4L7 15l2 1 2-3 2 3 2-1zM4 3l4 4M20 3l-4 4'),
