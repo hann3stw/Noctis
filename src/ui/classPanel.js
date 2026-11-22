@@ -15,7 +15,10 @@ export class ClassPanel {
     root.appendChild(this.el);
     this.isOpen = false;
     this.sel = '';
-    this.el.addEventListener('click', (e) => this.onClick(e));
+    // pointerup as well as click: a tap on a phone must work even when the click does not come through
+    this.last = 0;
+    this.el.addEventListener('pointerup', (e) => { this.last = performance.now(); this.onClick(e); });
+    this.el.addEventListener('click', (e) => { if (performance.now() - this.last > 500) this.onClick(e); });
     this.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   }
 

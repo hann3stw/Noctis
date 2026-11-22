@@ -110,7 +110,8 @@ export function setLootClass(c) {
 // Rolls one drop. `known` = ids of skills and ultimates the player already has.
 export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, topChance = CONFIG.items.topChance) {
   const W = CONFIG.loot.weights;
-  const kind = weighted([W.weapon, W.armor, gearOnly ? 0 : W.skill]);
+  const cap = CONFIG.loot.skillCap[Math.min(CONFIG.loot.skillCap.length - 1, rankOf(level))];
+  const kind = weighted([W.weapon, W.armor, gearOnly || known.length >= cap ? 0 : W.skill]);
   if (kind === 2) {
     const open = [];
     for (const id in CONFIG.skills) if (!known.includes(id) && skillOk(id, lootClass)) open.push(id);

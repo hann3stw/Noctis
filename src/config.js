@@ -284,7 +284,7 @@ export const CONFIG = {
     // mostly common and uncommon items, legendary items start in rank D,
     // mythic ones in rank B, exotic ones in rank SSS. A 0 means: not in this rank.
     rarityWeights: [
-      [60, 30, 9, 1, 0, 0, 0], // E
+      [62, 30, 8, 0, 0, 0, 0], // E (rare is the best: epic starts in D)
       [42, 34, 17, 6, 1, 0, 0], // D
       [30, 32, 23, 11, 4, 0, 0], // C
       [20, 27, 26, 17, 8, 2, 0], // B
@@ -418,7 +418,10 @@ export const CONFIG = {
 
   loot: {
     dropChance: [0.035, 0.6, 1, 1], // normal enemy, elite, champion, boss
-    weights: { weapon: 30, armor: 50, skill: 20 },
+    weights: { weapon: 30, armor: 50, skill: 10 },
+    // how many skills (with the ultimates) a hunter can have found by the end of each rank E ... M: from then on
+    // the drops are gear only until the next rank, so the skills come over the whole game, not in the first hour
+    skillCap: [4, 6, 8, 10, 12, 14, 16, 18, 99, 99],
     pickupRange: 1.8,
     chest: { items: [1, 2], respawn: 240, openRange: 2.4 }, // count per zone: see zones
   },
