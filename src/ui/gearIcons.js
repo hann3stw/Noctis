@@ -2,79 +2,114 @@
 // every set, drawn like the 3D models (hood and mask for the Nightstalker,
 // closed helm and pauldrons for Ironbark, bone crown and ribs for the
 // Gravecaller, wings for the Stormrunner, wizard hat and robe for the
-// Voidweaver, horns and spikes for the Bloodreaver). 32 x 32, the parts in
-// var(--rc) take the rarity colour of the tile.
+// Voidweaver, horns and spikes for the Bloodreaver).
+// Drawn in the storybook style of the interface: every part has a thick dark outline, a soft light on top and
+// a shade at the bottom, small white highlights on edges. 32 x 32 (a little room around for the outline); the
+// parts in var(--rc) take the rarity colour of the tile.
+const INK = '#1f0f08';
 const A = 'style="fill:var(--rc,#c9a8ff)"'; // accent = rarity colour
-const p = (d, c) => `<path d="${d}" ${c === A ? A : `fill="${c}"`}/>`;
-const icon = (...parts) => `<svg class="gi" viewBox="0 0 32 32" aria-hidden="true">${parts.join('')}</svg>`;
+const SHADE = '<defs><linearGradient id="gi-sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></linearGradient></defs>';
+const fillOf = (c) => (c === A ? A : `fill="${c}"`);
+// one part: colour, outline, light and shade
+const p = (d, c) => `<path d="${d}" ${fillOf(c)} stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/><path d="${d}" fill="url(#gi-sh)"/>`;
+// a part without outline (a darker half, a groove)
+const q = (d, c) => `<path d="${d}" ${fillOf(c)}/>`;
+// a small bright line on an edge
+const h = (d, o = 0.7) => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity="${o}" stroke-width=".9" stroke-linecap="round"/>`;
+const rot = (a, x, y, ...parts) => `<g transform="rotate(${a} ${x} ${y})">${parts.join('')}</g>`;
+const icon = (...parts) => `<svg class="gi" viewBox="-1.5 -1.5 35 35" aria-hidden="true">${SHADE}${parts.join('')}</svg>`;
 
 // ---- weapons -------------------------------------------------------------------
-const METAL = '#e3e8f4', METAL2 = '#9aa4bc', WOOD = '#9a6638', WOOD2 = '#6a4224', GRIP = '#3c2c48', DARK = '#16121e';
+const METAL = '#eef2fa', METAL2 = '#a4aec6', WOOD = '#a8703f', WOOD2 = '#6a4224', GRIP = '#4a3260', DARK = '#16121e', GOLD = '#e0ac3a';
 
 export const WEAPON_ICONS = {
-  sword: icon(
-    p('M26 2h4v4L14 22l-4-4z', METAL),
-    p('M30 2v4L14 22l-2-2z', METAL2),
-    p('M6 16l3-3 10 10-3 3z', A),
-    p('M9 22l2 2-6 6-2-2z', GRIP),
-    p('M2 27a2.5 2.5 0 1 0 3 3 2.5 2.5 0 0 0-3-3z', A),
-  ),
+  // drawn pointing up, then turned
+  sword: icon(rot(45, 16, 15.8,
+    p('M16 -4.5L19.6 1.2V21.5H12.4V1.2z', METAL),
+    q('M16 -4.5L12.4 1.2V21.5H16z', METAL2),
+    q('M15.2 3H16.8V19.6H15.2z', '#7c86a0'),
+    h('M18.4 2.6V19.4'),
+    p('M6.5 21.2Q16 19 25.5 21.2V24.8Q16 22.6 6.5 24.8z', GOLD),
+    p('M13.4 22.8a2.6 2.6 0 1 0 5.2 0 2.6 2.6 0 1 0-5.2 0z', A),
+    p('M14.2 24.6H17.8V31.4H14.2z', GRIP),
+    h('M14.8 26H17.2M14.8 27.8H17.2M14.8 29.6H17.2', 0.35),
+    p('M13.3 33.2a2.7 2.7 0 1 0 5.4 0 2.7 2.7 0 1 0-5.4 0z', A),
+  )),
   daggers: icon(
-    p('M23 2l3 1-8 12-3-2z', METAL),
-    p('M26 3l-8 12-1.5-1z', METAL2),
-    p('M9 2L6 3l8 12 3-2z', METAL),
-    p('M6 3l8 12 1.5-1z', METAL2),
-    p('M12 14l3 2-2 3-3-2zM20 14l-3 2 2 3 3-2z', A),
-    p('M11 18l3 2-6 9-3-2zM21 18l-3 2 6 9 3-2z', GRIP),
+    rot(-34, 16, 17,
+      p('M16 1L19.2 6.4 18.2 18H13.8L12.8 6.4z', METAL),
+      q('M16 1L12.8 6.4 13.8 18H16z', METAL2),
+      h('M17.9 7.2L17.2 17', 0.6),
+      p('M10.4 18H21.6V20.6H10.4z', A),
+      p('M14.3 20.6H17.7V27.6H14.3z', GRIP),
+      p('M13.6 28.6a2.4 2.4 0 1 0 4.8 0 2.4 2.4 0 1 0-4.8 0z', GOLD),
+    ),
+    rot(34, 16, 17,
+      p('M16 1L19.2 6.4 18.2 18H13.8L12.8 6.4z', METAL),
+      q('M16 1L12.8 6.4 13.8 18H16z', METAL2),
+      h('M17.9 7.2L17.2 17', 0.6),
+      p('M10.4 18H21.6V20.6H10.4z', A),
+      p('M14.3 20.6H17.7V27.6H14.3z', GRIP),
+      p('M13.6 28.6a2.4 2.4 0 1 0 4.8 0 2.4 2.4 0 1 0-4.8 0z', GOLD),
+    ),
   ),
-  spear: icon(
-    p('M5 29l-2-2L21 9l2 2z', WOOD),
-    p('M5 29l-1-1L22 10l1 1z', WOOD2),
-    p('M30 2l-3 11-3-2-3-3-2-3z', METAL),
-    p('M30 2l-3 11-3-2z', METAL2),
-    p('M18 10l4 4-2 2-4-4z', A),
-    p('M16 14l2 2-3 7-1-5-5-1z', A),
-  ),
-  hammer: icon(
-    p('M14.5 12h3v18h-3z', WOOD),
-    p('M16 12h1.5v18H16z', WOOD2),
-    p('M4 3h24v10H4z', METAL),
-    p('M4 9h24v4H4z', METAL2),
-    p('M13 3h6v10h-6z', A),
-    p('M2 4h2v8H2zM28 4h2v8h-2z', METAL2),
-    p('M14 27h4v3h-4z', GRIP),
-  ),
-  scythe: icon(
-    p('M8 4h3v26H8z', WOOD),
-    p('M9.5 4H11v26H9.5z', WOOD2),
-    p('M11 4c9 0 16 4 19 12-5-5-11-7-19-6z', METAL),
-    p('M11 8c8-1 14 2 19 8-6-4-12-5-19-4z', METAL2),
-    p('M7 3h5v4H7z', A),
-    p('M7 17h5v2H7z', GRIP),
-  ),
+  spear: icon(rot(45, 16, 15.5,
+    p('M14.7 8H17.3V34H14.7z', WOOD),
+    q('M16.2 8H17.3V34H16.2z', WOOD2),
+    p('M16 -4.5Q21.6 3.5 20.6 8.2Q16 10.6 11.4 8.2Q10.4 3.5 16 -4.5z', METAL),
+    q('M16 -4.5Q10.4 3.5 11.4 8.2Q13.6 9.4 16 9.5z', METAL2),
+    h('M17.8 1L19 6.4'),
+    p('M12.6 8.6H19.4V11H12.6z', GOLD),
+    p('M17.2 12Q24 12.6 23.6 19.4Q20 16.4 17.2 17.4z', A),
+    p('M14.2 32H17.8V35H14.2z', GRIP),
+  )),
+  hammer: icon(rot(28, 16, 17,
+    p('M14.6 11H17.4V32H14.6z', WOOD),
+    q('M16.2 11H17.4V32H16.2z', WOOD2),
+    p('M14.2 17H17.8V19H14.2zM14.2 22H17.8V24H14.2z', GRIP),
+    p('M6 1.5H26Q27.5 1.5 27.5 3V12Q27.5 13.5 26 13.5H6Q4.5 13.5 4.5 12V3Q4.5 1.5 6 1.5z', METAL),
+    q('M4.5 8H27.5V12Q27.5 13.5 26 13.5H6Q4.5 13.5 4.5 12z', METAL2),
+    h('M7 3.6H25'),
+    p('M12.6 1.5H19.4V13.5H12.6z', A),
+    p('M2 3H4.6V12H2zM27.4 3H30V12H27.4z', METAL2),
+    p('M14.2 31H17.8V34H14.2z', GRIP),
+  )),
+  scythe: icon(rot(-8, 16, 17,
+    p('M13.6 1H16.6V34H13.6z', WOOD),
+    q('M15.4 1H16.6V34H15.4z', WOOD2),
+    p('M16.6 1.6C25.4-.4 31.6 4 32.4 12.6 27 8 22 7.6 16.6 9.4z', METAL),
+    q('M16.6 9.4C22 7.6 27 8 32.4 12.6 28 9.8 22 9.4 16.6 11.2z', METAL2),
+    h('M18 3.4C24 2.4 29 5 31 9.4'),
+    p('M12.4 5.4H17.8V9.4H12.4z', A),
+    p('M13 18H17.2V20.4H13zM13 24H17.2V26.4H13z', GRIP),
+  )),
   bow: icon(
-    p('M7 2c11 3 17 9 17 14S18 27 7 30l-1-2.5c9-3 14-8 14-11.5S15 7.5 6 4.5z', WOOD),
-    p('M7 2c11 3 17 9 17 14h-2c0-4-6-9.5-15-12.5z', WOOD2),
-    p('M6.5 3.5h1v25h-1z', '#e8e4d8'),
-    p('M3 15h22v2H3z', METAL2),
-    p('M25 12l6 4-6 4z', METAL),
-    p('M2 13l4 3-4 3H0l3-3-3-3z', A),
-    p('M17 14h4v4h-4z', GRIP),
+    p('M7.4 1C23 4.6 28.6 11 28.6 16S23 27.4 7.4 31L6.6 28.2C17 25 22.6 20.6 22.6 16S17 7 6.6 3.8z', WOOD),
+    q('M7.4 1C23 4.6 28.6 11 28.6 16H26.4C26.4 11.6 20 6.4 7 3z', WOOD2),
+    h('M9 2.2C20 5 26 10 27 14', 0.5),
+    `<path d="M6.8 3.4V28.6" stroke="#efe6d0" stroke-width=".9" fill="none"/>`,
+    p('M2.4 15.2H26V16.8H2.4z', WOOD),
+    p('M26 13.4L31.4 16 26 18.6z', METAL),
+    p('M1.2 12.6L6 15.2V16.8L1.2 19.4z', A),
+    p('M21 12.4H26.4V19.6H21z', GRIP),
   ),
-  staff: icon(
-    p('M14.5 12h3v18h-3z', WOOD),
-    p('M16 12h1.5v18H16z', WOOD2),
-    p('M11 10c0-2 2-3 5-3s5 1 5 3l-2 3h-6z', GRIP),
-    p('M16 1a6 6 0 1 0 0 12 6 6 0 0 0 0-12z', A),
-    p('M14 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', '#ffffff'),
-    p('M14 22h4v2h-4z', A),
-  ),
+  staff: icon(rot(14, 16, 17,
+    p('M14.6 12H17.4V34H14.6z', WOOD),
+    q('M16.2 12H17.4V34H16.2z', WOOD2),
+    p('M10.4 11.6C9 6 12 3.6 16 3.6S23 6 21.6 11.6L19.6 14.2H12.4z', GRIP),
+    p('M16 .4a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 0 0 0-12.8z', A),
+    `<ellipse cx="13.8" cy="4" rx="2.4" ry="1.6" fill="#fff" fill-opacity=".75"/>`,
+    p('M13.4 22H18.6V24.4H13.4z', A),
+    p('M14.2 32H17.8V35H14.2z', GRIP),
+  )),
   grimoire: icon(
-    p('M6 3h19a2 2 0 0 1 2 2v23H8a2 2 0 0 1-2-2z', '#3a2266'),
-    p('M8 24h19v4H8a2 2 0 0 1 0-4z', '#efe6d0'),
-    p('M6 3h4v21H8a2 2 0 0 0-2 2z', '#24143f'),
-    p('M18 7l1.6 3.4 3.4.6-2.5 2.5.6 3.5-3.1-1.7-3.1 1.7.6-3.5-2.5-2.5 3.4-.6z', A),
-    p('M25 12h3v5h-3z', METAL),
+    p('M5.6 2.4H25Q27.4 2.4 27.4 4.8V26.8H7.8Q5.6 26.8 5.6 24.6z', '#4a2a82'),
+    q('M5.6 2.4H10V26.8H7.8Q5.6 26.8 5.6 24.6z', '#2c1850'),
+    p('M8 26.8H28V29.6H8Q6.6 29.6 6.6 28.2Q6.6 26.8 8 26.8z', '#f4ecd6'),
+    `<path d="M11.4 6H24V22.6H11.4z" fill="none" stroke="${GOLD}" stroke-width="1"/>`,
+    p('M17.7 8.2L19.3 11.6 23 12.1 20.3 14.7 21 18.4 17.7 16.6 14.4 18.4 15.1 14.7 12.4 12.1 16.1 11.6z', A),
+    p('M25.4 11H29.4V17H25.4z', METAL),
+    p('M5.6 2.4H9.4V6.2H5.6zM23.6 23H27.4V26.8H23.6z', GOLD),
   ),
 };
 
