@@ -6,7 +6,7 @@ import { t } from '../strings.js';
 import { runesOf } from '../core/runes.js';
 
 // the unlocks that are a section of the Camp tab
-const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'];
+export const SECTIONS = ['barracks', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'];
 
 // the sections that are unlocked (and exist in the game)
 export function campSections(game) {
@@ -16,7 +16,7 @@ export function campSections(game) {
 
 // a badge for the tab: something waits
 export function campNews(game) {
-  return game.barracks && game.barracks.report ? '!' : '';
+  return game.barracks && game.barracks.report ? '!' : ''; // for the Barracks tab
 }
 
 const dur = (sec) => {
@@ -133,13 +133,11 @@ function contractsView(menu) {
     <button class="ap-btn gold" data-act="campMods">${t('contracts.open', { n: g.mods.length, max: g.modsMax() })}</button></div>`;
 }
 
-export function campView(menu) {
-  const secs = campSections(menu.game);
-  if (!secs.length) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
-  const cur = secs.includes(menu.campTab) ? menu.campTab : secs[0];
-  const tabs = secs.length > 1 ? `<div class="cp-tabs">${secs.map((id) => `<button class="ttl${id === cur ? ' on' : ''}" data-act="campTab" data-id="${id}"><b>${t('camp.' + id)}</b></button>`).join('')}</div>` : '';
+// one section of the camp; every unlocked mechanic has a tab of its own in the menu
+export function campView(menu, sec) {
   const views = { barracks: barracksView, duelArena: duelView, runeWorkshop: workshopView, fortify: fortView, huntBoard: boardView, contracts: contractsView };
-  return `<div class="camp">${tabs}${views[cur](menu)}</div>`;
+  if (!views[sec]) return `<div class="camp"><p class="cp-none">${t('camp.none')}</p></div>`;
+  return `<div class="camp">${views[sec](menu)}</div>`;
 }
 
 // the buttons of the Camp tab; true = it was one of ours

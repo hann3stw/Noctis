@@ -85,7 +85,12 @@ export const TAB_ICONS = {
   army: svg('M12 2c3 2 5 5 5 8 0 2-1 4-2 5l-1 5h-4l-1-5c-1-1-2-3-2-5 0-3 2-6 5-8zm-2 8a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm4 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z'),
   look: svg('M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm-7 16a7 7 0 0 1 14 0z'),
   path: svg('M12 2l3 6h6l-5 4 2 7-6-4-6 4 2-7-5-4h6z'),
-  camp: svg('M12 3L2 20h20zm0 6l5 9H7z'),
+  barracks: svg('M3 20V9l3-2v3l3-2v3l3-2v3l3-2v3l3-2V20zM10 14h4v6h-4z'),
+  duelArena: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm-1 4L7 15l2 1 2-3 2 3 2-1zM4 3l4 4M20 3l-4 4'),
+  runeWorkshop: svg('M12 2l8 5v10l-8 5-8-5V7zm0 5l-2 3h4zm-3 6l-1 3h8l-1-3z'),
+  fortify: svg('M3 21V7h3v2h3V7h3v2h3V7h3v14h-4v-5a2 2 0 0 0-4 0v5z'),
+  huntBoard: svg('M5 3h14v18H5zm3 4v2h8V7zm0 4v2h8v-2zm0 4v2h5v-2z'),
+  contracts: svg('M6 2h9l4 4v16H6zm8 1.5V7h3.5zM9 11h7v2H9zm0 4h7v2H9z'),
   quests: svg('M6 2h10l4 4v16H6zm9 1.5V7h3.5zM8 10h10v2H8zm0 4h10v2H8zm0 4h7v2H8zM3 4h2v18H3z'),
   bestiary: svg('M4 3h11a3 3 0 0 1 3 3v15H7a3 3 0 0 1-3-3zm3 13a1 1 0 0 0 0 2h9v-2zm4-10c-2 0-3.5 1.5-3.5 3.5 0 1 .5 2 1.5 2.5V14h4v-2c1-.5 1.5-1.5 1.5-2.5C14.5 7.5 13 6 11 6zm-1.3 3a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6zm2.6 0a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6z'),
 };

@@ -1,0 +1,174 @@
+/* Storybook theme: Supercell clarity (chunky shapes, thick dark outlines, one bright
+   main action per screen, big readable type) mixed with a fantasy UI kit (wooden
+   frames with metal studs, parchment ribbons, ornate dividers). Loaded last. It only
+   changes colours, outlines and shadows (no sizes), so no layout moves. */
+
+:root {
+  --font-display: 'Lilita One', 'Cinzel', system-ui, sans-serif;
+  --ink: #1f0f08; /* the outline of everything */
+  --wood-hi: #a8703f;
+  --wood: #7a4a28;
+  --wood-lo: #4a2a14;
+  --parch-hi: #fff0c4;
+  --parch: #f1d79a;
+  --parch-lo: #cfa35c;
+  --brass: #ffc928;
+  --brass-lo: #d98a10;
+  --slate-hi: #3b2d4f;
+  --slate-lo: #1e1530;
+  --leaf: #67c25a;
+  --ribbon: #d23a46;
+  --teal: #38a9b8;
+  --ol: calc(var(--u) * 0.55); /* outline thickness */
+  --glass: linear-gradient(180deg, var(--slate-hi) 0%, var(--slate-lo) 100%);
+  --glass-soft: linear-gradient(180deg, rgba(59, 45, 79, 0.85) 0%, rgba(30, 21, 48, 0.9) 100%);
+  /* a wooden frame made of rings: ink, wood, ink, with a light top edge */
+  --frame: 0 0 0 var(--ol) var(--ink), inset 0 0 0 calc(var(--u) * 0.5) var(--wood), inset 0 0 0 calc(var(--u) * 0.95) var(--ink), inset 0 calc(var(--u) * 1.2) 0 calc(var(--u) * 0.9) rgba(255, 220, 160, 0.07);
+}
+
+html, body, button, input { font-family: var(--font-ui); }
+
+/* ---------------------------------- type ---------------------------------- */
+.scr-head h2, .scr-box h2, #menu h3, .g-right h3, .death b, .banner b, .boss-bar b, .zone b, .zone-card b,
+.gp-text b, .slot b, .s-head b, .logo h1, .lvl-badge b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+.mn-tab, .ap-btn, .sbtn, .btn.pill, .seg, .banner b, .pa-card b, .cls-card b, .cp-head b, .pa-head b, .ab-head h2, .cp-mis b, .tile small {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+/* --------------------------------- buttons --------------------------------- */
+/* a chunky tan button with a 3D edge; the main action is brass-yellow, danger is a red ribbon */
+.sbtn, .ap-btn, .btn.pill, .seg {
+  color: var(--wood-lo);
+  letter-spacing: 0.05em;
+  border: var(--ol) solid var(--ink);
+  background: linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.7), inset 0 calc(var(--u) * -0.7) 0 rgba(120, 70, 20, 0.45), 0 calc(var(--u) * 0.8) 0 var(--ink), 0 calc(var(--u) * 1.4) calc(var(--u) * 1.4) rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 0.07s, filter 0.12s, box-shadow 0.07s;
+}
+.sbtn:active, .ap-btn:active, .btn.pill:active, .seg:active {
+  transform: translateY(calc(var(--u) * 0.6));
+  filter: brightness(1.08);
+  box-shadow: inset 0 calc(var(--u) * 0.4) 0 rgba(255, 255, 255, 0.5), inset 0 calc(var(--u) * -0.5) 0 rgba(120, 70, 20, 0.4), 0 calc(var(--u) * 0.2) 0 var(--ink);
+}
+.sbtn.go, .ap-btn.gold, .ap-btn.go, .title-menu .sbtn.main:first-child:not([disabled]) {
+  color: #4a2300;
+  background: linear-gradient(180deg, #fff59a 0%, var(--brass) 45%, var(--brass-lo) 100%);
+  border-color: var(--ink);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.8), inset 0 calc(var(--u) * -0.8) 0 rgba(160, 80, 0, 0.5), 0 calc(var(--u) * 0.8) 0 var(--ink), 0 0 calc(var(--u) * 3.5) rgba(255, 201, 40, 0.55);
+}
+.sbtn.ghost, .ap-btn.ghost, .seg {
+  color: var(--parch-hi);
+  background: linear-gradient(180deg, rgba(255, 240, 196, 0.16), rgba(255, 240, 196, 0.05));
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.35) rgba(241, 215, 154, 0.55), 0 calc(var(--u) * 0.6) 0 var(--ink);
+  text-shadow: 0 1px 0 var(--ink);
+}
+.seg.on, .tab.on {
+  color: #4a2300;
+  background: linear-gradient(180deg, #fff59a 0%, var(--brass) 55%, var(--brass-lo) 100%);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.sbtn.danger, .ap-btn.danger {
+  color: #fff;
+  background: linear-gradient(180deg, #ff7b86 0%, var(--ribbon) 50%, #8e1c2a 100%);
+  text-shadow: 0 1px 0 var(--ink), 0 0 0 var(--ink);
+}
+.ap-btn[disabled], .sbtn[disabled] { filter: grayscale(0.6); opacity: 0.45; }
+
+/* --------------------------------- frames ---------------------------------- */
+.scr-box, .ap-col, .ap-grid, .g-left, .g-mid, .g-right, .s-left, .s-right, .k-left, .set-row, .slot, .gate-panel, .ed-panel,
+.ab-box, .cp-exp, .qt-box {
+  border: 0;
+  background: var(--glass);
+  box-shadow: var(--frame), 0 calc(var(--u) * 1.2) calc(var(--u) * 3) rgba(0, 0, 0, 0.5);
+}
+.scr-box::before { display: none; }
+.scr-box { border-radius: calc(var(--u) * 2.2); }
+#menu { background: radial-gradient(ellipse at 50% -10%, rgba(255, 190, 90, 0.16), transparent 60%), rgba(18, 10, 14, 0.95); }
+.mn-head { border-bottom: calc(var(--u) * 0.9) solid var(--ink); box-shadow: 0 calc(var(--u) * 0.5) 0 var(--wood); }
+
+/* tabs: wooden tabs, the open one is brass */
+.mn-tab { color: #e9d3a8; border: var(--ol) solid transparent; border-radius: calc(var(--u) * 1.6); font-size: calc(var(--u) * 3); }
+.mn-tab.on {
+  color: #4a2300;
+  background: linear-gradient(180deg, #fff59a 0%, var(--brass) 55%, var(--brass-lo) 100%);
+  border-color: var(--ink);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.8), 0 calc(var(--u) * 0.7) 0 var(--ink);
+}
+.mn-tab.on svg { color: var(--wood-lo); }
+.mn-tab.on::after { display: none; }
+.mn-tab i, .tile .nw, .k-card .nw { background: var(--ribbon); color: #fff; border: var(--ol) solid var(--ink); font-family: var(--font-display); font-style: normal; }
+
+/* ribbons: the title of a page sits on a parchment banner with notched ends */
+.pa-head b, .cp-head b, .ab-head h2, .scr-box h2 {
+  display: inline-block;
+  padding: 0 calc(var(--u) * 3.2);
+  color: var(--wood-lo);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, var(--parch-hi), var(--parch) 55%, var(--parch-lo));
+  border-top: var(--ol) solid var(--ink);
+  border-bottom: var(--ol) solid var(--ink);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--u) * 1.3) 50%, 100% 100%, 0 100%, calc(var(--u) * 1.3) 50%);
+}
+.ab-head h2 { margin-right: calc(var(--u) * 2); }
+
+/* dividers: an ornate line with a diamond */
+.pa-sub, .rune-h, .pa-sub + * { }
+.pa-sub {
+  color: var(--parch);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.2);
+}
+.pa-sub::after {
+  content: '';
+  flex: 1;
+  height: calc(var(--u) * 0.6);
+  background: linear-gradient(90deg, var(--brass) 0, var(--brass) 55%, transparent 100%);
+  border-radius: 99px;
+  opacity: 0.7;
+}
+.pa-sub::before { content: '◆'; color: var(--brass); font-size: 0.7em; }
+
+/* ------------------------------ cards and rows ------------------------------ */
+.pa-card, .cls-card, .k-card, .cp-row, .cp-mis, .cp-rune, .tile, .g-card, .q-card, .ttl, .pa-pill, .pa-chips span, .pa-tot li {
+  border: var(--ol) solid var(--ink);
+}
+.cls-card, .pa-card, .cp-mis, .cp-rune, .cp-row, .k-card {
+  background: linear-gradient(180deg, rgba(255, 240, 196, 0.13), rgba(255, 240, 196, 0.04));
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.35) rgba(241, 215, 154, 0.3), 0 calc(var(--u) * 0.5) 0 var(--ink);
+}
+.cls-card.on, .k-card.sel, .cp-row.sel, .pa-card.pick {
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--brass), 0 calc(var(--u) * 0.5) 0 var(--ink), 0 0 calc(var(--u) * 3) rgba(255, 201, 40, 0.45);
+}
+.cls-card b, .pa-card b { color: var(--brass); text-shadow: 0 var(--ol) 0 var(--ink); }
+.pa-pill, .ttl { text-shadow: 0 1px 0 var(--ink); }
+.cp-pips { color: var(--brass); }
+
+/* ---------------------------------- bars ----------------------------------- */
+.bar { border: var(--ol) solid var(--ink); box-shadow: inset 0 calc(var(--u) * 0.4) calc(var(--u) * 0.8) rgba(0, 0, 0, 0.6), 0 0 0 calc(var(--u) * 0.3) var(--wood); }
+.bar span, .banner b, .zone b, .dmg { text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink), 0 calc(var(--u) * -0.3) 0 var(--ink), calc(var(--u) * 0.3) 0 0 var(--ink), calc(var(--u) * -0.3) 0 0 var(--ink); }
+
+/* ----------------------------- round hud buttons ----------------------------- */
+.btn.round { border: calc(var(--u) * 0.9) solid var(--ink); box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--wood-hi), 0 calc(var(--u) * 0.8) 0 var(--ink), 0 calc(var(--u) * 1.4) calc(var(--u) * 1.6) rgba(0, 0, 0, 0.45); }
+#btn-attack { border: calc(var(--u) * 1) solid var(--ink); box-shadow: inset 0 0 0 calc(var(--u) * 0.6) #ffb6c0, 0 calc(var(--u) * 0.9) 0 var(--ink); }
+.skill { border-color: var(--ink); }
+.skill.ult { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--brass), 0 calc(var(--u) * 0.8) 0 var(--ink); }
+
+/* the ribbon text wins over the older heading colours */
+.ab-box .ab-head h2, .ab-box.mods .ab-head h2, .scr-box h2, #menu .pa-head b, #menu .cp-head b {
+  color: var(--wood-lo);
+  font-size: calc(var(--u) * 4.2);
+  line-height: 1.5;
+}
+.ab-head { align-items: center; }
+.pa-pill { box-shadow: inset 0 0 0 calc(var(--u) * 0.4) var(--lc, var(--parch)), 0 calc(var(--u) * 0.4) 0 var(--ink); background: rgba(0, 0, 0, 0.35); }
+.pa-card { box-shadow: inset 0 0 0 calc(var(--u) * 0.45) var(--lc, var(--parch)), 0 calc(var(--u) * 0.5) 0 var(--ink); }
