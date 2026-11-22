@@ -34,6 +34,7 @@ export class EnemyShots {
   }
 
   fire(x, z, dx, dz, speed, dmg, color, range, radius, kind = 0) {
+    if (this.game.coop.hosting) this.game.coop.mirrorShot(x + dx * 0.8, z + dz * 0.8, dx, dz, speed, dmg, color, range, radius, kind);
     const i = this.next;
     this.next = (this.next + 1) % MAX;
     this.live[i] = 1;

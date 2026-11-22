@@ -261,6 +261,11 @@ export class Gates {
       this.armyOut = game.army.out;
       game.army.out = false;
     }
+    // co-op: the hunters of the lobby enter this gate too (net/coop.js); no army, as in a duel
+    if (!g.abyss && !g.trial && !g.duelRun && game.coop.lobbyHost && game.coop.peers.size > 0) {
+      const ok = game.coop.announce(gi, { tier: g.tier, stages: [...gateDiff(g).stages, 'boss'] });
+      if (ok) { this.solo = true; this.armyOut = game.army.out; game.army.out = false; }
+    }
     this.runMods = game.modsOpen() ? game.mods.slice(0, game.modsMax(g.abyss)) : [];
     this.contractRun = !g.abyss && !g.trial && game.path.has('contracts') && this.runMods.length > 0; // Gate Contracts (Delver)
     const tl = this.runMods.includes('timeLimit') ? CONFIG.modifiers.list.timeLimit : null;
@@ -315,6 +320,51 @@ export class Gates {
     }
   }
 
+  // Co-op guest: the host entered gate gi. The arena is the same in every world; what happens in it comes from
+  // the host's snapshots (enemies.updateRemote). Nothing of this gate is used up in this world.
+  enterCoop(gi, info) {
+    const game = this.game, P = game.player, E = game.enemies;
+    if (this.active >= 0 || P.dead) return;
+    const g = this.list[gi], c = arenaCenter(gi), R = CONFIG.gates.arenaRadius;
+    g.tier = info.tier || 0;
+    g.keyRun = false;
+    g.duelRun = false;
+    this.runMods = [];
+    this.contractRun = false;
+    this.timeLeft = 0;
+    this.buildArena(gi).visible = true;
+    const d = Math.hypot(g.x, g.z) || 1;
+    this.returnX = g.x - (g.x / d) * 5;
+    this.returnZ = g.z - (g.z / d) * 5;
+    this.active = gi;
+    this.near = -1;
+    this.exitOpen = false;
+    this.exit.visible = false;
+    this.exit.position.set(c.x, 0, c.z + R - 3);
+    this.exit.rotation.y = Math.PI;
+    this.solo = true;
+    this.armyOut = game.army.out;
+    game.army.out = false;
+    E.calmAll();
+    E.usePool(gi);
+    E.vanish(E.arenaBoss[gi]);
+    this.stages = info.stages || ['boss'];
+    this.stageI = -1;
+    this.stagePause = 0;
+    this.surviveT = 0;
+    game.shots.clear();
+    game.hazards.clear();
+    P.x = c.x + (Math.random() - 0.5) * 6;
+    P.z = c.z + R - 7;
+    P.dirX = 0;
+    P.dirZ = -1;
+    game.army.relocate(P.x, P.z);
+    game.cam.snap(P.x, P.z);
+    game.world.update(P.x, P.z, true);
+    game.hud.toast(t('coop.entered'));
+    play('arise');
+  }
+
   // the loot bonus of the modifiers is bigger under Gate Contracts
   contractLuck() {
     return this.contractRun ? CONFIG.contracts.luck : 1;
@@ -328,6 +378,7 @@ export class Gates {
     this.active = -1;
     this.exitOpen = false;
     this.exit.visible = false;
+    game.coop.onGateLeft(); // co-op: the others are told
     if (this.arenas[gi]) this.arenas[gi].visible = false;
     E.vanish(E.arenaBoss[gi]);
     for (const a of E.arenaAdds[gi]) E.vanish(a);
@@ -464,10 +515,12 @@ export class Gates {
       game.effects.ring(c.x, c.z - 3, 0.5, 8, zone.gateColor, 0.6);
       game.cam.shake(0.5, 0.5);
       game.hud.banner(t('gate.stage', { n, max }), t('gate.stage.boss', { boss: t('enemy.' + zone.boss) }));
+      if (game.coop.hosting) game.coop.sendBanner('boss', n, max, zone.boss);
       play('roar');
       return;
     }
     game.hud.banner(t('gate.stage', { n, max }), t('gate.stage.' + kind));
+    if (game.coop.hosting) game.coop.sendBanner(kind, n, max, zone.boss);
     play('arise');
     if (kind === 'wave') {
       for (let k = 0; k < D.wave; k++) this.spawnOne(gi, this.eliteRoll(D));
@@ -501,6 +554,7 @@ export class Gates {
     game.hud.toast(t('gate.stageCleared', { n: this.stageI + 1 }) + ' · ' + t('toast.essence', { n: ess }));
     play('stage');
     game.quests.add('stage');
+    if (game.coop.hosting) game.coop.say({ t: 'sc' }); // the others get their stage reward
     this.stagePause = CONFIG.gates.stagePause;
   }
 
@@ -580,7 +634,7 @@ export class Gates {
     } else if (this.exitOpen) {
       this.exitPortal.scale.set(1.9 * pulse, 2.4 * pulse, 1);
     } else {
-      if (!this.inAbyss && !P.dead) this.runStages(dt);
+      if (!this.inAbyss && !P.dead && !game.coop.guest) this.runStages(dt);
       if (!(this.timeLeft > 0 && !P.dead)) return;
       // Against the Clock: out of the gate when the time is up
       this.timeLeft -= dt;
@@ -831,6 +885,13 @@ export class Gates {
     if (!b.hitP && !P.dead) {
       const dx = P.x - x, dz = P.z - z, m = r + P.radius;
       if (dx * dx + dz * dz < m * m) { b.hitP = true; P.damage(dmg); }
+    }
+    if (game.coop.hosting) {
+      game.coop.targets.forEach((u, k) => {
+        if (b.hitS.has(1000 + k)) return;
+        const dx = u.x - x, dz = u.z - z, m = r + u.radius;
+        if (dx * dx + dz * dz < m * m) { b.hitS.add(1000 + k); game.coop.hitGhost(k, dmg); }
+      });
     }
     for (const u of army.deployed) {
       if (b.hitS.has(u.slot) || !army.targetable(u)) continue;

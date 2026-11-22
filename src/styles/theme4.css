@@ -324,6 +324,17 @@ input::placeholder { color: rgba(241, 215, 154, 0.45); }
 .us-row b { flex: 1; font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .us-row i { font-style: normal; color: #fff; font-family: var(--font-display); }
 .us-row em { font-style: normal; color: var(--brass); font-size: calc(var(--u) * 2); }
+/* the co-op lobby looks like the class panel */
+#coop-panel { position: absolute; inset: 0; z-index: 55; display: none; align-items: center; justify-content: center; padding: calc(var(--st) + var(--u) * 2) calc(var(--sr) + var(--u) * 3) calc(var(--sb) + var(--u) * 2) calc(var(--sl) + var(--u) * 3); background: radial-gradient(ellipse at 50% 40%, rgba(40, 30, 90, 0.5), rgba(6, 3, 10, 0.92)); font-size: calc(var(--u) * 3); }
+#coop-panel.on { display: flex; }
+#coop-panel .ab-box { align-items: stretch; }
+#coop-panel p { margin: 0; color: var(--parch); text-align: center; }
+.co-row { display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 1.6); flex-wrap: wrap; }
+.co-or { font-family: var(--font-display); color: var(--parch); }
+.co-row input { width: calc(var(--u) * 24); text-align: center; letter-spacing: 0.2em; text-transform: uppercase; font-size: calc(var(--u) * 4); padding: calc(var(--u) * 1) calc(var(--u) * 1.6); }
+.co-code { display: flex; flex-direction: column; align-items: center; }
+.co-code small { font-family: var(--font-display); color: var(--parch); }
+.co-code b { font-family: var(--font-display); font-weight: 400; font-size: calc(var(--u) * 9); letter-spacing: 0.25em; color: var(--brass); text-shadow: 0 calc(var(--u) * 0.8) 0 var(--ink); }
 /* the world map (Travel) */
 .bm-map { border: 0 !important; border-radius: calc(var(--u) * 1.6); box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 1.6) calc(var(--u) * 3) rgba(0, 0, 0, 0.5) !important; }
 .bm-title { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); letter-spacing: 0.04em; }

@@ -338,6 +338,7 @@ export class Screens {
       case 'resume': app.resume(); break;
       case 'saveNow': app.saveNow(); break;
       case 'pauseSettings': this.show('settings', { back: 'pause' }); break;
+      case 'pauseCoop': app.resume(); if (app.game) app.game.coopPanel.open(); break;
       case 'quit': app.exitToTitle(); break;
       // travel
       case 'travel': app.travelTo(Number(v)); break;
@@ -670,6 +671,7 @@ export class Screens {
       <h2>${t('pause.title')}</h2>
       <button class="sbtn main" data-act="resume">${t('pause.resume')}</button>
       <button class="sbtn main" data-act="saveNow"${this.app.game && this.app.game.slot >= 0 ? '' : ' disabled'}>${t('pause.save')}</button>
+      <button class="sbtn main" data-act="pauseCoop">${t('coop.title')}</button>
       <button class="sbtn main" data-act="pauseSettings">${t('title.settings')}</button>
       <button class="sbtn main ghost" data-act="quit">${t('pause.quit')}</button>
     </div></div>`;

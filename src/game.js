@@ -2,6 +2,7 @@
 // frame loop.
 import * as THREE from 'three';
 import { usageTick } from './core/usage.js';
+import { Coop } from './net/coop.js';
 import { setMood, duckMusic, sting } from './core/music.js';
 import { CONFIG } from './config.js';
 import { rankOf, rankProgress, tierLevels, levelAt, enemyPower } from './core/levels.js';
@@ -49,6 +50,7 @@ import { Duel } from './core/duel.js';
 import { Fort } from './core/fort.js';
 import { Ranger } from './core/ranger.js';
 import { ClassPanel } from './ui/classPanel.js';
+import { CoopPanel } from './ui/coopPanel.js';
 import { play } from './core/sfx.js';
 import { reportFps, measureEvery, settings, gfx } from './core/settings.js';
 import { submitScore, publicLook, publicGear, publicStats } from './net/online.js';
@@ -135,6 +137,7 @@ export class Game {
     this.enemies = new Enemies(this);
     this.army = new Army(this);
     this.souls = new Souls(this);
+    this.coop = new Coop(this); // co-op gates (net/coop.js)
     this.shots = new EnemyShots(this);
     this.hazards = new Hazards(this);
     this.projectiles = new Projectiles(this);
@@ -149,6 +152,7 @@ export class Game {
     setLootClass(this.mainClass);
     document.documentElement.dataset.cls = this.mainClass || ''; // the class colour of the interface (styles/theme4.css)
     this.classPanel = new ClassPanel(uiRoot, this);
+    this.coopPanel = new CoopPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
     if (save) {
@@ -456,6 +460,7 @@ export class Game {
   // Leaves the world: stops the loop and frees everything it created.
   destroy() {
     this.running = false;
+    this.coop.quit();
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('orientationchange', this.resize);
     document.removeEventListener('visibilitychange', this.onHide);
@@ -542,6 +547,7 @@ export class Game {
     this.resolveMouse();
     this.effects.beginFrame();
     P.update(dt);
+    this.coop.update(dt);
     this.handleArmyInput();
     this.army.update(dt);
     this.enemies.update(dt);
@@ -917,6 +923,7 @@ export class Game {
   }
 
   setPaused(paused) {
+    if (paused && this.coop.active) paused = false; // the others play on: no pause in a co-op gate
     this.paused = paused;
     duckMusic(paused);
     this.last = 0;

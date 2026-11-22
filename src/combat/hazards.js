@@ -26,6 +26,7 @@ export class Hazards {
   }
 
   add(x, z, r, delay, dmg, color = 0xff3030) {
+    if (this.game.coop.hosting) this.game.coop.mirrorHazard(x, z, r, delay, dmg, color); // co-op: the others see it and are hit by it
     const h = this.list[this.next];
     this.next = (this.next + 1) % MAX;
     h.live = true;

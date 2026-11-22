@@ -75,6 +75,10 @@ export class Enemies {
     this.diedAt = new Float32Array(N); // clock at death (necro)
     this.revived = new Uint8Array(N); // raised again by a necro (only once)
     this.clock = 0;
+    // co-op guest: where the host says an enemy is (the enemy glides there), see net/coop.js
+    this.sx = new Float32Array(N);
+    this.sz = new Float32Array(N);
+    this.sy = new Float32Array(N);
 
     this.active = new Uint16Array(N);
     this.activeCount = 0;
@@ -360,7 +364,7 @@ export class Enemies {
         // a rank trial, or a gate difficulty (deadly gates: their tier on top)
         const gd = gateDiff(gate), GT = CONFIG.gateTiers, tier = gate.tier || 0;
         lv = gate.level;
-        hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1) * Math.pow(GT.hp, tier);
+        hpM = gd.hp * (def.boss ? CONFIG.boss.hp : 1) * Math.pow(GT.hp, tier) * (game.coop ? game.coop.hpMult() : 1); // co-op: more hunters, more health
         dmgM = gd.damage * Math.pow(GT.damage, tier);
       }
       const tough = game.modOn('tough');
@@ -526,6 +530,13 @@ export class Enemies {
   // src: -1 = the player, otherwise the slot of the shadow that dealt the hit
   damage(i, amount, kx, kz, src = -1, crit = false) {
     if (!this.alive[i]) return;
+    if (this.game.coop.guest && this.arena[i]) {
+      // co-op guest: the host decides; here only the hit is shown
+      this.game.coop.sendHit(i, amount, kx, kz, crit);
+      this.flash[i] = 0.12;
+      if (src < 0) this.game.effects.number(this.x[i], 2.2 * this.scale[i], this.z[i], fmt(amount), crit ? 'crit' : undefined);
+      return;
+    }
     const pf = this.game.profile;
     if (src < 0) { pf.dmgHunter += amount; pf.hits++; if (crit) pf.crits++; } else pf.dmgArmy += amount;
     const fx = this.game.effects;
@@ -572,6 +583,7 @@ export class Enemies {
     this.deathT[i] = DEATH_TIME;
     this.respawnT[i] = this.arena[i] || this.kid[i] ? Infinity : CONFIG.sim.respawnTime;
     this.diedAt[i] = this.clock;
+    if (this.arena[i] && this.game.coop.hosting) this.game.coop.sendKill(i);
     const fx = this.game.effects, x = this.x[i], z = this.z[i], t = this.tier[i];
     if (this.types[this.type[i]].trait === 'split' && !this.kid[i] && t < 3) this.split(i);
     fx.burst(x, 0.9, z, 14 + t * 10, 0x6a4dbf, 5, 0.24, 0.6);
@@ -610,7 +622,7 @@ export class Enemies {
   atk(i, tg) {
     let d = this.dmg[i];
     if (this.buff[i] > 0) d *= 1 + TR.rally.damage;
-    if (tg >= 0 && this.types[this.type[i]].trait === 'hunter') d *= TR.hunter.damage;
+    if (tg >= 0 && tg < 1000 && this.types[this.type[i]].trait === 'hunter') d *= TR.hunter.damage;
     return d;
   }
 
@@ -683,7 +695,7 @@ export class Enemies {
       bx = P.x - P.dirX * B.behind;
       bz = P.z - P.dirZ * B.behind;
     } else {
-      const u = game.army.units[tg];
+      const u = this.unitOf(tg);
       bx = u.x + (dx / dist) * B.behind;
       bz = u.z + (dz / dist) * B.behind;
     }
@@ -700,15 +712,66 @@ export class Enemies {
   }
 
   // hits whatever the enemy is attacking (tg = shadow slot or -1 = player)
+  unitOf(tg) {
+    return tg >= 1000 ? this.game.coop.targets[tg - 1000] : this.game.army.units[tg];
+  }
+
   hitTarget(tg, amount) {
-    if (tg >= 0) this.game.army.damage(tg, amount);
+    if (tg >= 1000) this.game.coop.hitGhost(tg - 1000, amount);
+    else if (tg >= 0) this.game.army.damage(tg, amount);
     else this.game.player.damage(amount);
   }
 
   // ---- simulation ---------------------------------------------------------
+  // co-op guest: the monsters of the arena are what the host sent; they glide to their places and are drawn
+  updateRemote(dt) {
+    const game = this.game, gates = game.gates, gi = gates.active;
+    this.clock += dt;
+    for (let t = 0; t < this.types.length; t++) this.types[t].n = 0;
+    this.nMarks = 0;
+    let nAct = 0;
+    const slots = [this.arenaBoss[gi], ...this.arenaAdds[gi]];
+    for (const i of slots) {
+      if (!this.alive[i]) {
+        if (this.deathT[i] > 0) {
+          this.deathT[i] -= dt;
+          if (this.deathT[i] > 0) this.draw(i, this.deathT[i] / DEATH_TIME, 3);
+        }
+        continue;
+      }
+      this.active[nAct++] = i;
+      if (this.flash[i] > 0) this.flash[i] -= dt;
+      if (this.lunge[i] > 0) this.lunge[i] -= dt * 5;
+      const k = Math.min(1, dt * 14);
+      const ox = this.x[i], oz = this.z[i];
+      this.x[i] += (this.sx[i] - this.x[i]) * k;
+      this.z[i] += (this.sz[i] - this.z[i]) * k;
+      let diff = this.sy[i] - this.yaw[i];
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      this.yaw[i] += diff * Math.min(1, dt * 12);
+      if (this.moving[i]) this.phase[i] += Math.hypot(this.x[i] - ox, this.z[i] - oz) * 2.2;
+      const st = this.state[i], tier = this.tier[i];
+      this.draw(i, 1, this.flash[i] > 0 ? 1 : st === ST_WINDUP ? 2 : st === ST_CHARGE ? 4 : 0);
+      game.effects.blob(this.x[i], this.z[i], this.radius[i] * 1.1);
+      if (tier > 0) this.mark(i);
+      if (tier < 3 && this.hp[i] < this.maxHp[i]) game.effects.bar(this.x[i], 2.1 * this.scale[i], this.z[i], this.hp[i] / this.maxHp[i], BAR_WIDTH[tier]);
+    }
+    this.activeCount = nAct;
+    for (let t = 0; t < this.types.length; t++) {
+      const ty = this.types[t];
+      ty.mesh.count = ty.n;
+      ty.mesh.visible = ty.n > 0;
+      if (ty.n > 0) { ty.mesh.instanceMatrix.needsUpdate = true; ty.mesh.instanceColor.needsUpdate = true; }
+    }
+    this.marks.count = this.nMarks;
+    this.marks.instanceMatrix.needsUpdate = true;
+    this.marks.instanceColor.needsUpdate = true;
+  }
+
   update(dt) {
     const game = this.game, P = game.player, world = game.world, S = CONFIG.sim, E = CONFIG.enemies;
     const gates = game.gates;
+    if (game.coop.guest && gates.active >= 0) { this.updateRemote(dt); return; }
     const px = P.x, pz = P.z;
     const army = game.army;
     const playerOk = !P.dead && !P.inCamp;
@@ -755,19 +818,24 @@ export class Enemies {
 
       // ---- target: the player or the most threatening shadow nearby
       let tg = this.tgt[i];
-      if (tg >= 0 && !army.targetable(army.units[tg])) tg = -1;
+      if (tg >= 1000 ? !game.coop.ghostOk(tg) : tg >= 0 && !army.targetable(army.units[tg])) tg = -1;
       this.retT[i] -= dt;
       if (this.retT[i] <= 0 && st !== ST_WINDUP && st !== ST_CHARGE) {
         this.retT[i] = 0.35 + Math.random() * 0.25;
         const s = army.pickTarget(this.x[i], this.z[i], E.targetRange);
         // hunters always go for a shadow when one is near
         tg = s >= 0 && (trait === 'hunter' || !playerOk || army.pickW < pd2) ? s : -1;
+        // co-op: the other hunters are targets too (the closest one wins)
+        if (this.arena[i] && game.coop.hosting) {
+          const gk = game.coop.pick(this.x[i], this.z[i], 40);
+          if (gk >= 0 && (tg >= 0 ? game.coop.pickD2 < army.pickW : !playerOk || game.coop.pickD2 < pd2)) tg = 1000 + gk;
+        }
       }
       this.tgt[i] = tg;
       let dx = pdx, dz = pdz, tr = P.radius, targetable = playerOk;
       // (dx, dz may change below when a blink moves the enemy)
       if (tg >= 0) {
-        const u = army.units[tg];
+        const u = this.unitOf(tg);
         dx = u.x - this.x[i];
         dz = u.z - this.z[i];
         tr = u.radius;
@@ -817,8 +885,8 @@ export class Enemies {
             else if (dist < def.chargeRange * 1.6 && this.blink(i, tg, dx, dz, dist)) {
               st = ST_WINDUP;
               this.timer[i] = def.attackWindup + 0.15;
-              dx = (tg < 0 ? px : army.units[tg].x) - this.x[i];
-              dz = (tg < 0 ? pz : army.units[tg].z) - this.z[i];
+              dx = (tg < 0 ? px : this.unitOf(tg).x) - this.x[i];
+              dz = (tg < 0 ? pz : this.unitOf(tg).z) - this.z[i];
               this.yaw[i] = Math.atan2(dx, dz);
             }
           }
