@@ -1,0 +1,124 @@
+/* Storybook theme, part 3: the rough fantasy layer. Worn wood with scratches and knots, rivets, deeper
+   ribbon ends, filigree corners with leaves and curls, flourish dividers, wooden title tiles. Everything is a
+   vector or a gradient, no pixels. Loaded after theme2.css. (made by tools in the scratchpad; edit freely) */
+:root {
+  --scratch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120'%3E%3Cpath d='M0.0 101.3Q8.9 100.1 17.8 98.7' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.8' stroke-linecap='round'/%3E%3Cpath d='M112.8 83.1Q126.0 85.2 139.3 85.5' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.7' stroke-linecap='round'/%3E%3Cpath d='M56.1 77.9Q72.0 74.2 87.9 70.8' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M121.1 13.5Q133.8 16.6 146.6 18.9' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.0' stroke-linecap='round'/%3E%3Cpath d='M136.8 99.9Q147.1 98.6 157.5 98.2' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.6' stroke-linecap='round'/%3E%3Cpath d='M44.6 47.1Q53.7 49.8 62.7 51.1' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M8.8 30.1Q22.3 29.2 35.9 30.2' fill='none' stroke='%231a0a04' stroke-opacity='0.22' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M8.2 40.2Q18.1 41.1 27.9 41.8' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.6' stroke-linecap='round'/%3E%3Cpath d='M60.8 31.2Q71.0 30.9 81.2 30.4' fill='none' stroke='%231a0a04' stroke-opacity='0.22' stroke-width='1.0' stroke-linecap='round'/%3E%3Cpath d='M35.0 99.7Q46.8 102.3 58.6 104.0' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.9' stroke-linecap='round'/%3E%3Cpath d='M75.7 75.8Q95.7 74.0 115.7 73.7' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.0' stroke-linecap='round'/%3E%3Cpath d='M52.6 36.4Q63.2 36.8 73.9 39.5' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M11.7 44.7Q18.3 42.5 24.9 42.0' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.0' stroke-linecap='round'/%3E%3Cpath d='M21.6 50.3Q35.7 48.9 49.8 45.2' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M132.8 99.9Q149.7 97.2 166.7 96.0' fill='none' stroke='%231a0a04' stroke-opacity='0.22' stroke-width='0.6' stroke-linecap='round'/%3E%3Cpath d='M0.2 67.9Q8.2 69.4 16.1 69.8' fill='none' stroke='%23ffe2a8' stroke-opacity='0.13' stroke-width='0.7' stroke-linecap='round'/%3E%3Cellipse cx='125.9' cy='36.2' rx='3.2' ry='2' fill='none' stroke='%231a0a04' stroke-opacity='.2' stroke-width='1'/%3E%3Cellipse cx='125.9' cy='36.2' rx='1.3' ry='.8' fill='%231a0a04' fill-opacity='.18'/%3E%3Cellipse cx='64.9' cy='95.5' rx='3.2' ry='2' fill='none' stroke='%231a0a04' stroke-opacity='.2' stroke-width='1'/%3E%3Cellipse cx='64.9' cy='95.5' rx='1.3' ry='.8' fill='%231a0a04' fill-opacity='.18'/%3E%3C/svg%3E");
+  --corner-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E %3Cpath d='M10 46V22Q10 10 22 10H46' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%231f0f08' stroke-width='4.2' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Cpath d='M28 3.5q3 8 11 6q-2-8-11-6z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M30 5q4 2 7 3.6' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Cpath d='M3.5 28q8 3 6 11q-8-2-6-11z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M5 30q2 4 3.6 7' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Ccircle cx='9' cy='9' r='5.4' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E %3Ccircle cx='7.4' cy='7.4' r='1.7' fill='%23fff'/%3E%3C/svg%3E");
+  --corner-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg transform='translate(48 0) scale(-1 1)'%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E %3Cpath d='M10 46V22Q10 10 22 10H46' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%231f0f08' stroke-width='4.2' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Cpath d='M28 3.5q3 8 11 6q-2-8-11-6z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M30 5q4 2 7 3.6' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Cpath d='M3.5 28q8 3 6 11q-8-2-6-11z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M5 30q2 4 3.6 7' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Ccircle cx='9' cy='9' r='5.4' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E %3Ccircle cx='7.4' cy='7.4' r='1.7' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg transform='translate(0 48) scale(1 -1)'%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E %3Cpath d='M10 46V22Q10 10 22 10H46' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%231f0f08' stroke-width='4.2' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Cpath d='M28 3.5q3 8 11 6q-2-8-11-6z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M30 5q4 2 7 3.6' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Cpath d='M3.5 28q8 3 6 11q-8-2-6-11z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M5 30q2 4 3.6 7' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Ccircle cx='9' cy='9' r='5.4' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E %3Ccircle cx='7.4' cy='7.4' r='1.7' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --corner-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg transform='translate(48 48) scale(-1 -1)'%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%231f0f08' stroke-width='6' stroke-linecap='round'/%3E %3Cpath d='M3 46V18Q3 3 18 3H46' fill='none' stroke='%23ffc928' stroke-width='3' stroke-linecap='round'/%3E %3Cpath d='M10 46V22Q10 10 22 10H46' fill='none' stroke='%23d98a10' stroke-width='1.6' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%231f0f08' stroke-width='4.2' stroke-linecap='round'/%3E %3Cpath d='M16 17q8-1 8 6q0 5-5 5' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Cpath d='M28 3.5q3 8 11 6q-2-8-11-6z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M30 5q4 2 7 3.6' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Cpath d='M3.5 28q8 3 6 11q-8-2-6-11z' fill='%2367c25a' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E %3Cpath d='M5 30q2 4 3.6 7' fill='none' stroke='%232f7a30' stroke-width='.9'/%3E %3Ccircle cx='9' cy='9' r='5.4' fill='%2338a9b8' stroke='%231f0f08' stroke-width='2'/%3E %3Ccircle cx='7.4' cy='7.4' r='1.7' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E");
+  --flourish: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 20'%3E %3Cpath d='M30 3l6 7-6 7-6-7z' fill='%23ffc928' stroke='%231f0f08' stroke-width='2' stroke-linejoin='round'/%3E %3Cpath d='M24 10Q16 3 9 8Q5 11 8 14Q11 16 13 13' fill='none' stroke='%231f0f08' stroke-width='4' stroke-linecap='round'/%3E %3Cpath d='M24 10Q16 3 9 8Q5 11 8 14Q11 16 13 13' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Cpath d='M36 10Q44 3 51 8Q55 11 52 14Q49 16 47 13' fill='none' stroke='%231f0f08' stroke-width='4' stroke-linecap='round'/%3E %3Cpath d='M36 10Q44 3 51 8Q55 11 52 14Q49 16 47 13' fill='none' stroke='%23ffc928' stroke-width='2' stroke-linecap='round'/%3E %3Ccircle cx='30' cy='10' r='1.6' fill='%2338a9b8'/%3E%3C/svg%3E");
+  --vine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E %3Cpath d='M0 10Q25 3 50 10T100 10T150 10T200 10' fill='none' stroke='%231f0f08' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E %3Cpath d='M0 10Q25 3 50 10T100 10T150 10T200 10' fill='none' stroke='%23d98a10' stroke-width='2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  /* a brass rivet: bright dot, brass body, dark rim */
+  --rivet: radial-gradient(circle at 36% 32%, #fff4c8 0 14%, #e8b040 15% 46%, #7a4a14 47% 66%, var(--ink) 67% 72%, transparent 74%);
+}
+
+/* ---- frames: scratched glass-slate with the new corners ---- */
+.scr-box, .ab-box, .g-left, .g-mid, .g-right, .s-left, .s-right, .k-left, .ap-col {
+  background:
+    var(--corner-tl) left calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-tr) right calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-bl) left calc(var(--u) * 0.6) bottom calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--corner-br) right calc(var(--u) * 0.6) bottom calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat,
+    var(--scratch) 0 0 / calc(var(--u) * 40) auto repeat,
+    var(--glass);
+}
+
+/* ---- the bar at the bottom: worn planks, scratched, with a rivet at each end ---- */
+.mn-nav {
+  background:
+    var(--rivet) left calc(var(--u) * 0.45) top 50% / calc(var(--u) * 1.5) calc(var(--u) * 1.5) no-repeat,
+    var(--rivet) right calc(var(--u) * 0.45) top 50% / calc(var(--u) * 1.5) calc(var(--u) * 1.5) no-repeat,
+    var(--scratch) 0 0 / calc(var(--u) * 36) auto repeat,
+    repeating-linear-gradient(91deg, rgba(0, 0, 0, 0.1) 0 calc(var(--u) * 0.5), transparent calc(var(--u) * 0.5) calc(var(--u) * 1.8)),
+    linear-gradient(180deg, var(--wood-hi) 0%, var(--wood) 45%, var(--wood-lo) 100%);
+}
+.mn-head { background: none; }
+
+/* ---- ribbons: deeper swallowtail ends and a rivet in each ---- */
+.mn-title, .pa-head b, .cp-head b, .ab-head h2, .scr-box h2 {
+  background-image:
+    var(--rivet), var(--rivet),
+    var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%);
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: calc(var(--u) * 1.3) calc(var(--u) * 1.3), calc(var(--u) * 1.3) calc(var(--u) * 1.3), 120px 120px, auto;
+  background-position: calc(var(--u) * 2.5) 50%, calc(100% - var(--u) * 2.5) 50%, 0 0, 0 0;
+  padding-left: calc(var(--u) * 5);
+  padding-right: calc(var(--u) * 5);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--u) * 2.2) 50%, 100% 100%, 0 100%, calc(var(--u) * 2.2) 50%);
+}
+
+/* ---- the big buttons: a rivet each side ---- */
+.title-menu .sbtn.main:first-child:not([disabled]), .ap-btn.gold:not(.ghost):not(.danger), .ap-btn.go:not(.ghost):not(.danger), .sbtn.go:not(.ghost):not(.danger) {
+  background-image:
+    var(--rivet), var(--rivet),
+    var(--grain), linear-gradient(180deg, #fff59a 0%, var(--brass) 45%, var(--brass-lo) 100%);
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: calc(var(--u) * 1.3) calc(var(--u) * 1.3), calc(var(--u) * 1.3) calc(var(--u) * 1.3), 120px 120px, auto;
+  background-position: calc(var(--u) * 1.4) 50%, calc(100% - var(--u) * 1.4) 50%, 0 0, 0 0;
+}
+.sbtn.main:not(.go):not(:first-child):not(.ghost), .title-menu .tm-worlds:not(.ghost) {
+  background-image:
+    var(--rivet), var(--rivet),
+    var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%);
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: calc(var(--u) * 1.3) calc(var(--u) * 1.3), calc(var(--u) * 1.3) calc(var(--u) * 1.3), 120px 120px, auto;
+  background-position: calc(var(--u) * 1.4) 50%, calc(100% - var(--u) * 1.4) 50%, 0 0, 0 0;
+}
+
+.sbtn.main.ghost {
+  background-image: var(--rivet), var(--rivet), linear-gradient(180deg, rgba(255, 240, 196, 0.16), rgba(255, 240, 196, 0.05));
+  background-repeat: no-repeat;
+  background-size: calc(var(--u) * 1.3) calc(var(--u) * 1.3), calc(var(--u) * 1.3) calc(var(--u) * 1.3), auto;
+  background-position: calc(var(--u) * 1.4) 50%, calc(100% - var(--u) * 1.4) 50%, 0 0;
+}
+
+/* ---- dividers: a flourish, then a line that fades out ---- */
+.pa-sub { gap: calc(var(--u) * 0.8); }
+.pa-sub::before {
+  content: '';
+  flex: none;
+  width: calc(var(--u) * 7);
+  height: calc(var(--u) * 2.3);
+  background: var(--flourish) center / contain no-repeat;
+}
+.pa-sub::after { height: calc(var(--u) * 0.45); opacity: 0.85; background: linear-gradient(90deg, var(--brass-lo) 0, var(--brass) 40%, transparent 100%); }
+
+/* ---- the title screen: a plank under the name, wooden tiles ---- */
+.logo p {
+  display: inline-block;
+  margin-top: calc(var(--u) * 2.6);
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 4.5);
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 2.7);
+  letter-spacing: 0.22em;
+  color: var(--parch-hi);
+  opacity: 1;
+  text-shadow: 0 1px 0 var(--ink);
+  background:
+    var(--rivet) left calc(var(--u) * 1) top 50% / calc(var(--u) * 1.3) calc(var(--u) * 1.3) no-repeat,
+    var(--rivet) right calc(var(--u) * 1) top 50% / calc(var(--u) * 1.3) calc(var(--u) * 1.3) no-repeat,
+    var(--scratch) 0 0 / calc(var(--u) * 30) auto repeat,
+    linear-gradient(180deg, var(--wood-hi), var(--wood) 50%, var(--wood-lo));
+  border: var(--ol) solid var(--ink);
+  border-radius: calc(var(--u) * 1.2);
+  box-shadow: inset 0 calc(var(--u) * 0.4) 0 rgba(255, 230, 180, 0.35), 0 calc(var(--u) * 0.7) 0 var(--ink);
+}
+.logo h1 { filter: drop-shadow(0 calc(var(--u) * 0.9) 0 var(--ink)) drop-shadow(0 0 calc(var(--u) * 3) rgba(138, 77, 255, 0.8)); }
+.tm-sq {
+  color: var(--parch-hi);
+  font-family: var(--font-display);
+  font-size: calc(var(--u) * 2.5);
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 0 var(--ink);
+  border: var(--ol) solid var(--ink);
+  background:
+    var(--scratch) 0 0 / calc(var(--u) * 30) auto repeat,
+    repeating-linear-gradient(91deg, rgba(0, 0, 0, 0.1) 0 calc(var(--u) * 0.5), transparent calc(var(--u) * 0.5) calc(var(--u) * 1.8)),
+    linear-gradient(180deg, var(--wood-hi), var(--wood) 55%, var(--wood-lo));
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 230, 180, 0.4), inset 0 calc(var(--u) * -0.6) 0 rgba(0, 0, 0, 0.35), 0 calc(var(--u) * 0.8) 0 var(--ink);
+}
+.tm-sq:active { transform: translateY(calc(var(--u) * 0.6)) scale(0.96); filter: brightness(1.1); }
+.tm-sq svg, .tm-sq[data-act='board'] svg, .tm-sq[data-act='online'] svg { color: var(--brass); filter: drop-shadow(0 calc(var(--u) * 0.4) 0 var(--ink)); }
+.tm-sq[data-act='online'] svg { color: #8fe0f0; }
+.tm-who { background: var(--teal); border: var(--ol) solid var(--ink); color: #fff; font-family: var(--font-display); font-size: calc(var(--u) * 1.9); }

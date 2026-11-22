@@ -314,6 +314,74 @@ function dispose(group) {
   });
 }
 
+
+// ---- what the main class wears: parts on top of the look, so a Warrior, a Mage and a Rogue can be told apart
+// at a glance. H = the head group (origin = centre of the head, the head is a 0.5 cube; hidden under a helmet),
+// B = the body group, F = the head group that stays (a halo). 
+// Returns what has to move (a floating orb) or null. Colours are the class colours of the interface.
+const CLASS_LOOK = {
+  necromancer: 0x9a6bff, warrior: 0xe8553f, mage: 0x4aa8ff, rogue: 0xe050a8, ranger: 0x58c24a, cleric: 0xffd24a,
+};
+function buildClassParts(id, H, B, F) {
+  const col = CLASS_LOOK[id];
+  if (!col) return null;
+  const main = mat(col), dark = mat(shade(col, 0.45)), glow = new THREE.MeshBasicMaterial({ color: col });
+  const steel = mat(0x8d97a8), steelHi = mat(0xc4ccd8), gold = mat(0xc9a24a), bone = mat(0xd8d0bc), leather = mat(0x6a4a2a);
+  let orb = null;
+  if (id === 'necromancer') {
+    // bone spikes on the shoulders, a violet soul floating over one of them
+    for (const s of [1, -1]) {
+      cone(B, bone, 0.07, 0.3, s * 0.5, 1.82, 0, 0, -s * 0.3, 5);
+      cone(B, bone, 0.05, 0.2, s * 0.58, 1.74, 0.1, 0.4, -s * 0.9, 5);
+    }
+    orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), glow);
+    orb.position.set(0.62, 2.35, 0);
+    B.add(orb);
+  } else if (id === 'warrior') {
+    // steel pauldrons with a red trim, a plate on the chest
+    for (const s of [1, -1]) {
+      box(B, steel, 0.38, 0.18, 0.44, s * 0.52, 1.68, 0, 0, 0, -s * 0.22);
+      box(B, steelHi, 0.4, 0.05, 0.46, s * 0.54, 1.78, 0, 0, 0, -s * 0.22);
+      box(B, main, 0.4, 0.05, 0.46, s * 0.5, 1.58, 0, 0, 0, -s * 0.22);
+    }
+    box(B, steel, 0.5, 0.36, 0.06, 0, 1.3, 0.24);
+    box(B, main, 0.12, 0.3, 0.07, 0, 1.3, 0.255);
+  } else if (id === 'mage') {
+    // a tall pointed hat with a gold band and a glowing star
+    box(H, dark, 0.86, 0.06, 0.86, 0, 0.27, 0);
+    box(H, main, 0.5, 0.06, 0.5, 0, 0.33, 0);
+    cone(H, main, 0.27, 0.72, 0, 0.7, 0, -0.12, 0, 4);
+    box(H, gold, 0.56, 0.07, 0.56, 0, 0.35, 0);
+    box(H, glow, 0.09, 0.09, 0.05, 0, 0.36, 0.29);
+  } else if (id === 'rogue') {
+    // a hood and a scarf over the lower face
+    box(H, dark, 0.58, 0.12, 0.6, 0, 0.27, -0.02);
+    box(H, dark, 0.58, 0.58, 0.12, 0, 0, -0.3);
+    box(H, dark, 0.1, 0.5, 0.5, 0.3, 0.02, -0.04);
+    box(H, dark, 0.1, 0.5, 0.5, -0.3, 0.02, -0.04);
+    box(H, main, 0.54, 0.16, 0.06, 0, -0.14, 0.27);
+    box(B, dark, 0.64, 0.14, 0.48, 0, 1.66, 0); // cowl
+  } else if (id === 'ranger') {
+    // a quiver with arrows on the back, a feather in a green cap band
+    box(B, leather, 0.2, 0.64, 0.2, 0.14, 1.32, -0.34, 0.18, 0, -0.15);
+    box(B, mat(0x3a2a18), 0.22, 0.08, 0.22, 0.14, 1.64, -0.3, 0.18, 0, -0.15);
+    for (let i = 0; i < 3; i++) box(B, i === 1 ? main : bone, 0.05, 0.22, 0.05, 0.08 + i * 0.07, 1.74, -0.34 - i * 0.01, 0.18, 0, -0.15 + i * 0.1);
+    box(H, dark, 0.54, 0.09, 0.54, 0, 0.2, 0);
+    cone(H, main, 0.05, 0.34, 0.2, 0.36, -0.2, 0.3, -0.5, 4);
+  } else if (id === 'cleric') {
+    // a golden halo, a white tabard with a gold cross
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.03, 6, 28), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+    halo.rotation.x = Math.PI / 2 - 0.2;
+    halo.position.set(0, 0.56, -0.04);
+    F.add(halo);
+    box(B, mat(0xf4f0e4), 0.32, 0.78, 0.04, 0, 1.18, 0.225);
+    box(B, gold, 0.06, 0.26, 0.05, 0, 1.28, 0.25);
+    box(B, gold, 0.18, 0.06, 0.05, 0, 1.32, 0.25);
+    for (const s of [1, -1]) box(B, gold, 0.3, 0.07, 0.36, s * 0.48, 1.62, 0, 0, 0, -s * 0.2);
+  }
+  return orb;
+}
+
 // ---- the look of the hunter ----------------------------------------------------
 // Every option of the skin editor. The index of an entry is what is saved; the
 // name is the key of its label (strings: 'opt.<option>.<name>'). New entries
@@ -562,7 +630,7 @@ function castShadows(root) {
   root.traverse((o) => { if (o.isMesh && o.material && o.material.isMeshLambertMaterial) o.castShadow = true; });
 }
 
-export function createPlayerModel(appearance) {
+export function createPlayerModel(appearance, cls = '') {
   const A = normLook(appearance);
   const root = new THREE.Group();
   const body = new THREE.Group();
@@ -669,6 +737,25 @@ export function createPlayerModel(appearance) {
     head.add(halo);
   }
   body.add(head);
+
+  // the parts of the main class (setClass changes them when the class is chosen later)
+  const clsHead = new THREE.Group(), clsFree = new THREE.Group(), clsBody = new THREE.Group();
+  head.add(clsHead);
+  head.add(clsFree);
+  body.add(clsBody);
+  let clsOrb = null, clsKey = null, helmetOn = false;
+  function setClass(id) {
+    id = id || '';
+    if (id === clsKey) return;
+    clsKey = id;
+    for (const g of [clsHead, clsFree, clsBody]) for (const c of [...g.children]) { g.remove(c); dispose(c); }
+    // the hat and hood are shown on the bare head only; the halo, pauldrons and quiver stay
+    clsOrb = buildClassParts(id, clsHead, clsBody, clsFree);
+    castShadows(clsHead);
+    castShadows(clsBody);
+    clsHead.visible = !helmetOn;
+  }
+  setClass(cls);
 
   function limb(x, y) {
     const pivot = new THREE.Group();
@@ -825,6 +912,8 @@ export function createPlayerModel(appearance) {
 
     hair.visible = !equip.helmet;
     worn.visible = !equip.helmet;
+    helmetOn = !!equip.helmet;
+    clsHead.visible = !helmetOn;
     if (equip.helmet) attach(head, armorPiece('helmet', equip.helmet));
     if (equip.chest) attach(body, armorPiece('chest', equip.chest));
     if (equip.gloves) for (const arm of [armL, armR]) attach(arm, armorPiece('gloves', equip.gloves));
@@ -897,6 +986,7 @@ export function createPlayerModel(appearance) {
   return {
     root,
     setEquipment,
+    setClass,
     // st: { moving, attack (1 -> 0 while swinging), weapon, combo (0 / 1,
     // alternates every attack), cast (1 -> 0 while casting a skill), dodging, dead }
     animate(dt, st) {
@@ -949,6 +1039,7 @@ export function createPlayerModel(appearance) {
         o.rotation.y = time * 3;
       });
       if (halo) halo.position.y = 0.5 + Math.sin(time * 2) * 0.03;
+      if (clsOrb) { clsOrb.position.y = 2.35 + Math.sin(time * 2.4) * 0.07; clsOrb.rotation.y = time * 2; }
       const flutter = st.moving ? 0.55 + Math.sin(walk * 0.7) * 0.12 : 0.1;
       cape.rotation.x += (flutter - cape.rotation.x) * 0.2;
     },

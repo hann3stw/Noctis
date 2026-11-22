@@ -11,6 +11,7 @@ import { RANKS } from '../world/gates.js';
 import { fmt } from '../core/format.js';
 import { SKILL_ICONS, UI_ICONS } from './icons.js';
 import { settings } from '../core/settings.js';
+import { hints, hintKey } from '../core/hints.js';
 import { IDS, SELECTORS, layout } from '../core/hudLayout.js';
 
 const ICON_SWORD =
@@ -712,11 +713,16 @@ export class Hud {
       this.rkText.textContent = due ? t('hud.trialReady')
         : ri + 1 < RANKS.length ? t('hud.nextRank', { rank: RANKS[ri + 1], level: cap + 1 }) : t('hud.toAbyss', { level: CONFIG.levels.maxLevel });
     }
-    // "!" on the menu when there is something new (points, items, skills)
-    const news = P.hasNews() || game.quests.ready() > 0 || game.bestiary.fresh.size > 0;
-    if (news !== this.vPoints) {
-      this.vPoints = news;
-      this.menuBadge.textContent = news ? '!' : '';
+    // the badge on the menu: how many pages have something new (points, items, skills, class, quests ...)
+    if ((this.hintT = (this.hintT || 0) - dt) <= 0) {
+      this.hintT = 0.5;
+      const hs = hints(game), key = hintKey(hs);
+      if (key !== this.vPoints) {
+        this.vPoints = key;
+        this.menuBadge.textContent = hs.length ? String(hs.length) : '';
+        this.menuBadge.parentNode.classList.toggle('hint', hs.length > 0);
+        this.qEl.classList.toggle('ready', game.quests.ready() > 0);
+      }
     }
 
     // the ultimate glows while it lasts (it cannot charge then)

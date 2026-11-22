@@ -366,6 +366,7 @@ export class App {
     if (game.slot >= 0) this.cloud.queue(game.slot, this.slots[game.slot], true);
     game.destroy();
     this.game = null;
+    delete document.documentElement.dataset.cls;
     setMood('menu');
     if (this.debug) window.__noctis = null;
     this.screens.show('title');

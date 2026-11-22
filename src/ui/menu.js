@@ -13,6 +13,7 @@ import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 import { skillOk } from '../core/classes.js';
+import { hints } from '../core/hints.js';
 import { campView, campHub, campAct, campSections, campNews, SECTIONS } from './camp.js';
 
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" fill="currentColor"/></svg>';
@@ -97,9 +98,7 @@ export class Menu {
     this.army.hint = hint || '';
     // open where something new waits
     if (tab) this.tab = tab;
-    else if (P.points > 0 || P.mastery.pts > 0) this.tab = 'stats';
-    else if (P.inventory.some((it) => it.n)) this.tab = 'gear';
-    else if (P.newSkills.length) this.tab = 'skills';
+    else { const hs = hints(this.game); if (hs.length) this.tab = hs[0].page; } // where something new waits
     this.selItem = null;
     this.selSkill = null;
     this.confirmId = 0;
@@ -252,7 +251,7 @@ export class Menu {
       skills: P.newSkills.length ? '!' : '',
       quests: this.game.quests.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
-      path: this.game.path.due() ? '!' : '',
+      path: this.game.classDue() || this.game.path.due() ? '!' : '',
       barracks: campNews(this.game),
     };
     if (this.tab === 'army' && !this.game.hasArmy()) this.tab = 'gear'; // no army without the Necromancer
@@ -552,7 +551,7 @@ export class Menu {
     const tiers = this.game.gateTiers.map((n, zi) => (n > 0 ? t('zone.' + CONFIG.world.zones[zi].id) + ' +' + n : '')).filter(Boolean).join(' · ');
     return `<div class="stats">
       <div class="s-left" data-scroll="stats">
-        <div class="s-head"><b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: fmt(Math.floor(P.xp)), need: fmt(P.xpNeed()) })}</span>
+        <div class="s-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: fmt(Math.floor(P.xp)), need: fmt(P.xpNeed()) })}</span>
           <small class="s-rank">${rank}</small>${tiers ? `<small class="s-rank">${t('stats.tiers', { list: tiers })}</small>` : ''}
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}</div></div>`;
@@ -609,7 +608,7 @@ export class Menu {
       return `<button class="ttl${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}" title="${t('title.' + id + '.how')}"><b>${t('title.' + id)}</b></button>`;
     }).join('');
     return `<div class="path" data-scroll="path">
-      <div class="pa-top"><div class="pa-head"><b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
+      <div class="pa-top"><div class="pa-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
         <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
       ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}

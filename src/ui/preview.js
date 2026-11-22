@@ -85,6 +85,7 @@ export class Preview {
     this.anchor = null; // element whose centre the character should stand in
     this.last = 0;
     this.sized = '';
+    this.cls = ''; // the main class: its parts are worn on the model
     this.frame = this.frame.bind(this);
   }
 
@@ -97,7 +98,7 @@ export class Preview {
         if (o.material) o.material.dispose();
       });
     }
-    this.model = createPlayerModel(appearance);
+    this.model = createPlayerModel(appearance, this.cls);
     if (equip) this.model.setEquipment(equip);
     this.model.root.rotation.y = this.yaw;
     this.scene.add(this.model.root);

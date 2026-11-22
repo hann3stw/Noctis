@@ -215,7 +215,7 @@ export class Screens {
       // the look of a world is changed here, in the Worlds screen, not while playing
       case 'lookSlot': {
         const s = app.slots[slot];
-        if (s) this.show('editor', { mode: 'slot', slot, appearance: { ...CONFIG.defaultAppearance, ...(s.appearance || {}) }, equip: (s.player && s.player.equip) || null });
+        if (s) this.show('editor', { mode: 'slot', slot, appearance: { ...CONFIG.defaultAppearance, ...(s.appearance || {}) }, equip: (s.player && s.player.equip) || null, cls: s.mainClass || '' });
         break;
       }
       case 'continue': app.continueLast(); break;
@@ -495,7 +495,7 @@ export class Screens {
     }
     const level = (s.player && s.player.level) || 1;
     const dk = CONFIG.difficulty.levels[s.difficulty] ? s.difficulty : CONFIG.difficulty.oldSaves;
-    return `<div class="slot"><b>${esc(s.name)}</b>
+    return `<div class="slot"><b>${s.mainClass ? `<i class="emb" data-c="${s.mainClass}"></i> ` : ''}${esc(s.name)}</b>
       <span class="rank">${t('slot.rankLevel', { rank: RANKS[s.rankIndex || 0], level })} · <em class="dif-${dk}">${t('diff.' + dk)}</em></span>
       <small>${t('slot.playTime', { time: formatPlayTime(s.playTime || 0) })}</small>
       <small>${formatDate(s.updated)}</small>${this.cloudPart(i)}${buttons}</div>`;
@@ -711,6 +711,7 @@ export class Screens {
       equip: params.equip || { weapon: { kind: 'weapon', type: CONFIG.player.startWeapon, rarity: 0, level: 1, up: 0 } },
     };
     if (!this.preview) this.preview = new Preview();
+    this.preview.cls = params.cls || '';
     this.preview.setLook(this.ed.look, this.ed.equip);
     this.preview.focus = 0;
     this.preview.start(null);

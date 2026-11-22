@@ -1,0 +1,280 @@
+/* Storybook theme, part 4: class colours and emblems, the HUD in the storybook look (wood signs, brass rings,
+   thick ink outlines), hint badges. Loaded after theme3.css. Made with tools/gen in the scratchpad; edit freely. */
+:root {
+  --cc: #9a6bff; /* the colour of the main class (set on <html data-cls="...">) */
+  --cc-hi: #d2bcff;
+  --cc-lo: #4a2a98;
+  --emb-necromancer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M12 2.5C7 2.5 4 6 4 10.4c0 2.7 1.3 4.4 2.6 5.3V19h2.6v-1.8h1.4V19h2.8v-1.8h1.4V19h2.6v-3.3c1.3-.9 2.6-2.6 2.6-5.3C20 6 17 2.5 12 2.5z'/%3E%3Ccircle cx='8.6' cy='11' r='2.1' fill='%231f0f08' stroke='none'/%3E%3Ccircle cx='15.4' cy='11' r='2.1' fill='%231f0f08' stroke='none'/%3E%3Cpath d='M11.2 14.2h1.6l-.8 1.6z' fill='%231f0f08' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  --emb-warrior: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M12 2l8 3v6.4c0 4.8-3.4 8.7-8 10.6-4.6-1.9-8-5.8-8-10.6V5z'/%3E%3Cpath d='M12 6v9.5M8.8 9.2h6.4' fill='none' stroke='%231f0f08' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+  --emb-mage: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M12 1.5l2.7 7.8 7.8 2.7-7.8 2.7L12 22.5l-2.7-7.8L1.5 12l7.8-2.7z'/%3E%3C/g%3E%3C/svg%3E");
+  --emb-rogue: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M12 1.8l3 5.4-1.2 8.8h-3.6L9 7.2z'/%3E%3Cpath d='M7.6 15.4h8.8v2.2H7.6z'/%3E%3Cpath d='M10.8 17.6h2.4v4.4h-2.4z'/%3E%3C/g%3E%3C/svg%3E");
+  --emb-ranger: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M6.5 3.5Q20 12 6.5 20.5' fill='none' stroke='%231f0f08' stroke-width='4.2'/%3E%3Cpath d='M6.5 3.5Q20 12 6.5 20.5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M3 12h17M20.5 12l-4-3v6z'/%3E%3C/g%3E%3C/svg%3E");
+  --emb-cleric: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='%23fff' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' paint-order='stroke'%3E%3Cpath d='M9.6 2h4.8v6.6H21v4.8h-6.6V22H9.6v-8.6H3V8.6h6.6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-cls='necromancer'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+:root[data-cls='warrior'] { --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; --emb-cur: var(--emb-warrior); }
+:root[data-cls='mage'] { --cc: #4aa8ff; --cc-hi: #b0dcff; --cc-lo: #1c4a9a; --emb-cur: var(--emb-mage); }
+:root[data-cls='rogue'] { --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; --emb-cur: var(--emb-rogue); }
+:root[data-cls='ranger'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
+:root[data-cls='cleric'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
+
+/* an emblem: a small picture of the class; with data-c on the element itself it works anywhere (cards, lists) */
+.emb {
+  display: inline-block;
+  flex: none;
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: middle;
+  border-radius: 50%;
+  border: var(--ol) solid var(--ink);
+  background: var(--emb-cur) center / 66% no-repeat, radial-gradient(circle at 35% 30%, var(--cc-hi), var(--cc) 62%, var(--cc-lo));
+  box-shadow: inset 0 calc(var(--u) * 0.3) 0 rgba(255, 255, 255, 0.5);
+}
+.emb[data-c='necromancer'] { --emb-cur: var(--emb-necromancer); --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; }
+.emb[data-c='warrior'] { --emb-cur: var(--emb-warrior); --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; }
+.emb[data-c='mage'] { --emb-cur: var(--emb-mage); --cc: #4aa8ff; --cc-hi: #b0dcff; --cc-lo: #1c4a9a; }
+.emb[data-c='rogue'] { --emb-cur: var(--emb-rogue); --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; }
+.emb[data-c='ranger'] { --emb-cur: var(--emb-ranger); --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; }
+.emb[data-c='cleric'] { --emb-cur: var(--emb-cleric); --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; }
+
+/* ------------------------------ the hunter's panel ------------------------------ */
+.lvl-badge {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cc) 30%, #241838), #150e24) padding-box,
+    linear-gradient(180deg, var(--cc-hi), var(--cc) 55%, var(--cc-lo)) border-box;
+  border-width: calc(var(--u) * 0.95);
+  filter: drop-shadow(0 calc(var(--u) * 0.7) 0 var(--ink));
+}
+.lvl-badge b { font-weight: 400; color: #fff; text-shadow: 0 calc(var(--u) * 0.45) 0 var(--ink), 0 0 calc(var(--u) * 1.4) var(--cc); }
+.lvl-badge small { font-family: var(--font-display); color: var(--cc-hi); text-shadow: 0 1px 0 var(--ink); }
+.panel-player::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: calc(var(--u) * -1.4);
+  top: calc(var(--u) * -1.4);
+  width: calc(var(--u) * 5.2);
+  height: calc(var(--u) * 5.2);
+  border-radius: 50%;
+  border: var(--ol) solid var(--ink);
+  background: var(--emb-cur) center / 64% no-repeat, radial-gradient(circle at 35% 30%, var(--cc-hi), var(--cc) 62%, var(--cc-lo));
+  box-shadow: inset 0 calc(var(--u) * 0.3) 0 rgba(255, 255, 255, 0.5), 0 calc(var(--u) * 0.4) 0 var(--ink);
+  display: none;
+}
+:root[data-cls]:not([data-cls='']) .panel-player::before { display: block; }
+
+/* ------------------------------- signs on the left ------------------------------- */
+.qtrack {
+  padding: calc(var(--u) * 1) calc(var(--u) * 2) calc(var(--u) * 1.2);
+  border: var(--ol) solid var(--ink);
+  border-left-width: calc(var(--u) * 1.1);
+  border-left-color: var(--cc);
+  border-radius: calc(var(--u) * 1.4);
+  background: var(--scratch) 0 0 / calc(var(--u) * 28) auto repeat, linear-gradient(180deg, rgba(110, 66, 34, 0.9), rgba(56, 30, 14, 0.92));
+  box-shadow: inset 0 calc(var(--u) * 0.4) 0 rgba(255, 220, 160, 0.25), 0 calc(var(--u) * 0.6) 0 var(--ink);
+}
+.qtrack small { font-family: var(--font-display); letter-spacing: 0.08em; color: var(--brass); text-shadow: 0 1px 0 var(--ink); }
+.qtrack div { color: var(--parch-hi); }
+.qtrack div b { color: var(--parch-hi); font-family: var(--font-display); font-weight: 400; }
+.qtrack div.done b { color: #8dffa8; }
+.qtrack.ready { animation: sign-glow 1.4s ease-in-out infinite alternate; }
+@keyframes sign-glow { to { box-shadow: inset 0 calc(var(--u) * 0.4) 0 rgba(255, 220, 160, 0.25), 0 calc(var(--u) * 0.6) 0 var(--ink), 0 0 calc(var(--u) * 3) rgba(141, 255, 168, 0.7); } }
+
+.zone {
+  padding: calc(var(--u) * 0.6) calc(var(--u) * 5);
+  border: var(--ol) solid var(--ink);
+  border-radius: calc(var(--u) * 1.4);
+  background:
+    var(--rivet) left calc(var(--u) * 1.2) top 50% / calc(var(--u) * 1.3) calc(var(--u) * 1.3) no-repeat,
+    var(--rivet) right calc(var(--u) * 1.2) top 50% / calc(var(--u) * 1.3) calc(var(--u) * 1.3) no-repeat,
+    var(--scratch) 0 0 / calc(var(--u) * 28) auto repeat,
+    linear-gradient(180deg, rgba(120, 74, 40, 0.92), rgba(60, 32, 16, 0.94));
+  box-shadow: inset 0 calc(var(--u) * 0.4) 0 rgba(255, 220, 160, 0.3), 0 calc(var(--u) * 0.6) 0 var(--ink);
+}
+.zone b { color: var(--parch-hi); }
+.zone small { font-family: var(--font-display); opacity: 1; color: var(--parch); text-shadow: 0 1px 0 var(--ink); }
+#hud.safe .zone small { color: #9dffb8; }
+
+.streak {
+  border: var(--ol) solid var(--ink);
+  border-left: calc(var(--u) * 1.1) solid var(--cc);
+  background: linear-gradient(180deg, rgba(110, 66, 34, 0.9), rgba(56, 30, 14, 0.92));
+  box-shadow: 0 calc(var(--u) * 0.6) 0 var(--ink);
+}
+.streak b { font-family: var(--font-display); font-weight: 400; text-shadow: 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.streak small { font-family: var(--font-display); color: var(--parch); }
+
+/* ----------------------------------- the minimap ----------------------------------- */
+.minimap {
+  border: 0;
+  background: #0d0a16;
+  box-shadow: 0 0 0 var(--ol) var(--ink), 0 0 0 calc(var(--u) * 1.5) var(--wood), 0 0 0 calc(var(--u) * 2.05) var(--ink), 0 calc(var(--u) * 2.9) 0 calc(var(--u) * 0.6) rgba(0, 0, 0, 0.35);
+}
+
+/* --------------------------------- the right side --------------------------------- */
+.top-right .btn.pill { position: relative; }
+#btn-menu i, .top-right .btn.pill i {
+  position: absolute;
+  top: calc(var(--u) * -1.6);
+  right: calc(var(--u) * -1);
+  min-width: calc(var(--u) * 3.8);
+  height: calc(var(--u) * 3.8);
+  padding: 0 calc(var(--u) * 0.8);
+  border-radius: 99px;
+  font-size: calc(var(--u) * 2.4);
+  line-height: calc(var(--u) * 3.1);
+  text-align: center;
+  background: var(--ribbon);
+  box-shadow: inset 0 calc(var(--u) * 0.3) 0 rgba(255, 255, 255, 0.5);
+}
+#btn-menu i:empty { display: none; }
+#btn-menu.hint { animation: hint-bob 1.2s ease-in-out infinite; }
+@keyframes hint-bob { 0%, 100% { transform: none; } 50% { transform: translateY(calc(var(--u) * -0.6)) scale(1.04); } }
+
+.btn.round { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--cc), 0 calc(var(--u) * 0.8) 0 var(--ink), 0 calc(var(--u) * 1.4) calc(var(--u) * 1.6) rgba(0, 0, 0, 0.45); }
+#btn-dodge { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) #8fd4ff, 0 calc(var(--u) * 0.8) 0 var(--ink); }
+.skill.ult { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--brass), 0 calc(var(--u) * 0.8) 0 var(--ink); }
+#btn-arise { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--cc-hi), 0 calc(var(--u) * 0.8) 0 var(--ink); background: radial-gradient(circle at 50% 35%, var(--cc), var(--cc-lo) 75%); }
+#joy .knob { background: radial-gradient(circle at 35% 30%, var(--cc-hi), var(--cc)); box-shadow: 0 0 0 var(--ol) var(--ink); }
+#joy { border-color: rgba(255, 240, 196, 0.55); }
+
+/* the army chips: a big button in the class colour and wooden plates */
+.sq-summon, .squad.resting .sq-summon {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  border: var(--ol) solid var(--ink);
+  background: linear-gradient(180deg, var(--cc-hi) 0%, var(--cc) 55%, var(--cc-lo) 100%);
+  text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink);
+  box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.6), 0 calc(var(--u) * 0.7) 0 var(--ink);
+}
+.sq-chip {
+  --bc: #6aa8ff;
+  border: var(--ol) solid var(--ink);
+  background: var(--scratch) 0 0 / calc(var(--u) * 28) auto repeat, linear-gradient(180deg, rgba(110, 66, 34, 0.95), rgba(56, 30, 14, 0.95));
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.45) var(--bc), 0 calc(var(--u) * 0.7) 0 var(--ink);
+}
+.sq-chip[data-b='attack'] { --bc: #ff6070; }
+.sq-chip[data-b='hold'] { --bc: #ffd24a; }
+.sq-chip b { font-weight: 400; color: var(--parch-hi); text-shadow: 0 1px 0 var(--ink); }
+.sq-chip small { font-family: var(--font-display); font-weight: 400; }
+.sq-revive { border: var(--ol) solid var(--ink); font-family: var(--font-display); font-weight: 400; box-shadow: 0 calc(var(--u) * 0.6) 0 var(--ink); }
+
+/* ---------------------------- messages and the death screen ---------------------------- */
+.toast {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--parch-hi);
+  text-shadow: 0 1px 0 var(--ink);
+  background: linear-gradient(90deg, transparent, rgba(80, 46, 22, 0.95) 10%, rgba(80, 46, 22, 0.95) 90%, transparent);
+}
+.toast::before, .toast::after { height: calc(var(--u) * 0.35); background: linear-gradient(90deg, transparent, var(--brass), transparent); }
+.banner small { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.4) 0 var(--ink); }
+.death { background: radial-gradient(ellipse at center, rgba(60, 8, 14, 0.4), rgba(20, 4, 8, 0.78)); }
+.death b { color: #ff8a94; font-weight: 400; text-shadow: 0 calc(var(--u) * 0.9) 0 var(--ink), 0 0 calc(var(--u) * 5) rgba(255, 50, 70, 0.7); }
+.death small { font-family: var(--font-display); color: var(--parch-hi); opacity: 1; text-shadow: 0 1px 0 var(--ink); }
+.dmg { font-family: var(--font-display); font-weight: 400; }
+
+/* ----------------------------------- the menu pages ----------------------------------- */
+/* every card and slot gets an ink outline (outside, so a rarity colour on the border stays) and a parchment inner ring */
+.tile, .ap-card, .k-slot, .k-item, .g-slot, .s-row, .q-card, .b-card, .q-bonus, .k-card { outline: var(--ol) solid var(--ink); outline-offset: 0; border-radius: calc(var(--u) * 1.4); }
+.s-row, .q-card, .b-card, .q-bonus, .k-slot, .ap-card, .g-slot {
+  background: var(--scratch) 0 0 / calc(var(--u) * 34) auto repeat, linear-gradient(180deg, rgba(255, 240, 196, 0.12), rgba(255, 240, 196, 0.04));
+  box-shadow: inset 0 0 0 calc(var(--u) * 0.35) rgba(241, 215, 154, 0.3), 0 calc(var(--u) * 0.5) 0 var(--ink);
+  border-color: transparent;
+}
+.k-slot.sel, .ap-card.sel, .b-card.sel, .g-slot.sel, .k-item.sel { box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--brass), 0 calc(var(--u) * 0.5) 0 var(--ink), 0 0 calc(var(--u) * 3) rgba(255, 201, 40, 0.45); }
+.tile.empty, .tile.none, .k-slot.empty { border-style: dashed; border-color: rgba(241, 215, 154, 0.5); }
+.q-card.d0 { --qc: var(--leaf); }
+.q-card.d1 { --qc: var(--teal); }
+.q-card.d2 { --qc: var(--brass); }
+.q-card em, .q-card > b, .s-row span, .s-head b, .b-card b { font-family: var(--font-display); font-weight: 400; text-shadow: 0 1px 0 var(--ink); }
+.g-quick button { border: var(--ol) solid var(--ink); border-radius: calc(var(--u) * 1.4); font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); background: linear-gradient(180deg, rgba(255, 240, 196, 0.16), rgba(255, 240, 196, 0.05)); box-shadow: inset 0 0 0 calc(var(--u) * 0.35) rgba(241, 215, 154, 0.5), 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.g-quick button.on { color: #4a2300; background: linear-gradient(180deg, #fff59a 0%, var(--brass) 55%, var(--brass-lo) 100%); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); }
+.g-quick button.on svg { color: var(--wood-lo); }
+.pa-head b, .cp-head b { white-space: nowrap; font-size: calc(var(--u) * 3.8); padding-left: calc(var(--u) * 4.4); padding-right: calc(var(--u) * 4.4); }
+
+/* ------------------------------------- emblems in place ------------------------------------- */
+.cls-card[data-id='necromancer'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+.cls-card[data-id='warrior'] { --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; --emb-cur: var(--emb-warrior); }
+.cls-card[data-id='mage'] { --cc: #4aa8ff; --cc-hi: #b0dcff; --cc-lo: #1c4a9a; --emb-cur: var(--emb-mage); }
+.cls-card[data-id='rogue'] { --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; --emb-cur: var(--emb-rogue); }
+.cls-card[data-id='ranger'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
+.cls-card[data-id='cleric'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
+
+.cls-card { position: relative; box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--cc), 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.cls-card.on { box-shadow: inset 0 0 0 calc(var(--u) * 0.7) var(--brass), 0 0 calc(var(--u) * 3) rgba(255, 201, 40, 0.5), 0 calc(var(--u) * 0.5) 0 var(--ink); }
+.cls-card b { color: var(--cc-hi); }
+.cls-card .emb { position: absolute; top: calc(var(--u) * 1); right: calc(var(--u) * 1); width: calc(var(--u) * 6.6); height: calc(var(--u) * 6.6); }
+.slot b .emb { width: calc(var(--u) * 3.8); height: calc(var(--u) * 3.8); vertical-align: calc(var(--u) * -0.7); margin-right: calc(var(--u) * 0.6); }
+.s-head .emb, .pa-head .emb { width: calc(var(--u) * 6.4); height: calc(var(--u) * 6.4); align-self: center; }
+.s-head { align-items: center; }
+
+/* ---------------------------------- the screens around the game ---------------------------------- */
+/* the title bar of a screen: back button and a ribbon */
+.scr-head h2, .ed-stage h2 {
+  display: inline-block !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-fill-color: currentColor !important;
+  filter: none !important;
+  margin: 0;
+  padding: 0 calc(var(--u) * 5);
+  font-size: calc(var(--u) * 4.6);
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  color: var(--wood-lo);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-top: var(--ol) solid var(--ink);
+  border-bottom: var(--ol) solid var(--ink);
+  background-image: var(--rivet), var(--rivet), var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%);
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: calc(var(--u) * 1.3) calc(var(--u) * 1.3), calc(var(--u) * 1.3) calc(var(--u) * 1.3), 120px 120px, auto;
+  background-position: calc(var(--u) * 2.5) 50%, calc(100% - var(--u) * 2.5) 50%, 0 0, 0 0;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--u) * 2.2) 50%, 100% 100%, 0 100%, calc(var(--u) * 2.2) 50%);
+}
+.scr-head .sbtn.ghost { color: var(--wood-lo); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55); background-image: var(--grain), linear-gradient(180deg, var(--parch-hi) 0%, var(--parch) 40%, var(--parch-lo) 100%); box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.7), inset 0 calc(var(--u) * -0.7) 0 rgba(120, 70, 20, 0.45), 0 calc(var(--u) * 0.8) 0 var(--ink); }
+.scr-hint { font-family: var(--font-display); letter-spacing: 0.02em; color: var(--parch); opacity: 0.9; text-shadow: 0 1px 0 var(--ink); }
+.scr-newSlot, .scr-settings, .scr-online, .scr-board { background: radial-gradient(ellipse at 50% -10%, rgba(255, 190, 90, 0.14), transparent 60%), radial-gradient(ellipse at 50% 100%, rgba(60, 30, 100, 0.5), transparent 70%), #120a10; }
+
+/* a world: a framed card with the hunter on top and a wooden plate under him */
+.wcard {
+  border: 0;
+  border-radius: calc(var(--u) * 2.2);
+  background: none; /* the 3D hunter shows through the stage */
+  box-shadow: var(--frame), 0 calc(var(--u) * 1.2) calc(var(--u) * 3) rgba(0, 0, 0, 0.5);
+}
+.wc-stage { background: var(--corner-tl) left calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat, var(--corner-tr) right calc(var(--u) * 0.6) top calc(var(--u) * 0.6) / calc(var(--u) * 8) no-repeat; }
+.segs input[type='range'] { accent-color: var(--brass); }
+.wcard.last { box-shadow: 0 0 0 var(--ol) var(--ink), inset 0 0 0 calc(var(--u) * 0.6) var(--brass), inset 0 0 0 calc(var(--u) * 1.1) var(--ink), 0 0 calc(var(--u) * 4) rgba(255, 201, 40, 0.4), 0 calc(var(--u) * 1.2) calc(var(--u) * 3) rgba(0, 0, 0, 0.5); }
+.wcard.empty {
+  background: var(--scratch) 0 0 / calc(var(--u) * 34) auto repeat, linear-gradient(180deg, rgba(74, 42, 20, 0.55), rgba(34, 18, 8, 0.7));
+  box-shadow: 0 0 0 var(--ol) var(--ink), inset 0 0 0 calc(var(--u) * 0.5) rgba(241, 215, 154, 0.35);
+}
+.wc-info { background: var(--scratch) 0 0 / calc(var(--u) * 34) auto repeat, linear-gradient(180deg, rgba(120, 74, 40, 0.97), rgba(56, 30, 14, 0.98)); border-top: var(--ol) solid var(--ink); }
+.wc-name { font-weight: 400; color: var(--parch-hi); text-shadow: 0 calc(var(--u) * 0.45) 0 var(--ink); }
+.wc-info .rank { font-family: var(--font-display); font-weight: 400; color: var(--brass); text-shadow: 0 1px 0 var(--ink); }
+.wc-stats span { background: rgba(0, 0, 0, 0.3); outline: var(--ol) solid var(--ink); border-radius: calc(var(--u) * 1); }
+.wc-stats small { font-family: var(--font-display); opacity: 0.85; color: var(--parch); }
+.wc-stats b { font-family: var(--font-display); font-weight: 400; color: #fff; text-shadow: 0 1px 0 var(--ink); }
+.wc-badge { font-family: var(--font-display); font-weight: 400; color: #fff; border: var(--ol) solid var(--ink); background: linear-gradient(180deg, #ff8a92, var(--ribbon) 55%, #8e1c2a); text-shadow: 0 1px 0 var(--ink); letter-spacing: 0.04em; }
+.wc-empty b { font-weight: 400; color: var(--parch-hi); opacity: 1; text-shadow: 0 1px 0 var(--ink); }
+.wc-empty span { color: var(--parch); opacity: 0.8; }
+.wc-empty::before { opacity: 0.8; filter: drop-shadow(0 calc(var(--u) * 0.4) 0 var(--ink)); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.5 2.5a9.5 9.5 0 1 0 7 15.9A8 8 0 0 1 14.5 2.5z' fill='%23ffc928' stroke='%231f0f08' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+
+/* settings and other rows */
+.set-row { border-radius: calc(var(--u) * 1.8); }
+.set-row b { font-family: var(--font-display); font-weight: 400; color: var(--parch-hi); text-shadow: 0 1px 0 var(--ink); }
+.set-row small { opacity: 0.85; color: var(--parch); }
+
+/* the big banner: solid gold with a thick ink outline (not a see-through gradient) */
+.banner b {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: #ffe27a;
+  -webkit-text-fill-color: #ffe27a;
+  filter: none !important;
+  text-shadow: 0 calc(var(--u) * 0.9) 0 var(--ink), 0 calc(var(--u) * -0.5) 0 var(--ink), calc(var(--u) * 0.6) 0 0 var(--ink), calc(var(--u) * -0.6) 0 0 var(--ink), 0 0 calc(var(--u) * 4) rgba(255, 176, 48, 0.7);
+}

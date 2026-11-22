@@ -26,6 +26,7 @@ export class WorldStages {
       if (!s || !els[i]) return;
       const p = new Preview();
       p.yaw = 0.35 + i * 0.5;
+      p.cls = s.mainClass || '';
       p.setLook({ ...CONFIG.defaultAppearance, ...(s.appearance || {}) }, (s.player && s.player.equip) || null);
       // a little closer than in the editor: the cards are small
       p.camera.position.set(0, 1.9, 6.3);
@@ -73,7 +74,7 @@ export class WorldStages {
     }
     r.setScissorTest(false);
     r.setViewport(0, 0, w, h);
-    r.setClearColor(0x0b0714, 1);
+    r.setClearColor(0x120a10, 1);
     r.clear();
     r.setScissorTest(true);
     for (const st of this.stages) {

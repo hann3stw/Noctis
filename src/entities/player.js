@@ -129,7 +129,7 @@ export class Player {
     this.moving = false;
     this.hurtFlash = 0;
 
-    this.model = createPlayerModel(appearance);
+    this.model = createPlayerModel(appearance, game.mainClass);
     game.scene.add(this.model.root);
     this.recalc();
     this.hp = this.maxHp;
@@ -196,7 +196,7 @@ export class Player {
       if (o.geometry) o.geometry.dispose();
       if (o.material) o.material.dispose();
     });
-    this.model = createPlayerModel(appearance);
+    this.model = createPlayerModel(appearance, this.game.mainClass);
     this.model.setEquipment(this.equip);
     this.model.root.rotation.y = old.rotation.y;
     this.game.scene.add(this.model.root);

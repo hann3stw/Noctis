@@ -13,6 +13,8 @@ import './styles/world.css';
 import './styles/premium.css';
 import './styles/theme.css';
 import './styles/theme2.css';
+import './styles/theme3.css';
+import './styles/theme4.css';
 import { App } from './app.js';
 import { t } from './strings.js';
 import { blockZoom } from './core/nozoom.js';

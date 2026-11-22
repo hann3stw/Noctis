@@ -146,6 +146,7 @@ export class Game {
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
     setLootClass(this.mainClass);
+    document.documentElement.dataset.cls = this.mainClass || ''; // the class colour of the interface (styles/theme4.css)
     this.classPanel = new ClassPanel(uiRoot, this);
     this.aim = new AimIndicator(this.scene);
 
@@ -347,6 +348,8 @@ export class Game {
     if (!c || !c.ready || !this.classDue()) return false;
     this.mainClass = id;
     setLootClass(id);
+    document.documentElement.dataset.cls = id;
+    this.player.model.setClass(id); // a hat, a hood, pauldrons ...
     // skills of other classes are put away; the class brings its own to start with
     const P = this.player;
     P.known = P.known.filter((s) => skillOk(s, id));
