@@ -100,7 +100,7 @@ export class Game {
     this.trialRank = save ? save.trialRank || 0 : 0; // highest rank whose trial was passed
     // the main class ('' = not chosen yet). Worlds from before the classes: a hunter from rank D on, or with
     // shadows, is a Necromancer; a younger one chooses at rank D
-    this.mainClass = save ? (CONFIG.classes.list[save.mainClass] ? save.mainClass
+    this.mainClass = save ? (CONFIG.classes.list[save.mainClass] ? save.mainClass : save.mainClass === '' ? '' // saved as "not chosen yet": stays open
       : (save.rankIndex || 0) >= CONFIG.classes.choiceRank || (save.army && save.army.units && save.army.units.length) || (save.profile && save.profile.raised > 0) ? 'necromancer' : '') : '';
     this.xpBoostT = save ? Math.max(0, save.xpBoostT || 0) : 0; // seconds of Double XP left
     this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
