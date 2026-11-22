@@ -35,7 +35,7 @@ export class Ranger {
 
   update(dt) {
     const g = this.game, R = CONFIG.ranger;
-    if (g.mainClass !== 'ranger') return;
+    if (g.mech !== 'ranger') return;
     // the companion
     if ((this.t -= dt) <= 0) {
       this.t = 3;

@@ -2,6 +2,7 @@
 // and armour are shown on top of the skin. Every armour set has its own
 // shapes and colours (see ARMOR below), so sets can be told apart at a glance.
 import * as THREE from 'three';
+import { baseOf } from '../../core/classes.js';
 import { RARITY_COLORS } from '../../core/items.js';
 
 function mat(color) {
@@ -351,6 +352,7 @@ const CLASS_LOOK = {
   necromancer: 0x9a6bff, warrior: 0xe8553f, mage: 0x4aa8ff, rogue: 0xe050a8, ranger: 0x58c24a, cleric: 0xffd24a,
 };
 function buildClassParts(id, H, B, F) {
+  id = baseOf(id);
   const col = CLASS_LOOK[id];
   if (!col) return null;
   const main = mat(col), dark = mat(shade(col, 0.45)), glow = new THREE.MeshBasicMaterial({ color: col });

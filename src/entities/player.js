@@ -129,7 +129,7 @@ export class Player {
     this.moving = false;
     this.hurtFlash = 0;
 
-    this.model = createPlayerModel(appearance, game.mainClass);
+    this.model = createPlayerModel(appearance, game.mech);
     game.scene.add(this.model.root);
     this.recalc();
     this.hp = this.maxHp;
@@ -196,7 +196,7 @@ export class Player {
       if (o.geometry) o.geometry.dispose();
       if (o.material) o.material.dispose();
     });
-    this.model = createPlayerModel(appearance, this.game.mainClass);
+    this.model = createPlayerModel(appearance, this.game.mech);
     this.model.setEquipment(this.equip);
     this.model.root.rotation.y = old.rotation.y;
     this.game.scene.add(this.model.root);
@@ -283,7 +283,7 @@ export class Player {
 
   // the Rogue's Combo Points (force = a skill gives them, no gap needed)
   addCombo(n, force) {
-    if (this.game.mainClass !== 'rogue' || n <= 0 || (!force && this.cpCd > 0)) return;
+    if (this.game.mech !== 'rogue' || n <= 0 || (!force && this.cpCd > 0)) return;
     this.cpCd = 0.2;
     this.cp = Math.min(CONFIG.rogue.cpMax, this.cp + n);
     this.cpT = CONFIG.rogue.cpTime;
@@ -291,20 +291,20 @@ export class Player {
 
   // the Cleric's Faith
   addFaith(n) {
-    if (this.game.mainClass !== 'cleric' || n <= 0) return;
+    if (this.game.mech !== 'cleric' || n <= 0) return;
     this.faith = Math.min(CONFIG.cleric.faithMax, this.faith + n);
   }
 
   // the Mage's Arcane Charges
   addArcane(n) {
-    if (this.game.mainClass !== 'mage' || n <= 0) return;
+    if (this.game.mech !== 'mage' || n <= 0) return;
     this.arcane = Math.min(CONFIG.mage.arcaneMax, this.arcane + n);
     this.arcaneT = CONFIG.mage.arcaneTime;
   }
 
   // the Warrior's Rage
   addRage(n) {
-    if (this.game.mainClass !== 'warrior' || n <= 0) return;
+    if (this.game.mech !== 'warrior' || n <= 0) return;
     this.rage = Math.min(CONFIG.warrior.rageMax, this.rage + n);
   }
 
@@ -564,7 +564,9 @@ export class Player {
   // ---- health ---------------------------------------------------------------
   heal(amount) {
     if (this.dead || this.game.modOn('noHeal')) return;
+    const before = this.hp;
     this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.game.profile.healed += this.hp - before;
   }
 
   // a chilling shot: slower for a moment

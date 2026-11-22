@@ -7,6 +7,7 @@ const KEYS = [
   'dmgHunter', 'dmgArmy', 'dmgTaken', // damage dealt by the hunter / the shadows, damage the hunter took
   'hits', 'crits', // hits of the hunter and critical ones
   'deaths', 'casts', 'manaSpent', 'dodges', // the hunter's own play
+  'atkMelee', 'atkRanged', 'atkMagic', 'healed', // attacks by the group of the weapon, health healed
   'raised', 'shadowsLost', 'revived', // the army: shadows raised, fallen, brought back
   'gatesCleared', 'stagesCleared', 'huntsSlain', 'outposts', 'chests', // content
   'time', 'timeCamp', 'timeGate', 'timeAbyss', 'sprintTime', // seconds

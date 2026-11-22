@@ -520,7 +520,7 @@ export class Hud {
     }
 
     // the Warrior's Rage, the Mage's Arcane Charges
-    const mc = game.mainClass, res = mc === 'warrior' ? P.rage / CONFIG.warrior.rageMax : mc === 'mage' ? P.arcane / CONFIG.mage.arcaneMax : mc === 'cleric' ? P.faith / CONFIG.cleric.faithMax : mc === 'rogue' ? P.cp / CONFIG.rogue.cpMax : -1;
+    const mc = game.mech, res = mc === 'warrior' ? P.rage / CONFIG.warrior.rageMax : mc === 'mage' ? P.arcane / CONFIG.mage.arcaneMax : mc === 'cleric' ? P.faith / CONFIG.cleric.faithMax : mc === 'rogue' ? P.cp / CONFIG.rogue.cpMax : -1;
     if (mc !== this.vRageOn) { this.vRageOn = mc; this.rageEl.style.display = res >= 0 ? '' : 'none'; this.rageEl.classList.toggle('arcane', mc === 'mage'); this.rageEl.classList.toggle('faith', mc === 'cleric'); this.rageEl.classList.toggle('combo', mc === 'rogue'); }
     if (res >= 0) {
       const r = Math.round(res * 100);

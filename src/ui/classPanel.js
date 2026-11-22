@@ -3,6 +3,7 @@
 // this world. The classes that are not ready yet are shown, but cannot be picked.
 // The game is paused while the panel is open.
 import { CONFIG } from '../config.js';
+import { classOffers } from '../core/style.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
 import { flashClass } from '../core/format.js';
@@ -59,12 +60,14 @@ export class ClassPanel {
   render() {
     const list = CONFIG.classes.list, spec = this.mode === 'spec';
     // first choice: the four groups (their emblem is the one of their first class); second: the class or its sibling
-    const ids = spec ? CONFIG.classes.spec[this.game.mainClass] : Object.keys(CONFIG.classes.groups);
+    const offers = spec ? classOffers(this.game) : [];
+    const ids = spec ? offers.map((o) => o.id) : Object.keys(CONFIG.classes.groups);
     const cards = ids.map((id) => {
       const cid = spec ? id : CONFIG.classes.groups[id].class, c = list[cid], on = id === this.sel;
       const name = spec ? t('mc.' + id) : t('mc.group.' + id);
       const desc = spec ? t('mc.' + id + '.desc') : t('mc.group.' + id + '.desc');
-      const mech = spec ? t('mc.' + id + '.mech') : t('mc.group.' + id + '.mech');
+      const off = offers.find((o) => o.id === id);
+      const mech = spec ? (off && off.stay ? t('mc.stay') : off && off.why ? t('mc.fit', { why: t('style.' + off.why) }) : t('mc.' + id + '.mech')) : t('mc.group.' + id + '.mech');
       return `<button class="cls-card${on ? ' on' : ''}" data-act="pick" data-id="${id}">
         <i class="emb" data-c="${cid}"></i><em>${t('mc.role.' + c.role)}</em><b>${name}</b><p>${desc}</p><small class="mech">${mech}</small></button>`;
     }).join('');

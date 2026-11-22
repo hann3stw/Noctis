@@ -24,14 +24,14 @@ export function playerHit(game, i, base, kx, kz) {
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
   P.addRage(CONFIG.warrior.rageHit);
-  if (game.mainClass === 'cleric') {
+  if (game.mech === 'cleric') {
     P.addFaith(CONFIG.cleric.faithHit);
     // Faith heals with the hits, at most once per healGap (an area hit on many enemies is one heal)
     if (P.faithCd <= 0) { P.faithCd = CONFIG.cleric.healGap; P.heal(P.maxHp * P.faith * CONFIG.cleric.hitHeal); }
   }
   P.addCombo(1);
   // Ranger: the farther the enemy, the harder the hit
-  if (game.mainClass === 'ranger') {
+  if (game.mech === 'ranger') {
     const R = CONFIG.ranger, d = Math.hypot(E.x[i] - P.x, E.z[i] - P.z);
     dmg *= 1 + R.rangeBonus * Math.max(0, Math.min(1, (d - R.rangeFrom) / (R.rangeTo - R.rangeFrom)));
   }
@@ -142,6 +142,7 @@ export function fireWeapon(game, weaponId, dx, dz, power) {
   const w = CONFIG.weapons[weaponId];
   const P = game.player, fx = game.effects;
   const base = P.power();
+  game.profile['atk' + w.group[0].toUpperCase() + w.group.slice(1)]++; // melee / ranged / magic: the style
   if (w.shape === 'arc') {
     hitArc(game, P.x, P.z, dx, dz, w.range, w.arcDeg, base);
     // the trail sweeps the way the arm swings (alternates every attack)

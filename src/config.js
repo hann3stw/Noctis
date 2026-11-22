@@ -733,7 +733,33 @@ export const CONFIG = {
       necromancer: { class: 'necromancer' },
     },
     specRank: 2,
-    spec: { warrior: ['warrior', 'rogue'], mage: ['mage', 'cleric'] },
+    // The second choice (rank C): the classes that can be offered to a class. The first ones of the list are the
+    // plain classes (always offered), the other ones (hybrid: true) only when the way you play fits them (fit >= min).
+    // base = the class whose mechanic it uses (Rage, Arcane Charges, Faith, Combo Points, the companion, the army);
+    // skillFrom = the classes whose skills it can use.
+    spec: {
+      warrior: ['warrior', 'rogue', 'spellblade', 'paladin'],
+      mage: ['mage', 'cleric', 'spellblade', 'arcaneArcher'],
+      ranger: ['ranger', 'arcaneArcher', 'skirmisher'],
+      necromancer: ['necromancer', 'deathKnight', 'boneArcher', 'warlock', 'commander'],
+    },
+    minFit: 0.42,
+    // how well a class fits the way you play: weights of the measures of core/style.js (sum 1)
+    fit: {
+      warrior: { melee: 0.5, tank: 0.3, calm: 0.2 },
+      rogue: { melee: 0.4, dodge: 0.3, crit: 0.3 },
+      mage: { magic: 0.5, caster: 0.5 },
+      cleric: { magic: 0.3, caster: 0.3, heal: 0.4 },
+      ranger: { ranged: 0.7, dodge: 0.3 },
+      spellblade: { melee: 0.3, magic: 0.3, caster: 0.4 },
+      paladin: { melee: 0.35, heal: 0.4, tank: 0.25 },
+      arcaneArcher: { ranged: 0.4, magic: 0.3, caster: 0.3 },
+      skirmisher: { ranged: 0.4, melee: 0.3, dodge: 0.3 },
+      deathKnight: { army: 0.35, melee: 0.45, tank: 0.2 },
+      boneArcher: { army: 0.35, ranged: 0.45, dodge: 0.2 },
+      warlock: { army: 0.35, magic: 0.35, caster: 0.3 },
+      commander: { army: 0.9, calm: 0.1 },
+    },
     weaponPick: 0.7, // chance that a weapon drop is of the weapons of the class group
     list: {
       necromancer: { group: 'necromancer', weapons: '', role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
@@ -742,6 +768,16 @@ export const CONFIG = {
       rogue: { group: 'fighter', weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { group: 'ranged', weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { group: 'mage', weapons: 'magic', role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
+      // hybrids: a class that grows from the way you play (the second choice)
+      spellblade: { hybrid: true, group: 'fighter', base: 'warrior', skillFrom: ['warrior', 'mage'], weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, hp: 0.1 }, cores: ['blade', 'mage', 'tank', 'slayer'] },
+      paladin: { hybrid: true, group: 'fighter', base: 'cleric', skillFrom: ['cleric', 'warrior'], weapons: 'melee', role: 'support', ready: true, army: false, startSkills: ['shieldBash'], bonus: { hp: 0.2, damage: 0.15 }, cores: ['tank', 'mage', 'delver', 'slayer'] },
+      arcaneArcher: { hybrid: true, group: 'ranged', base: 'ranger', skillFrom: ['ranger', 'mage'], weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, speed: 0.05 }, cores: ['slayer', 'mage', 'delver', 'blade'] },
+      skirmisher: { hybrid: true, group: 'ranged', base: 'rogue', skillFrom: ['rogue', 'ranger'], weapons: 'ranged', role: 'melee', ready: true, army: false, startSkills: ['piercingShot'], bonus: { crit: 0.1, speed: 0.1, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'tank'] },
+      // the Necromancer's ways: the army stays, the way you fight decides what is added
+      deathKnight: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'warrior'], weapons: 'melee', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, hp: 0.2, armyDamage: 0.1 }, cores: ['blade', 'tank', 'commander', 'slayer', 'delver'] },
+      boneArcher: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'ranger'], weapons: 'ranged', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, crit: 0.08, armyHp: 0.1 }, cores: ['slayer', 'blade', 'commander', 'delver', 'tank'] },
+      warlock: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'mage'], weapons: 'magic', role: 'summoner', ready: true, army: true, bonus: { skillDamage: 0.4, mana: 0.25, armyDamage: 0.1 }, cores: ['mage', 'commander', 'slayer', 'delver', 'tank'] },
+      commander: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer'], weapons: '', role: 'summoner', ready: true, army: true, minFit: 0.5, bonus: { armyDamage: 0.35, armySlots: 4, armyHp: 0.3 }, cores: ['commander', 'tank', 'delver', 'slayer', 'mage', 'blade'] },
     },
   },
 

@@ -1,6 +1,8 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { baseOf } from './core/classes.js';
+import { classOffers } from './core/style.js';
 import { usageTick } from './core/usage.js';
 import { Coop } from './net/coop.js';
 import { setMood, duckMusic, sting } from './core/music.js';
@@ -340,6 +342,11 @@ export class Game {
     this.save();
   }
 
+  // the class whose mechanic the main class uses (a hybrid uses the one of its base)
+  get mech() {
+    return baseOf(this.mainClass);
+  }
+
   // the main class has the shadow army (Arise, the Army tab)
   hasArmy() {
     const c = CONFIG.classes.list[this.mainClass];
@@ -354,20 +361,20 @@ export class Game {
   // the second choice: at rank C the class can become its sibling (Warrior or Rogue, Mage or Cleric)
   specDue() {
     const C = CONFIG.classes;
-    return !!this.mainClass && !this.specDone && this.rankIndex >= C.specRank && !!C.spec[this.mainClass];
+    return !!this.mainClass && !this.specDone && this.rankIndex >= C.specRank && !!C.spec[this.mainClass] && !C.list[this.mainClass].hybrid;
   }
 
   // switch to another class of the same group (the skills of the old class that do not fit are put away)
   changeClass(id) {
     const C = CONFIG.classes, c = C.list[id];
-    if (!this.specDue() || !c || !C.spec[this.mainClass].includes(id)) return false;
+    if (!this.specDue() || !c || !C.spec[this.mainClass].includes(id) || !classOffers(this).some((o) => o.id === id)) return false;
     this.specDone = true;
     if (id === this.mainClass) { this.save(); return true; }
     const old = C.list[this.mainClass], P = this.player;
     this.mainClass = id;
     setLootClass(id);
     document.documentElement.dataset.cls = id;
-    P.model.setClass(id);
+    P.model.setClass(this.mech);
     P.known = P.known.filter((s) => skillOk(s, id));
     P.slots = P.slots.map((s) => (s && P.known.includes(s) ? s : null));
     for (const s of c.startSkills || []) { P.learn(s); if (!P.newSkills.includes(s)) P.newSkills.push(s); }
@@ -386,7 +393,7 @@ export class Game {
     this.mainClass = id;
     setLootClass(id);
     document.documentElement.dataset.cls = id;
-    this.player.model.setClass(id); // a hat, a hood, pauldrons ...
+    this.player.model.setClass(this.mech); // a hat, a hood, pauldrons ...
     // skills of other classes are put away; the class brings its own to start with
     const P = this.player;
     P.known = P.known.filter((s) => skillOk(s, id));
@@ -395,7 +402,7 @@ export class Game {
     if (c.startUltimate) { P.learn(c.startUltimate); P.slots[2] = c.startUltimate; if (!P.newSkills.includes(c.startUltimate)) P.newSkills.push(c.startUltimate); }
     this.player.recalc();
     this.quests.fixArise();
-    if (id === 'ranger') this.ranger.welcome();
+    if (this.mech === 'ranger') this.ranger.welcome();
     this.hud.banner(t('mc.chosen'), t('mc.' + id));
     play('levelup');
     if (c.army && this.tips) this.tips.show('necro');
@@ -570,7 +577,8 @@ export class Game {
     else if (this.player.inCamp) pf.timeCamp += dt;
     if (this.player.sprint) pf.sprintTime += dt;
     if (this.classDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open(); // the choice of the main class
-    if (this.specDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open('spec'); // the second choice
+    if (this.specDue() && classOffers(this).length < 2) this.specDone = true; // nothing to choose from: the class stays
+    else if (this.specDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open('spec'); // the second choice
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
     if (this.xpBoostT > 0 && (this.xpBoostT -= dt) <= 0) { this.xpBoostT = 0; this.hud.toast(t('quest.xpOff')); }
     this.saveT += dt;

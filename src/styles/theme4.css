@@ -17,6 +17,14 @@
 :root[data-cls='rogue'] { --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; --emb-cur: var(--emb-rogue); }
 :root[data-cls='ranger'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
 :root[data-cls='cleric'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
+:root[data-cls='spellblade'] { --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; --emb-cur: var(--emb-warrior); }
+:root[data-cls='paladin'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
+:root[data-cls='arcaneArcher'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
+:root[data-cls='skirmisher'] { --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; --emb-cur: var(--emb-rogue); }
+:root[data-cls='deathKnight'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+:root[data-cls='boneArcher'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+:root[data-cls='warlock'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+:root[data-cls='commander'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
 
 /* an emblem: a small picture of the class; with data-c on the element itself it works anywhere (cards, lists) */
 .emb {
@@ -36,6 +44,14 @@
 .emb[data-c='rogue'] { --emb-cur: var(--emb-rogue); --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; }
 .emb[data-c='ranger'] { --emb-cur: var(--emb-ranger); --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; }
 .emb[data-c='cleric'] { --emb-cur: var(--emb-cleric); --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; }
+.emb[data-c='spellblade'] { --emb-cur: var(--emb-warrior); --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; }
+.emb[data-c='paladin'] { --emb-cur: var(--emb-cleric); --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; }
+.emb[data-c='arcaneArcher'] { --emb-cur: var(--emb-ranger); --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; }
+.emb[data-c='skirmisher'] { --emb-cur: var(--emb-rogue); --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; }
+.emb[data-c='deathKnight'] { --emb-cur: var(--emb-necromancer); --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; }
+.emb[data-c='boneArcher'] { --emb-cur: var(--emb-necromancer); --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; }
+.emb[data-c='warlock'] { --emb-cur: var(--emb-necromancer); --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; }
+.emb[data-c='commander'] { --emb-cur: var(--emb-necromancer); --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; }
 
 /* ------------------------------ the hunter's panel ------------------------------ */
 .lvl-badge {
@@ -204,6 +220,14 @@
 .cls-card[data-id='cleric'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
 .cls-card[data-id='fighter'] { --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; --emb-cur: var(--emb-warrior); }
 .cls-card[data-id='ranged'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
+.cls-card[data-id='spellblade'] { --cc: #e8553f; --cc-hi: #ffa896; --cc-lo: #8e2418; --emb-cur: var(--emb-warrior); }
+.cls-card[data-id='paladin'] { --cc: #ffd24a; --cc-hi: #fff2a8; --cc-lo: #a8780a; --emb-cur: var(--emb-cleric); }
+.cls-card[data-id='arcaneArcher'] { --cc: #58c24a; --cc-hi: #b0f0a0; --cc-lo: #25702a; --emb-cur: var(--emb-ranger); }
+.cls-card[data-id='skirmisher'] { --cc: #e050a8; --cc-hi: #ff9ad0; --cc-lo: #8a1e64; --emb-cur: var(--emb-rogue); }
+.cls-card[data-id='deathKnight'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+.cls-card[data-id='boneArcher'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+.cls-card[data-id='warlock'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
+.cls-card[data-id='commander'] { --cc: #9a6bff; --cc-hi: #d2bcff; --cc-lo: #4a2a98; --emb-cur: var(--emb-necromancer); }
 
 .cls-card { position: relative; box-shadow: inset 0 0 0 calc(var(--u) * 0.5) var(--cc), 0 calc(var(--u) * 0.5) 0 var(--ink); }
 .cls-card.on { box-shadow: inset 0 0 0 calc(var(--u) * 0.7) var(--brass), 0 0 calc(var(--u) * 3) rgba(255, 201, 40, 0.5), 0 calc(var(--u) * 0.5) 0 var(--ink); }
