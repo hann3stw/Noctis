@@ -59,6 +59,8 @@ export class Player {
     this.armyDamage = 0;
     this.armyHp = 0;
     this.armySlots = 0;
+    this.companionDamage = 0;
+    this.companionHp = 0;
 
     this.charges = c.charges.max;
     this.maxCharges = c.charges.max;
@@ -218,6 +220,7 @@ export class Player {
     const c = CONFIG.player, G = CONFIG.progression, S = G.stats, st = this.stats;
     const b = this.bonus;
     b.hp = b.speed = b.mana = b.crit = b.reload = b.damage = b.damageTaken = b.armyDamage = b.armyHp = b.armySlots = 0;
+    b.companionDamage = b.companionHp = 0; // the companion of the Ranger line (never the army)
     b.skillDamage = b.ultCharge = b.charges = b.cooldown = b.killHeal = b.hitHeal = 0;
     for (const set in CONFIG.items.sets) this.setCount[set] = 0;
     let def = 0;
@@ -235,6 +238,7 @@ export class Player {
       }
     }
     if (this.game.path) this.game.path.apply(b); // the Path of the Necromancer
+    if (this.game.progression) { const pb = this.game.progression.bonus; for (const k in pb) b[k] = (b[k] || 0) + pb[k]; } // class progression (A to M)
     if (this.game.hunts && this.game.path.has('huntBoard')) this.game.hunts.apply(b); // trophies of the Hunt Board
     const mc = CONFIG.classes.list[this.game.mainClass]; // what the main class gives
     if (mc && mc.bonus) for (const k in mc.bonus) b[k] = (b[k] || 0) + mc.bonus[k];
@@ -278,6 +282,11 @@ export class Player {
     this.armyDamage = b.armyDamage + M.armyDamage * ms.armyDamage;
     this.armyHp = b.armyHp + M.armyHp * ms.armyHp;
     this.armySlots = b.armySlots;
+    // the companion: its own bonuses; the mastery points a hunter of the Ranger line put into army damage / health
+    // go to the companion (there is no army in that line), as they did when the companion was part of the army
+    const ownComp = this.game.hasCompanion && this.game.hasCompanion();
+    this.companionDamage = b.companionDamage + (ownComp ? M.armyDamage * ms.armyDamage : 0);
+    this.companionHp = b.companionHp + (ownComp ? M.armyHp * ms.armyHp : 0);
     this.model.setEquipment(this.equip);
     if (this.game.army) this.game.army.recalcAll();
   }
@@ -449,6 +458,7 @@ export class Player {
   // something new to look at in the menu?
   hasNews() {
     if (this.points > 0 || this.newSkills.length || this.mastery.pts > 0) return true;
+    if (this.game.progressionPending && this.game.progressionPending()) return true; // a pick of the class progression waits
     for (let i = 0; i < this.inventory.length; i++) if (this.inventory[i].n) return true;
     return false;
   }

@@ -80,7 +80,7 @@ export const BEHAVIORS = {
     if (def.eliteStun) {
       for (let k = 0; k < E.activeCount; k++) {
         const i = E.active[k];
-        if (!E.alive[i] || E.tier[i] < 1) continue;
+        if (!E.alive[i] || (E.tier[i] < 1 && !def.stunAll)) continue; // stunAll (Warlord of Ruin): every enemy there
         const ex = E.x[i] - P.x, ez = E.z[i] - P.z, r = def.radius + E.radius[i];
         if (ex * ex + ez * ez <= r * r) E.applyStun(i, def.eliteStun);
       }
@@ -212,6 +212,7 @@ export const BEHAVIORS = {
     u.hp = Math.min(u.maxHp, u.hp + u.maxHp * def.healArmy * k);
     u.cmdT = def.duration;
     u.cmdDmg = def.armyDamage * k;
+    if (def.markAround) game.enemies.markArea(u.x, u.z, def.markAround, def.duration); // Primal Hunt: the prey around it is marked
     fx.ring(u.x, u.z, 0.4, 4, def.color, 0.45);
     fx.burst(u.x, 1.2, u.z, full ? 40 : 20, def.color, 7, 0.22, 0.7);
     if (game.aff) game.aff.record('companionHit');
@@ -247,5 +248,7 @@ export function runAbility(game, id, def, base, dx, dz, tx, tz, yaw, dist) {
     const f = BEHAVIORS[b];
     if (f) f(c);
   }
+  // a bleed (Rending Cleave): the enemies where it landed burn for 3 s (burn x the damage over that time)
+  if (def.burn && c.n > 0) game.enemies.burnArea(c.cx, c.cz, c.cr, (c.base * def.burn) / 3, 3);
   return c;
 }

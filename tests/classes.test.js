@@ -205,7 +205,8 @@ test('First Awakening: all four groups, the fitting one recommended', () => {
 });
 
 test('Specialization keeps continuation and marks kinds', () => {
-  const o = specOffers('warrior', [{ id: 'warrior', fit: 0.5, why: 'melee', stay: true }, { id: 'rogue', fit: 0.6, why: 'dodge' }, { id: 'spellblade', fit: 0.5, why: 'magic' }], strong({}));
+  // (Spellblade is unlocked here: its affinity needs are met; a locked one would be left out, see locked.test.js)
+  const o = specOffers('warrior', [{ id: 'warrior', fit: 0.5, why: 'melee', stay: true }, { id: 'rogue', fit: 0.6, why: 'dodge' }, { id: 'spellblade', fit: 0.5, why: 'magic' }], strong({ might: 40, arcana: 40 }));
   assert.equal(o.find((x) => x.stay).kind, 'continuation');
   assert.equal(o.find((x) => x.id === 'spellblade').kind, 'hybrid');
   assert.equal(o.find((x) => x.id === 'rogue').kind, 'specialization');
@@ -254,14 +255,14 @@ test('a version 3 save becomes version 4 and keeps everything', () => {
     player: { level: 120, known: ['cleave', 'smite'], slots: ['cleave', 'smite', 'divineIntervention', null], inventory: [{ kind: 'weapon', type: 'sword', rarity: 3 }], equip: {} } };
   const copy = structuredClone(v3);
   const v4 = migrateSave(v3);
-  assert.equal(v4.version, 4);
+  assert.equal(v4.version, 5);
   for (const k of ['mainClass', 'rankIndex', 'specDone', 'path', 'forge', 'mastery', 'runes', 'army', 'player']) assert.deepEqual(v4[k], copy[k], k);
   assert.equal(v4.affinities, null); // nothing made up
-  // a version 4 save is left alone
+  // a migrated save is left alone
   const again = migrateSave(structuredClone(v4));
   assert.deepEqual(again, v4);
   // very old saves still come through all steps
-  assert.equal(migrateSave({ version: 1, player: { level: 9, inventory: [], equip: {} } }).version, 4);
+  assert.equal(migrateSave({ version: 1, player: { level: 9, inventory: [], equip: {} } }).version, 5);
   assert.equal(migrateSave({ version: 2, player: { inventory: [{ rarity: 1 }], equip: {} } }).player.inventory[0].rarity, 2);
 });
 

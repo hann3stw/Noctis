@@ -5,17 +5,17 @@ import { Goals } from './core/goals.js';
 import { track, setTrackCtx } from './core/track.js';
 import { Forge } from './core/forge.js';
 import { Mastery } from './core/mastery.js';
-import { baseOf, skillOk } from './core/classes.js';
+import { baseOf, skillOk, specAllowed } from './core/classes.js';
 import { mechanicOf } from './core/classComponents.js';
 import { mechOf, resetMechanics } from './core/classMechanics.js';
 import { Affinities } from './core/affinities.js';
 import { AwakeningState, evolutionOffers } from './core/awakening.js';
-import { classOffers } from './core/style.js';
+import { classOffers, openOffers } from './core/style.js';
 import { usageTick } from './core/usage.js';
 import { Coop } from './net/coop.js';
 import { setMood, duckMusic, sting } from './core/music.js';
 import { CONFIG } from './config.js';
-import { rankOf, rankProgress, tierLevels, levelAt, enemyPower } from './core/levels.js';
+import { rankOf, rankProgress, tierLevels, levelAt, enemyPower, migrateSave } from './core/levels.js';
 import { input, resetInput, clearEvents } from './input/input.js';
 import { initTouch } from './input/touch.js';
 import { FollowCamera } from './render/camera.js';
@@ -26,7 +26,7 @@ import { Bloom } from './render/bloom.js';
 import { World } from './world/world.js';
 import { Player } from './entities/player.js';
 import { Enemies, ST_CHASE, ST_WINDUP, ST_CHARGE } from './entities/enemies.js';
-import { Army } from './entities/army.js';
+import { Army, COMP_SLOT } from './entities/army.js';
 import { Souls } from './entities/souls.js';
 import { Projectiles } from './combat/projectiles.js';
 import { Zones } from './combat/zones.js';
@@ -38,7 +38,8 @@ import { Loot } from './entities/loot.js';
 import { Menu } from './ui/menu.js';
 import { Abyss } from './world/abyss.js';
 import { AbyssPanel } from './ui/abyssPanel.js';
-import { skillDef, setRunes, setMastery } from './combat/skills.js';
+import { skillDef, setRunes, setMastery, bumpSkillCache } from './combat/skills.js';
+import { ClassProgression, treeOf, GUARANTEED, stepsOf, titleOf } from './core/classProgression.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
@@ -71,7 +72,7 @@ export class Game {
   // opts: { slot, name, seed, appearance } for a new world, or { slot, save }
   // to continue a saved one. slot -1 = test world that is never saved.
   constructor(app, uiRoot, opts) {
-    const save = opts.save || null;
+    const save = opts.save ? migrateSave(opts.save) : null; // (the stores migrate already; a save from elsewhere too)
     this.app = app;
     this.uiRoot = uiRoot;
     this.slot = opts.slot === undefined ? -1 : opts.slot;
@@ -124,6 +125,7 @@ export class Game {
     // and the Awakening (the classes taken, the offer that waits: core/awakening.js)
     this.aff = new Affinities(save && save.affinities);
     this.awakening = new AwakeningState(save && save.awakening, this.mainClass, this.rankIndex);
+    this.progression = new ClassProgression(save && save.classProgression); // rank A to M (core/classProgression.js)
     this.xpBoostT = save ? Math.max(0, save.xpBoostT || 0) : 0; // seconds of Double XP left
     this.gateTiers = save && Array.isArray(save.gateTiers) ? save.gateTiers.map((n) => n | 0) : []; // deadly gate tier per zone
     this.appearance = { ...CONFIG.defaultAppearance, ...(save ? save.appearance : opts.appearance) };
@@ -191,7 +193,7 @@ export class Game {
     this.barracks = new Barracks(this, save && save.barracks); // shadows stationed in the camp (Commander)
     this.duel = new Duel(this, save && save.duel); // the Duel Arena (Blade)
     this.fort = new Fort(this, save && save.fort); // fortified outposts (Tank)
-    this.ranger = new Ranger(this); // the Ranger's companion and traps
+    this.ranger = new Ranger(this, save && save.companion); // the companion of the Ranger line (apart from the army) and traps
 
     // outposts taken in this world
     for (const si of this.discovered) this.markCaptured(si);
@@ -215,6 +217,7 @@ export class Game {
     this.waypoint = new Waypoint(this, save && save.mark);
     this.hunts = new Hunts(this, save && save.hunts);
     this.player.recalc(); // (the trophies of the Hunt Board)
+    this.refreshProgression(); // the class progression in force (A to M)
     if (!this.quests.list.length || this.quests.day < 0) this.quests.make();
     this.minimap = new Minimap(this, this.hud.els.minimap);
     this.touchCleanup = initTouch(this.hud.els);
@@ -284,7 +287,7 @@ export class Game {
   // ---- saving ---------------------------------------------------------------
   serialize() {
     return {
-      version: 4,
+      version: 5,
       name: this.name,
       seed: this.seed,
       created: this.created,
@@ -315,6 +318,8 @@ export class Game {
       specDone: this.specDone,
       affinities: this.aff.serialize(),
       awakening: this.awakening.serialize(),
+      classProgression: this.progression.serialize(),
+      companion: this.ranger.serialize(), // the companion: its own data, never part of the army
       barracks: this.barracks.serialize(),
       duel: this.duel.serialize(),
       fort: this.fort.serialize(),
@@ -395,7 +400,8 @@ export class Game {
 
   // the class has a companion (the Ranger's line); it is never an army
   hasCompanion() {
-    return this.mech === 'ranger';
+    const c = CONFIG.classes.list[this.mainClass];
+    return !!c && (c.companion || baseOf(this.mainClass) === 'ranger');
   }
 
   // a new class is taken: the skills stay known (the ones the new class cannot use are only put away, see
@@ -412,16 +418,70 @@ export class Game {
     if (c.startUltimate) { P.learn(c.startUltimate); if (kind === 'first' || !P.slots[2] || P.slots[2] === (old && old.startUltimate)) P.slots[2] = c.startUltimate; if (!P.newSkills.includes(c.startUltimate)) P.newSkills.push(c.startUltimate); }
     P.buffT = 0;
     resetMechanics(P);
+    this.army.syncAccess(); // the shadows take part only with army access; the companion only in the Ranger line
+    this.refreshProgression();
     this.awakening.add(id, this.rankIndex, kind);
     this.awakening.pending = null;
     P.recalc();
     this.quests.fixArise();
   }
 
+  // the tree of the class progression (A to M) the class grows along ('' = none)
+  get classTree() {
+    return treeOf(this.mainClass);
+  }
+
+  // Applies the class progression: unique steps whose affinities are met open for good, the numbers of the steps in
+  // force are put into the game, and the guaranteed skill of an evolution class is given when it is earned.
+  refreshProgression() {
+    const tree = this.classTree, aff = this.aff.values(), P = this.player;
+    if (!P) return;
+    for (const st of this.progression.openUniques(tree, this.rankIndex, aff)) if (this.hud) this.hud.banner(t('prog.uniqueOpen'), titleOf(st.node.id));
+    if (this.progression.apply(tree, this.rankIndex, aff)) {
+      bumpSkillCache();
+      P.recalc();
+      this.army.recalcAll();
+    }
+    const G = GUARANTEED[this.mainClass];
+    if (G && !this.progression.granted[this.mainClass]) {
+      const done = P.known.includes(G.skill) || this.rankIndex >= G.rank || this.mastery.level(G.quest.mastery) >= G.quest.level;
+      if (done) {
+        this.progression.granted[this.mainClass] = true;
+        if (!P.known.includes(G.skill)) {
+          P.learn(G.skill);
+          if (!P.newSkills.includes(G.skill)) P.newSkills.push(G.skill);
+          if (this.hud) this.hud.banner(t('prog.skillGranted'), t('skill.' + G.skill));
+        }
+      }
+    }
+  }
+
+  // a pick of the class progression waits (for the menu badge; it stays until it is made)
+  progressionPending() {
+    return stepsOf(this.classTree, this.rankIndex, this.aff.values(), this.progression).some((s) => s.status === 'pick');
+  }
+
+  // a step of the progression waits for a pick: its key (once per step and session), or ''
+  progressionPickDue() {
+    const st = stepsOf(this.classTree, this.rankIndex, this.aff.values(), this.progression).find((s) => s.status === 'pick');
+    if (!st) return '';
+    const key = this.classTree + ':' + st.key;
+    return this.treeAskedSet && this.treeAskedSet.has(key) ? '' : key;
+  }
+
+  // the hunter picks an option of a progression step
+  progressionPick(key, id) {
+    if (!this.progression.pick(this.classTree, key, id, this.rankIndex)) return false;
+    this.refreshProgression();
+    play('levelup');
+    this.save();
+    return true;
+  }
+
   // Class Evolution (rank B on): an evolution can be taken; the offer is kept until it is answered
   evolveDue() {
     if (!this.mainClass || this.rankIndex < CONFIG.classes.evolveRank || this.awakening.declined >= this.rankIndex) return false;
-    if (this.classDue() || this.specDue()) return false;
+    if (this.classDue() || (this.specDue() && openOffers(this).length >= 2)) return false;
     const P = this.awakening.pending;
     if (P && P.rank === this.rankIndex && P.ids.length > 1) return true;
     // an offer is kept only when it holds a real evolution; otherwise it is looked at again later (the
@@ -471,7 +531,10 @@ export class Game {
   // switch to another class of the same group (the skills of the old class that do not fit are put away)
   changeClass(id) {
     const C = CONFIG.classes, c = C.list[id];
-    if (!this.specDue() || !c || !C.spec[this.mainClass].includes(id) || !classOffers(this).some((o) => o.id === id)) return false;
+    // checked again here, so a direct call can never take a locked or unready class
+    const held = new Set(this.awakening.history.map((h) => h.id));
+    if (!this.specDue() || !c || c.ready !== true || !(C.spec[this.mainClass] || []).includes(id)) return false;
+    if (!specAllowed(this.mainClass, id, this.aff.values(), held) || !classOffers(this).some((o) => o.id === id)) return false;
     this.specDone = true;
     track('spec', { id, from: this.mainClass });
     if (id === this.mainClass) { this.save(); return true; }
@@ -667,11 +730,15 @@ export class Game {
     else if (this.player.inCamp) pf.timeCamp += dt;
     if (this.player.sprint) pf.sprintTime += dt;
     if (this.classDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open(); // the choice of the main class
-    if (this.specDue() && classOffers(this).length < 2) this.specDone = true; // nothing to choose from: the class stays
-    else if (this.specDue() && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open('spec'); // the second choice
+    // the Specialization opens when there is a real choice (open offers from the affinities); while there is none it
+    // waits (the affinities grow), and from the evolution rank on it is closed: the class stays and evolves
+    if (this.specDue() && this.rankIndex >= CONFIG.classes.evolveRank && openOffers(this).length < 2) this.specDone = true;
+    else if (this.specDue() && openOffers(this).length >= 2 && !this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3) this.classPanel.open('spec'); // the second choice
     else if (!this.classPanel.isOpen && !this.menu.isOpen && this.gates.active < 0 && !P.dead && this.playTime > 3 && (this.evoT -= dt) <= 0) {
       this.evoT = 5; // the evolution offer is looked at every few seconds (the affinities change slowly)
+      this.refreshProgression();
       if (this.evolveDue()) this.classPanel.open('evolve');
+      else if (this.progressionPickDue()) { (this.treeAskedSet || (this.treeAskedSet = new Set())).add(this.progressionPickDue()); this.classPanel.open('tree'); }
     }
     this.aff.tick(dt); // only active play counts for the affinities
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)
@@ -1071,8 +1138,7 @@ export class Game {
 
   // a shadow (or the companion) of slot src hit an enemy (kill: and slew it): affinities and Companion Bond
   onArmyHit(src, kill = false) {
-    const u = this.army.units[src];
-    const comp = this.hasCompanion() && u && u === this.army.deployed[0];
+    const comp = src === COMP_SLOT && this.army.compOn;
     if (comp) {
       this.aff.record(kill ? 'companionKill' : 'companionHit');
       const m = this.mechImpl;

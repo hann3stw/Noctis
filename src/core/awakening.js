@@ -8,7 +8,7 @@
 // Offers never change the class by themselves; the hunter picks. Nothing here touches the DOM (node --test).
 import { CONFIG } from '../config.js';
 import { AFFINITIES } from './affinities.js';
-import { lineOf } from './classes.js';
+import { lineOf, specAllowed } from './classes.js';
 
 // how well the affinities meet the needs of a class: 0..1 (1 = every need met), and which are missing
 export function meets(needs, aff) {
@@ -78,13 +78,16 @@ export function evolutionOffers(cls, rank, aff) {
   return out;
 }
 
-// Specialization (rank C): the offers of the play style (core/style.js classOffers) with their kind and the
-// recommendation; continuation is always one of them
-export function specOffers(cls, offers, aff) {
+// Specialization (rank C): the offers of the affinities (core/style.js classOffers) with their kind and the
+// recommendation; continuation is always one of them, locked classes never
+// held = a Set of the classes held before. Whatever is passed in, a class that cannot be taken (core/classes.js
+// specAllowed) is dropped here too.
+export function specOffers(cls, offers, aff, held) {
   const list = CONFIG.classes.list;
-  const out = offers.map((o) => ({ ...o, kind: o.stay ? 'continuation' : list[o.id] && list[o.id].hybrid ? 'hybrid' : 'specialization' }));
-  if (!out.some((o) => o.stay)) out.unshift({ id: cls, kind: 'continuation', fit: 0, why: '', stay: true });
-  const best = out.filter((o) => !o.stay).sort((a, b) => b.fit - a.fit)[0];
+  const out = offers.filter((o) => o && (o.id === cls || specAllowed(cls, o.id, aff, held)))
+    .map((o) => ({ ...o, open: true, stay: o.id === cls, kind: o.id === cls ? 'continuation' : list[o.id].hybrid ? 'hybrid' : 'specialization' }));
+  if (!out.some((o) => o.stay)) out.unshift({ id: cls, kind: 'continuation', fit: 0, why: '', stay: true, open: true });
+  const best = out.filter((o) => !o.stay && o.open).sort((a, b) => b.fit - a.fit)[0];
   if (best && best.fit > 0.3) best.rec = true;
   return out;
 }

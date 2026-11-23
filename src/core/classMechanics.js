@@ -48,6 +48,7 @@ export const MECHANIC_IMPL = {
       if (!def.lightning) return 0;
       let j = 0;
       if (P.arcane >= S.at[1]) { j = S.jumps[1]; P.arcane -= S.at[1]; } else if (P.arcane >= S.at[0]) { j = S.jumps[0]; P.arcane -= S.at[0]; }
+      if (j && S.refund) P.arcane = Math.min(CONFIG.mage.arcaneMax, P.arcane + S.refund); // Mythic Storm Core
       P.overload = j;
       if (j) game.effects.flare(P.x, 1.6, P.z, 3 + j, 0xfff07a, 0.35, 1.6);
       return j;

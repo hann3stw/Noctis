@@ -1,15 +1,36 @@
-// The Ranger (a main class, CONFIG.ranger): a loyal companion at its side and traps on the ground.
-//  - The companion is one shadow of the army machinery (the Ranger has no army otherwise): it fights,
-//    grows with the hunter, and stands up again by itself after a while.
+// The Ranger (a main class, CONFIG.ranger) and its line (the Beastmaster): a loyal companion at its side and traps
+// on the ground.
+//  - The companion is NOT a shadow. It has its own identity and data (saved here as `companion`, apart from the
+//    army), and lives in the army only as one extra unit outside the roster (army.comp, slot COMP_SLOT), so it
+//    moves and fights with the same machinery. It never takes a place of the army, never gets the army's bonuses
+//    (it has companionDamage / companionHp), and a shadow is never mistaken for it. It fights, grows with the
+//    hunter, learns from kills, and stands up again by itself after a while. When the class has no companion it
+//    rests: nothing of it is lost, and it comes back as it was.
 //  - A trap waits where it was set and goes off when an enemy comes near.
 import { CONFIG } from '../config.js';
 import { makeWeapon } from './items.js';
 import { t } from '../strings.js';
 
+// the saved form of the companion: { id, kind, type, tier, level, xp, totalXp, stage, plv, alive, hp, reviveT, upgrades }
+function cleanCompanion(d) {
+  if (!d || typeof d !== 'object' || !CONFIG.enemies.types[d.type]) return null;
+  const num = (v, min = 0) => (Number.isFinite(Number(v)) ? Math.max(min, Number(v)) : min);
+  return {
+    id: typeof d.id === 'string' && d.id ? d.id.slice(0, 24) : 'cmp-' + Math.random().toString(36).slice(2, 10),
+    kind: 'beast', type: d.type, tier: Math.max(0, Math.min(2, d.tier | 0)), role: CONFIG.shadows.roles[d.role] ? d.role : CONFIG.enemies.types[d.type].shadowRole, zone: d.zone | 0,
+    level: Math.max(1, d.level | 0), xp: num(d.xp), totalXp: num(d.totalXp), stage: Math.max(0, d.stage | 0), plv: num(d.plv, 1),
+    alive: d.alive !== false, hp: num(d.hp), reviveT: num(d.reviveT),
+    upgrades: Array.isArray(d.upgrades) ? d.upgrades.filter((k) => typeof k === 'string').slice(0, 16) : [],
+  };
+}
+
 export class Ranger {
-  constructor(game) {
+  constructor(game, saved) {
     this.game = game;
     this.traps = []; // { x, z, r, dmg, stun, color, life }
+    this.data = cleanCompanion(saved); // the companion as saved (also while the class has none)
+    if (this.data) this.game.army.comp = this.game.army.makeCompanion(this.data);
+    this.game.army.rebuild();
     this.t = 1; // time until the companion is looked after
     this.pulse = 0;
   }
@@ -22,8 +43,23 @@ export class Ranger {
     this.game.hud.toast(t('ranger.bow'));
   }
 
+  // the companion when the class has one (never a shadow of the army)
   companion() {
-    return this.game.army.deployed[0] || null;
+    const A = this.game.army;
+    return A.compOn ? A.comp : null;
+  }
+
+  serialize() {
+    const u = this.game.army.comp;
+    if (!u) return this.data;
+    const d = this.game.army.unitData(u);
+    return { id: this.data ? this.data.id : 'cmp-' + Math.random().toString(36).slice(2, 10), kind: 'beast', ...d, nick: undefined, rank: undefined, olv: undefined, oxp: undefined, upgrades: this.upgrades() };
+  }
+
+  // the companion upgrades of the class progression that are active (core/classProgression.js)
+  upgrades() {
+    const p = this.game.progression;
+    return p ? [...p.compUp] : (this.data ? this.data.upgrades : []);
   }
 
   // a trap of a skill: it waits for an enemy
@@ -35,21 +71,26 @@ export class Ranger {
 
   update(dt) {
     const g = this.game, R = CONFIG.ranger;
-    if (g.mech !== 'ranger') return;
+    if (!g.hasCompanion()) return;
     // the companion
     if ((this.t -= dt) <= 0) {
       this.t = 3;
-      const A = g.army, u = this.companion();
-      if (!u) {
-        if (A.hasRoom()) {
-          const P = g.player, z = CONFIG.world.zones[Math.min(g.rankIndex, CONFIG.world.zones.length - 1)];
-          A.add(R.companionType, R.companionTier, P.x + 2, P.z + 2, undefined, 0, z.level);
-        }
-      } else {
+      const A = g.army;
+      if (!A.comp) {
+        // the first companion: its own new identity
+        const z = CONFIG.world.zones[Math.min(g.rankIndex, CONFIG.world.zones.length - 1)];
+        this.data = cleanCompanion({ type: R.companionType, tier: R.companionTier, level: 1, plv: z.level, alive: true });
+        A.comp = A.makeCompanion(this.data);
+        A.comp.hp = A.comp.maxHp;
+        A.rebuild();
+        A.placeAtHome(A.comp, true);
+      }
+      const u = this.companion();
+      if (u) {
         if (!u.alive && u.reviveT <= 0) { // it stands up again
           u.alive = true;
           u.hp = u.maxHp;
-          if (A.out) A.placeAtHome(u, true);
+          A.placeAtHome(u, true);
           A.version++;
         }
         // it grows with the zone of your rank

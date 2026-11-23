@@ -50,7 +50,7 @@ export class Hazards {
   }
 
   update(dt) {
-    const game = this.game, P = game.player, army = game.army, D = army.deployed;
+    const game = this.game, P = game.player, army = game.army, D = army.fighters; // the active shadows and the companion
     for (const h of this.list) {
       if (!h.live) continue;
       h.t -= dt;

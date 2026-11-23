@@ -94,6 +94,10 @@ export function setRunes(r) {
 }
 const runed = new Map(); // 'skill:rune' -> the skill with the rune's numbers
 let runedVer = -1; // the rune levels the cache was made for
+// the base numbers of skills changed (class progression): the cached numbers are made again
+export function bumpSkillCache() {
+  runedVer = -2;
+}
 
 // The numbers of a skill (with the rune worn for it, if any).
 export function skillDef(id) {

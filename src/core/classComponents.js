@@ -33,6 +33,33 @@ export const CLASS_FAMILY = {
 
 export const WEAPON_BLOCKS = ['melee', 'ranged', 'magic', 'neutral'];
 
+// The combat identity of every playable class: how it deals damage (channel), how it stays alive (defense), how
+// it moves (mobility) and its main trade-off (weakness). Shown in the evolution tree; the numbers live elsewhere.
+export const IDENTITY = {
+  warrior: { channel: 'melee', defense: 'armor', mobility: 'mid', weakness: 'reach' },
+  rogue: { channel: 'melee', defense: 'evasion', mobility: 'high', weakness: 'fragile' },
+  mage: { channel: 'spell', defense: 'distance', mobility: 'mid', weakness: 'fragile' },
+  cleric: { channel: 'spell', defense: 'heal', mobility: 'low', weakness: 'burst' },
+  ranger: { channel: 'ranged', defense: 'distance', mobility: 'high', weakness: 'close' },
+  necromancer: { channel: 'summons', defense: 'army', mobility: 'mid', weakness: 'alone' },
+  spellblade: { channel: 'melee', defense: 'armor', mobility: 'mid', weakness: 'mana' },
+  paladin: { channel: 'melee', defense: 'heal', mobility: 'low', weakness: 'burst' },
+  arcaneArcher: { channel: 'ranged', defense: 'distance', mobility: 'mid', weakness: 'mana' },
+  skirmisher: { channel: 'ranged', defense: 'evasion', mobility: 'high', weakness: 'fragile' },
+  deathKnight: { channel: 'melee', defense: 'army', mobility: 'mid', weakness: 'reach' },
+  boneArcher: { channel: 'ranged', defense: 'army', mobility: 'mid', weakness: 'close' },
+  warlock: { channel: 'spell', defense: 'army', mobility: 'low', weakness: 'mana' },
+  commander: { channel: 'summons', defense: 'army', mobility: 'low', weakness: 'alone' },
+  berserker: { channel: 'melee', defense: 'rage', mobility: 'high', weakness: 'reach' },
+  stormcaller: { channel: 'spell', defense: 'control', mobility: 'mid', weakness: 'fragile' },
+  beastmaster: { channel: 'companion', defense: 'distance', mobility: 'mid', weakness: 'alone' },
+  sentinel: { channel: 'melee', defense: 'shield', mobility: 'low', weakness: 'burst' },
+};
+
+export function identityOf(id) {
+  return IDENTITY[id] || null;
+}
+
 // The mechanics. The first six exist since long (they live in entities/player.js, core/ranger.js and the army);
 // the last four are the evolution mechanics (core/classMechanics.js). resource = what the HUD shows.
 export const MECHANICS = {
@@ -55,7 +82,7 @@ export const BASE_MECHANIC = { warrior: 'rage', mage: 'arcane', rogue: 'combo', 
 export const PASSIVES = {
   berserkerFury: { damage: 0.3, hp: 0.1, killHeal: 0.01 },
   stormAttunement: { skillDamage: 0.55, mana: 0.2, cooldown: 0.1 },
-  packInstinct: { damage: 0.12, crit: 0.05, speed: 0.06, armyDamage: 0.45, armyHp: 0.45 },
+  packInstinct: { damage: 0.12, crit: 0.05, speed: 0.06, companionDamage: 0.45, companionHp: 0.45 }, // for the companion, not an army
   bulwarkFaith: { hp: 0.25, damageTaken: -0.1, skillDamage: 0.1 },
 };
 

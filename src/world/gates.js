@@ -786,7 +786,7 @@ export class Gates {
     if (p === 'slam') {
       game.hazards.add(bx, bz, BP.slam.radius + E.radius[i], b.t, dmg * BP.slam.damage, 0xff3030);
     } else if (p === 'eruption') {
-      const ER = BP.eruption, P = game.player, D = game.army.deployed;
+      const ER = BP.eruption, P = game.player, D = game.army.fighters;
       for (let k = 0; k < ER.count; k++) {
         let x = P.x, z = P.z;
         if (k > 0) {
@@ -901,7 +901,7 @@ export class Gates {
         if (dx * dx + dz * dz < m * m) { b.hitS.add(1000 + k); game.coop.hitGhost(k, dmg); }
       });
     }
-    for (const u of army.deployed) {
+    for (const u of army.fighters) { // the active shadows and the companion
       if (b.hitS.has(u.slot) || !army.targetable(u)) continue;
       const dx = u.x - x, dz = u.z - z, m = r + u.radius;
       if (dx * dx + dz * dz < m * m) { b.hitS.add(u.slot); army.damage(u.slot, dmg); }

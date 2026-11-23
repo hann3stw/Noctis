@@ -753,7 +753,7 @@ export class Enemies {
 
   // hits whatever the enemy is attacking (tg = shadow slot or -1 = player)
   unitOf(tg) {
-    return tg >= 1000 ? this.game.coop.targets[tg - 1000] : this.game.army.units[tg];
+    return tg >= 1000 ? this.game.coop.targets[tg - 1000] : this.game.army.unit(tg);
   }
 
   hitTarget(tg, amount) {
@@ -858,7 +858,7 @@ export class Enemies {
 
       // ---- target: the player or the most threatening shadow nearby
       let tg = this.tgt[i];
-      if (tg >= 1000 ? !game.coop.ghostOk(tg) : tg >= 0 && !army.targetable(army.units[tg])) tg = -1;
+      if (tg >= 1000 ? !game.coop.ghostOk(tg) : tg >= 0 && !army.targetable(army.unit(tg))) tg = -1;
       this.retT[i] -= dt;
       if (this.retT[i] <= 0 && st !== ST_WINDUP && st !== ST_CHARGE) {
         this.retT[i] = 0.35 + Math.random() * 0.25;

@@ -324,7 +324,7 @@ export class Minimap {
     }
     // army
     g.fillStyle = css(game.army.auraHex);
-    for (const u of game.army.deployed) {
+    for (const u of game.army.fighters) { // the active shadows and the companion
       if (!u.alive) continue;
       g.fillRect(X(u.x) - dot * 0.5, Y(u.z) - dot * 0.5, dot, dot);
     }

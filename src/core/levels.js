@@ -90,9 +90,10 @@ export function tierLevels(zi, tier) {
 // Saves from before the new rank levels (8 levels per rank) are moved to the
 // same place on the new scale: same rank, same share of it.
 export function migrateSave(s) {
-  if (!s || (s.version || 1) >= 4) return s;
-  if (s.version === 3) return migrateClasses(s);
-  if (s.version === 2) return migrateClasses(migrateRarity(s));
+  if (!s || (s.version || 1) >= 5) return s;
+  if (s.version === 4) return migrateCompanion(s);
+  if (s.version === 3) return migrateCompanion(migrateClasses(s));
+  if (s.version === 2) return migrateCompanion(migrateClasses(migrateRarity(s)));
   const map = (lv) => levelFromProgress(((lv || 1) - 1) / 8);
   const items = [];
   if (s.player) {
@@ -104,7 +105,7 @@ export function migrateSave(s) {
   }
   for (const it of items) if (it && it.level) it.level = map(it.level);
   s.version = 2;
-  return migrateClasses(migrateRarity(s));
+  return migrateCompanion(migrateClasses(migrateRarity(s)));
 }
 
 function playerItems(s) {
@@ -133,5 +134,24 @@ function migrateClasses(s) {
   if (!s.affinities || typeof s.affinities !== 'object') s.affinities = null;
   if (!s.awakening || typeof s.awakening !== 'object') s.awakening = null;
   s.version = 4;
+  return s;
+}
+
+// Version 5: the companion of the Ranger line is no longer a shadow of the army. In older worlds of that line
+// the companion was the one unit of the army (of the companion's kind): it is taken out of the army and kept as
+// the companion, with its level, XP and health. Nothing else of the army is touched. Running it twice changes
+// nothing (a save that has a companion already is left alone). The class progression starts empty (rewards
+// come from the rank the world has).
+function migrateCompanion(s) {
+  const C = CONFIG.classes && CONFIG.classes.list, c = C && C[s.mainClass];
+  const ranger = !!c && (c.base || s.mainClass) === 'ranger';
+  if (ranger && !s.companion && s.army && Array.isArray(s.army.units)) {
+    const i = s.army.units.findIndex((u) => u && u.type === CONFIG.ranger.companionType);
+    if (i >= 0) {
+      const u = s.army.units.splice(i, 1)[0];
+      s.companion = { id: 'cmp-' + ((s.seed || 0) >>> 0).toString(36), kind: 'beast', type: u.type, tier: u.tier, role: u.role, zone: u.zone, level: u.level, xp: u.xp, totalXp: u.totalXp, stage: u.stage, plv: u.plv, alive: u.alive, hp: u.hp, reviveT: u.reviveT, upgrades: [] };
+    }
+  }
+  s.version = 5;
   return s;
 }

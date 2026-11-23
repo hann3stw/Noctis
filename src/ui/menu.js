@@ -17,6 +17,7 @@ import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 import { skillOk } from '../core/classes.js';
 import { affinityHtml, historyHtml } from './classPanel.js';
+import { GUARANTEED } from '../core/classProgression.js';
 import { hints } from '../core/hints.js';
 import { campView, campHub, campAct, campSections, campNews, SECTIONS } from './camp.js';
 
@@ -226,6 +227,10 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(Number(target.dataset.id));
+    } else if (act === 'classTree') {
+      this.close();
+      this.game.classPanel.open('tree');
+      return;
     } else if (act === 'forgeOpen') {
       this.forgeOn = true;
     } else if (act === 'forgeClose') {
@@ -610,6 +615,7 @@ export class Menu {
           <small class="s-rank">${rank}</small>${tiers ? `<small class="s-rank">${t('stats.tiers', { list: tiers })}</small>` : ''}
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}
+        ${this.game.mainClass ? `<button class="ap-btn" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}
         <h4 class="rune-h">${t('aff.title')}</h4><small class="mp-note">${t('aff.hint')}</small>${affinityHtml(this.game, true)}${historyHtml(this.game)}</div></div>`;
   }
 
@@ -859,10 +865,21 @@ export class Menu {
     const known = P.known.includes(id);
     const used = P.slots.indexOf(id);
     const def = skillDef(id), ult = !!CONFIG.ultimates[id];
-    const meta = !known ? t('skills.locked') : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: this.cd(def) });
+    const meta = !known ? this.lockReason(id) : ult ? t('skills.ultShort') : t('skills.short', { mana: def.mana, cd: this.cd(def) });
     const badge = used >= 0 ? `<em>${used === 2 ? 'U' : used + 1}</em>` : '';
     return `<div class="k-card ${cls}${ult ? ' ult' : ''}${known ? '' : ' locked'}${this.selSkill === id ? ' sel' : ''}" data-act="skill" data-id="${id}">
       <i>${known ? SKILL_ICONS[id] : LOCK}</i><div><b>${t('skill.' + id)}</b><small>${meta}</small></div>${badge}${P.newSkills.includes(id) ? `<b class="nw">${t('menu.new')}</b>` : ''}</div>`;
+  }
+
+  // why a skill is still locked and how it is found: its rank, its class quest, or the loot
+  lockReason(id) {
+    const g = this.game, def = CONFIG.skills[id] || CONFIG.ultimates[id], RN = CONFIG.levels.rankNames;
+    if (!def) return t('skills.locked');
+    if (def.unlockRank && g.rankIndex < def.unlockRank) return t('skills.lockRank', { rank: RN[def.unlockRank] });
+    const G = GUARANTEED[g.mainClass];
+    if (G && G.skill === id) return t('skills.lockQuest', { skill: t('skill.' + G.quest.mastery), lv: G.quest.level, rank: RN[G.rank] });
+    if (def.custom) return t('skills.locked');
+    return t('skills.lockLoot');
   }
 
   // cooldown of a skill with the player's bonuses, as text
@@ -1034,7 +1051,7 @@ export class Menu {
         <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">
-      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}${this.game.forge.open ? `<button class="ap-btn" data-act="forgeOpen">${t('forge.open')}</button>` : ''}</div>
+      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}${this.game.forge.open ? `<button class="ap-btn" data-act="forgeOpen">${t('forge.open')}</button>` : ''}${this.game.mainClass ? `<button class="ap-btn ghost" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}</div>
       <div class="k-mid" data-scroll="skills">${list}</div>
       <div class="g-right">${detail}</div></div>`;
   }

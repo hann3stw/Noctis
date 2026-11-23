@@ -55,7 +55,7 @@ export class EnemyShots {
   }
 
   update(dt) {
-    const game = this.game, P = game.player, army = game.army, D = army.deployed;
+    const game = this.game, P = game.player, army = game.army, D = army.fighters; // the active shadows and the companion
     const a = this.mesh.instanceMatrix.array, col = this.mesh.instanceColor.array;
     let n = 0;
     for (let i = 0; i < MAX; i++) {

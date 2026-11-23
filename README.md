@@ -180,6 +180,70 @@ HTTPS (or localhost) for offline mode and installing.
   explosion). Values: `src/config.js` -> `mastery`, `abyss`, `modifiers`,
   `uniques`.
 
+## Classes and the Awakening
+
+Everyone starts as a neutral hunter. The class grows from the way you play,
+measured as nine **affinities** (0–100, `src/core/affinities.js`): Might,
+Precision, Agility, Arcana, Resilience, Dominion, Instinct, Discovery and
+Control. Only actions that really happened count (a hit that landed, a skill
+that went off, damage a shield really took …), each kind at most a few times per
+second. A long-term profile and a recent one (the last ~5 hours of active play
+in 30 slices of 10 minutes) are mixed 65 / 35. Pauses and menus do not count.
+With less than 10 minutes of play the values stay low. The affinities are in
+the Hero → Stats page; the evolution tree is behind **Class path** (Stats and
+Skills pages).
+
+| Rank (level) | Step | What happens |
+|---|---|---|
+| D (10) | First Awakening | Fighter, Ranged, Mage or Necromancer; all four can be picked, the one that fits the affinities is marked |
+| C (25) | Specialization | stay, the plain sibling (Warrior ↔ Rogue, Mage ↔ Cleric) or a hybrid whose affinity needs are met (locked hybrids show what is missing) |
+| B (50) | Class Evolution | Warrior → Berserker, Mage → Stormcaller, Ranger → Beastmaster, Cleric or Paladin → Sentinel, when the affinities fit; staying is always possible and you are asked again at the next rank |
+| A (100) | Advanced Mastery | an improvement of the class mechanic + a pick of a skill modifier |
+| S (200) | Class Mastery | a pick between two ways to grow the core mechanic + an ultimate improvement |
+| SS (300) | Unique Evolution | a unique variant that needs certain affinities; once open it stays |
+| SSS (450) | Transcendence | an extension of the core mechanic |
+| L (650) | Legendary Evolution | a pick between two legendary branches |
+| M (850) | Mythic Evolution | the Mythic Class Trait and the last step of the ultimate or core |
+
+Steps A–M exist for all playable classes: Berserker, Stormcaller, Beastmaster,
+Sentinel, Warrior, Mage, Rogue, Ranger, Cleric and Necromancer. The hybrids
+(Spellblade, Paladin, Arcane Archer, Skirmisher, Death Knight, Bone Archer,
+Warlock, Commander) use the tree of their base class. Every step changes real
+numbers of the game (mechanics, skills, ultimates, bonuses); the tree shows them,
+made from the same data. Picks are for good and saved. Data:
+`src/core/classProgression.js`.
+
+**Families**: Vanguard, Predator, Arcanist, Warden, Dominion, Abyssal (the last
+one is prepared only). **Prepared, not playable yet** (never offered, their
+skills never drop): Assassin, Phantom Duelist, Elementalist, Huntmaster,
+Riftwalker, Void Reaver, Gravity Weaver.
+
+### The four evolution classes
+
+| Class | Mechanic (on top of the base class) | Skills | Ultimate |
+|---|---|---|---|
+| Berserker (Warrior) | Momentum: from 50 Rage melee hits build up to 3 stacks; the next melee skill spends them for more damage | Frenzy Cleave, Reckless Charge | Bloodstorm |
+| Stormcaller (Mage, Spell Forge) | Storm Overload: lightning cast with 3 / 5 Arcane Charges leaps to 1 / 2 more enemies | Thunder Lance, Stormfield | Tempest Ascension |
+| Beastmaster (Ranger) | Companion Bond: grows with the companion's hits and kills, Pack Assault spends it | Prey Mark, Pack Assault | Primal Apex |
+| Sentinel (Cleric / Paladin) | Aegis: damage the Sentinel's own shields and guards prevent | Aegis Oath, Radiant Sweep | Last Bastion |
+
+The first skill and the ultimate come with the class. The second skill is
+guaranteed: by the class quest (mastery level 2 of the first skill) or at the
+latest at rank A; loot can bring it earlier. Locked skills say in the Skills page
+why and how they open (rank, class quest or loot).
+
+### Changing class
+
+- Learned skills are never lost: the ones the new class cannot use are put away
+  and come back with a class that can use them (mastery and runes stay).
+- **Shadow army**: only classes with army access lead it. With another class the
+  shadows stay saved with everything they are, but they do not fight, learn, get
+  hit or appear. Back to such a class, they rise around you as they were.
+- **Companion** (Ranger line): its own creature with its own identity, level, XP,
+  health and upgrades, saved apart from the army (`companion` in the save). It
+  is never a shadow, never takes an army place and gets only companion bonuses.
+  With a class of another line it rests; it comes back as it was.
+
 ## Shadow army
 
 - Raise defeated enemies with Arise. Enemies below your level always rise;
@@ -257,6 +321,9 @@ HTTPS (or localhost) for offline mode and installing.
 
 ## Saving
 
+- Save version 5. Older worlds are brought up to date when they are loaded
+  (version 4: the dynamic class system; version 5: the Ranger companion leaves
+  the army and gets its own data). Nothing is lost on the way.
 - 3 save slots, stored in the browser twice (IndexedDB and a copy in
   localStorage; the newer one is loaded). The game asks the browser to keep
   the storage. Updates of the game never delete saves: old saves are brought
@@ -327,7 +394,10 @@ HTTPS (or localhost) for offline mode and installing.
 
 URL options: `?seed=123` starts a test world straight away (never saved; add
 `&tutorial=1` for the tutorial),
-`?debug` shows the frame rate and exposes the game as `window.__noctis`.
+`?debug` shows the frame rate, exposes the game as `window.__noctis` and checks
+the class configuration at start.
+
+Tests of the game logic: `npm test` (node's own test runner, no browser needed).
 
 ## Status
 

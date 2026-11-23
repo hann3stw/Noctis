@@ -1,6 +1,7 @@
 // What the way you play says about you: measures from 0 to 1 (core/profile.js counts the play), and from them
 // the classes that fit best at the second choice (rank C). A hybrid class is only offered when it fits.
 import { CONFIG } from '../config.js';
+import { specAllowed } from './classes.js';
 
 const clamp = (v) => Math.max(0, Math.min(1, v));
 
@@ -25,23 +26,32 @@ export function styleOf(game) {
 
 export const MEASURES = ['melee', 'ranged', 'magic', 'caster', 'dodge', 'crit', 'tank', 'heal', 'army'];
 
-// [{ id, fit, why, stay }]: the classes to offer to a hunter of class game.mainClass
+// The offers of the Specialization (rank C), from the affinities (core/affinities.js), the one system that steers
+// every class offer. [{ id, fit, why, stay, open }]: only classes that can really be taken now (core/classes.js
+// specAllowed): the class itself (stay), the plain sibling, and the hybrids that are ready and unlocked. Locked
+// classes are left out completely (no card, no hint). fit = how much the affinities lean to it. At most four.
 export function classOffers(game) {
-  const C = CONFIG.classes, s = styleOf(game), cur = game.mainClass;
+  const C = CONFIG.classes, cur = game.mainClass, aff = game.aff ? game.aff.values() : {};
+  const held = new Set(game.awakening ? game.awakening.history.map((h) => h.id) : []);
   const out = [];
   for (const id of C.spec[cur] || []) {
-    const w = C.fit[id] || {}, c = C.list[id];
-    let fit = 0, why = '', best = 0;
-    for (const k in w) {
-      const v = (s[k] || 0) * w[k];
-      fit += v;
-      if (k !== 'calm' && v > best) { best = v; why = k; }
+    const c = C.list[id];
+    if (!specAllowed(cur, id, aff, held)) continue; // locked or not ready: never offered
+    const needs = c.needs || {};
+    let w = 0, v = 0, why = '', best = -1;
+    for (const a in needs) {
+      w += needs[a];
+      v += needs[a] * (aff[a] || 0) / 100;
+      if ((aff[a] || 0) > best) { best = aff[a] || 0; why = a; }
     }
-    const stay = id === cur;
-    if (c.hybrid && fit < (c.minFit || C.minFit)) continue; // does not fit the way you play: not offered
-    out.push({ id, fit, why, stay });
+    out.push({ id, fit: w ? v / w : 0, why, stay: id === cur, open: true });
   }
-  // the plain classes first, then the hybrids by how well they fit
-  out.sort((a, b) => (CONFIG.classes.list[a.id].hybrid ? 1 : 0) - (CONFIG.classes.list[b.id].hybrid ? 1 : 0) || b.fit - a.fit);
+  // the class itself first, then by fit; at most four offers
+  out.sort((a, b) => (b.stay - a.stay) || b.fit - a.fit);
   return out.slice(0, 4);
+}
+
+// the open offers of the Specialization (what can really be picked)
+export function openOffers(game) {
+  return classOffers(game).filter((o) => o.open);
 }
