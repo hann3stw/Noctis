@@ -202,6 +202,7 @@ export class Game {
       this.player.z = sp.z;
       this.army.relocate(sp.x, sp.z);
       for (const si of this.discovered) { const o = this.world.safes[si]; this.fog.revealAround(o.x, o.z, CONFIG.minimap.fogReveal); }
+      this.fog.completeZones();
     }
     this.waypoint = new Waypoint(this, save && save.mark);
     this.hunts = new Hunts(this, save && save.hunts);
@@ -940,7 +941,7 @@ export class Game {
     const A = CONFIG.arise, souls = this.souls, P = this.player;
     if (souls.level[i] < P.level) return 1; // weaker than you: always rises
     const ranks = rankProgress(souls.level[i]) - rankProgress(P.level);
-    let c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + P.stats.int * CONFIG.progression.stats.int.arise;
+    let c = A.chance[souls.tier[i]] * Math.pow(A.rankFalloff, ranks) + (this.hasArmy() ? P.stats.int * CONFIG.progression.stats.int.arise : 0); // only the Necromancer's line gains from Intelligence here
     if (souls.gate[i] && souls.tier[i] === 3) c *= CONFIG.gates.bossAriseFactor; // gate bosses are a bit harder to raise
     return Math.max(A.minChance, Math.min(1, c));
   }

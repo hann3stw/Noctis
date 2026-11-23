@@ -1,6 +1,7 @@
-// Fog of the map: the world is cut into squares that are uncovered when the
-// hunter comes near. The map (minimap and big map) shows unexplored squares
-// dark. The uncovered squares are kept as a small picture (one pixel per
+// Fog of the map: a whole zone (one ring of the world) lies in the fog until the
+// hunter steps into it; then the entire zone is uncovered at once. The map
+// (minimap and big map) shows unexplored zones dark. The world is cut into
+// squares for it. The uncovered squares are kept as a small picture (one pixel per
 // square, transparent = explored) that the maps lay over the land, smoothly
 // scaled, so the edge of the fog looks soft. Saved with the world as bits.
 import { CONFIG } from '../config.js';
@@ -27,6 +28,8 @@ export class Fog {
     if (saved === 'legacy') this.revealKnown();
     else if (typeof saved === 'string') this.load(saved);
     this.revealAround(0, 0, CONFIG.world.campRadius + 30); // the camp is always known
+    this.completeZones(); // a zone that was begun (older saves had patches) is uncovered whole
+    this.zone = -1;
     this.flush();
   }
 
@@ -73,6 +76,37 @@ export class Fog {
     }
   }
 
+  // the zone (ring) of a world point, -1 outside the world
+  zoneAt(x, z) {
+    const r = Math.hypot(x, z), zones = CONFIG.world.zones;
+    return zones.findIndex((zn) => r < zn.outer);
+  }
+
+  // uncovers a whole zone
+  revealZone(zi) {
+    const zones = CONFIG.world.zones, c = this.cell;
+    for (let cz = 0; cz < this.n; cz++) {
+      for (let cx = 0; cx < this.n; cx++) {
+        const r = Math.hypot((cx + 0.5) * c - this.R, (cz + 0.5) * c - this.R);
+        if (zones.findIndex((zn) => r < zn.outer) === zi) this.set(cz * this.n + cx);
+      }
+    }
+  }
+
+  // every zone with at least one uncovered square is uncovered whole (the camp alone does not count for the meadow)
+  completeZones() {
+    const zones = CONFIG.world.zones, c = this.cell, seen = new Set();
+    for (let cz = 0; cz < this.n; cz++) {
+      for (let cx = 0; cx < this.n; cx++) {
+        if (!this.bits[cz * this.n + cx]) continue;
+        const r = Math.hypot((cx + 0.5) * c - this.R, (cz + 0.5) * c - this.R);
+        const zi = zones.findIndex((zn) => r < zn.outer);
+        if (zi >= 0 && (zi > 0 || r > CONFIG.world.campRadius + 40)) seen.add(zi);
+      }
+    }
+    for (const zi of seen) this.revealZone(zi);
+  }
+
   // share of the world (inside the last zone) that is explored
   share() {
     const zones = CONFIG.world.zones, outer = zones[zones.length - 1].outer;
@@ -89,7 +123,9 @@ export class Fog {
     if ((this.t -= dt) > 0) return;
     this.t = 0.25;
     const P = this.game.player;
-    if (this.game.gates.active < 0 && !P.dead) this.revealAround(P.x, P.z, CONFIG.minimap.fogReveal);
+    if (this.game.gates.active >= 0 || P.dead) return;
+    const zi = this.zoneAt(P.x, P.z);
+    if (zi >= 0 && zi !== this.zone) { this.zone = zi; this.revealZone(zi); } // stepping into a zone uncovers all of it
   }
 
   // Draws the fog over a map: (cx, cz) world point in the middle, k pixels

@@ -262,7 +262,7 @@ export class Player {
     this.maxCharges = c.charges.max + b.charges;
     if (this.charges > this.maxCharges) this.charges = this.maxCharges;
     this.skillMult = 1 + b.skillDamage;
-    this.cdMult = 1 / (1 + b.cooldown + (this.uq.focus ? this.uq.focus.cooldown : 0));
+    this.cdMult = 1 / (1 + b.cooldown + (this.uq.focus ? this.uq.focus.cooldown : 0) + (this.game.mech === 'mage' ? st.int * S.int.mageCooldown : 0)); // the Mage: Intelligence shortens skill cooldowns
     this.ultRate = 1 + b.ultCharge;
     this.killHeal = b.killHeal;
     this.hitHeal = b.hitHeal;

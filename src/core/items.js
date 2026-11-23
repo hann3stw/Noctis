@@ -103,9 +103,12 @@ export function uniqueDef(id) {
 
 // the main class the skills that drop are for (set by the game)
 let lootClass = '';
+let lootSet = ''; // the armour set of the main class
 let lootWeapons = ''; // melee | ranged | magic: the weapons the main class gets most of
 export function setLootClass(c) {
   lootClass = c || '';
+  const base = (CONFIG.classes.list[lootClass] && CONFIG.classes.list[lootClass].base) || lootClass;
+  lootSet = CONFIG.items.classSet[base] || '';
   const cl = CONFIG.classes.list[lootClass];
   lootWeapons = (cl && cl.weapons) || '';
 }
@@ -127,7 +130,9 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, to
     const mine = lootWeapons ? all.filter((w) => CONFIG.weapons[w].group === lootWeapons) : all;
     return makeWeapon(pick(mine.length && Math.random() < CONFIG.classes.weaponPick ? mine : all), rarity, level);
   }
-  return makeArmor(pick(ARMOR_SLOTS), pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), rarity, level);
+  const sets = Object.keys(CONFIG.items.sets);
+  const set = lootSet && Math.random() < CONFIG.items.setPick ? lootSet : pick(sets); // lean towards the set of your class
+  return makeArmor(pick(ARMOR_SLOTS), set, pick(Object.keys(CONFIG.items.bonuses)), rarity, level);
 }
 
 // ---- stats ------------------------------------------------------------------

@@ -231,13 +231,13 @@ export const CONFIG = {
     //   Strength      hard hitting hunter
     //   Agility       fast, quick reloads and dodges
     //   Vitality      tough, regenerates health
-    //   Intelligence  big army, lots of mana, better chance to raise shadows
+    //   Intelligence  lots of mana; Necromancer: big army, better chance to raise shadows; Mage: shorter skill cooldowns
     //   Perception    critical hits and loot
     stats: {
       str: { damage: 0.03 }, // +3 % damage per point (adds up: 100 points = x4)
       agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
       vit: { hp: 0.04, regen: 0.0005 }, // +4 % health per point (adds up), regenerates 0.05 % of max health per second
-      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004 }, // +1 army slot per 2 points, +0.4 % arise chance
+      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004, mageCooldown: 0.004 }, // +1 army slot per 2 points; arise chance +0.4 % (only classes with the army); shorter skill cooldowns +0.4 % (only the Mage)
       per: { crit: 0.008, critDamage: 0.015, drop: 0.02, armyRange: 0.25 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops, +0.25 army hunt range
     },
     baseCrit: 0.05,
@@ -324,13 +324,14 @@ export const CONFIG = {
     // legendary piece has x2.6, a mythic one x3
     bonuses: { hp: 0.05, speed: 0.025, mana: 0.06, crit: 0.02, reload: 0.04, skillDamage: 0.04, ultCharge: 0.05 }, // all as shares (0.05 = +5 %)
     bonusRarity: 0.4,
-    // Six sets, one per way to play. 2 and 4 pieces of a set give its bonuses.
-    //   stalker      crits and raw damage
-    //   bulwark      health and less damage taken
-    //   gravecaller  a bigger, stronger army
-    //   tempest      faster reload, speed and a fourth attack charge
-    //   arcanist     mana, stronger skills, shorter cooldowns
-    //   bloodreaver  kills and hits heal you
+    // Six sets, one per class. 2 and 4 pieces of a set give its bonuses. The drops lean towards
+    // the set of your class (setPick; classSet says which; a hybrid uses the set of its base).
+    //   stalker      Rogue: crits and raw damage
+    //   bulwark      Warrior: health and less damage taken
+    //   gravecaller  Necromancer: a bigger, stronger army
+    //   tempest      Ranger: faster reload, speed and a fourth attack charge
+    //   arcanist     Mage: mana, stronger skills, shorter cooldowns
+    //   bloodreaver  Cleric: kills and hits heal you, stronger skills
     // hitHeal / killHeal are shares of max health per hit / per kill.
     sets: {
       stalker: { 2: { crit: 0.08 }, 4: { damage: 0.2 } },
@@ -338,8 +339,10 @@ export const CONFIG = {
       gravecaller: { 2: { armyDamage: 0.15 }, 4: { armyHp: 0.25, armySlots: 2 } },
       tempest: { 2: { reload: 0.12 }, 4: { speed: 0.08, charges: 1 } },
       arcanist: { 2: { mana: 0.3 }, 4: { skillDamage: 0.3, cooldown: 0.2 } },
-      bloodreaver: { 2: { killHeal: 0.04 }, 4: { damage: 0.1, hitHeal: 0.004 } },
+      bloodreaver: { 2: { killHeal: 0.04 }, 4: { skillDamage: 0.2, hitHeal: 0.004 } },
     },
+    classSet: { necromancer: 'gravecaller', warrior: 'bulwark', mage: 'arcanist', rogue: 'stalker', ranger: 'tempest', cleric: 'bloodreaver' },
+    setPick: 0.6, // chance that an armour drop is of the set of your class
   },
 
   // ---- after the last level --------------------------------------------------
@@ -923,6 +926,15 @@ export const CONFIG = {
     hp: 2.6, damage: 1.5, items: 3, minRarity: 3, luck: 2.5, eliteAdds: true, color: 0xffd24a,
     stages: ['wave', 'guard'], wave: 10, elite: 0.2, survive: 25, guards: 2,
     essence: 60, // times (rank + 1)
+  },
+
+  // The first trial (rank E to D) comes right at the start, so it is much gentler:
+  // fewer enemies, weaker hits, a shorter fight.
+  trialFirst: {
+    id: 'trial', pos: { x: -11.5, z: 11.5 },
+    hp: 1.2, damage: 0.7, items: 3, minRarity: 3, luck: 2.5, eliteAdds: false, color: 0xffd24a,
+    stages: ['wave', 'guard'], wave: 5, elite: 0.05, survive: 15, guards: 1,
+    essence: 60,
   },
 
   // Hunted monsters: now and then a named champion shows up in the zone you

@@ -28,8 +28,10 @@ export function arenaCenter(i) {
 }
 
 // the values of a gate: the rank trial or one of the gate difficulties
+let trialRank = 0; // rank index of the hunter when the trial was set up
 export function gateDiff(g) {
-  return g.trial ? CONFIG.trial : CONFIG.gates.difficulties[g.diff];
+  if (!g.trial) return CONFIG.gates.difficulties[g.diff];
+  return trialRank === 0 ? CONFIG.trialFirst : CONFIG.trial; // the first trial (E to D) is a gentler one
 }
 
 function portalMesh(color, w, h) {
@@ -232,6 +234,7 @@ export class Gates {
   setupTrial(gi) {
     const game = this.game, E = game.enemies, g = this.list[gi], zones = CONFIG.world.zones;
     const r = game.rankIndex;
+    trialRank = r;
     g.zone = Math.min(zones.length - 1, r + 1);
     g.level = zones[Math.min(zones.length - 1, r)].levelTo;
     const b = E.arenaBoss[gi];

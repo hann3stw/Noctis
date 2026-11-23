@@ -900,6 +900,7 @@ export class Enemies {
           if (!targetable || ax * ax + az * az > leash2) this.packAggro[p] = 0;
           if (!this.packAggro[p]) {
             st = ST_RETURN;
+            this.hp[i] = this.maxHp[i]; // too far from home: the enemy gives up and is whole again
           } else if (ty.beh === B_RANGED) {
             // keep a distance, shoot when in range
             if (dist > def.attackRange * 0.9) { mvx = dx; mvz = dz; speed = def.speed; }
