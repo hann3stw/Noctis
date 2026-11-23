@@ -576,6 +576,7 @@ export class Army {
     const u = this.units[slot];
     if (!u || !u.alive) return;
     if (u.tauntT > 0) amount *= 1 - CONFIG.shadows.abilities.tank.reduction;
+    if (u.apexT > 0) amount *= 1 - (u.apexGuard || 0); // Primal Apex
     u.hp -= amount;
     u.flash = 0.12;
     if (u.hp <= 0) {
@@ -709,6 +710,15 @@ export class Army {
         continue;
       }
       this.alive++;
+      // the companion's orders (Beastmaster: Prey Mark, Pack Assault, Primal Apex; combat/abilities.js)
+      let um = 1;
+      if (u.cmdT > 0) { u.cmdT -= dt; um += u.cmdDmg; }
+      if (u.preyT > 0) u.preyT -= dt;
+      if (u.apexT > 0) {
+        um += u.apexDmg;
+        if (Math.random() < dt * 6) fx.burst(u.x, 1.2 * u.scale, u.z, 2, 0xff8a3a, 3, 0.2, 0.5, 2);
+        if ((u.apexT -= dt) <= 0) { u.apexT = 0; this.recalc(u); u.hp = Math.min(u.hp, u.maxHp); } // back to its own form
+      }
       if (!out) {
         // resting in the shadows: slowly healed
         if (u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * S.campRegen * 0.2 * dt);
@@ -827,7 +837,7 @@ export class Army {
               u.lunge = 1;
               u.atkCd = role.cooldown * (0.85 + Math.random() * 0.3);
               if (d <= reach + S.blockedReach + 0.6) {
-                const dmg = Math.max(1, Math.round(u.dmg * dmgMult * (1 + (Math.random() * 2 - 1) * variance)));
+                const dmg = Math.max(1, Math.round(u.dmg * dmgMult * um * (u.preyT > 0 && E.vuln[tg] > 0 ? 1 + u.preyDmg : 1) * (1 + (Math.random() * 2 - 1) * variance)));
                 if (role.projectileSpeed) game.projectiles.fire(u.x, u.z, tg, role.projectileSpeed, dmg, u.slot);
                 else E.damage(tg, dmg, dx / d, dz / d, u.slot);
               }

@@ -70,7 +70,7 @@ export class Goals {
   usable(a) {
     const g = this.game;
     if (a.stat === 'raised') return g.hasArmy();
-    if (a.stat === 'spells') return g.mech === 'mage';
+    if (a.stat === 'spells') return g.canForge();
     return true;
   }
 

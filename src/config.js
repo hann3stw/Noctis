@@ -514,6 +514,20 @@ export const CONFIG = {
     explosiveTrap: { for: ['ranger'], mana: 22, cooldown: 12, aim: 'point', range: 9, radius: 4.5, power: 5, trap: true },
     huntersFocus: { for: ['ranger'], mana: 20, cooldown: 18, aim: 'self', radius: 2, damage: 0.25, duration: 8 },
     beastCommand: { for: ['ranger'], mana: 25, cooldown: 20, aim: 'self', radius: 10, armyDamage: 0.6, healArmy: 0.4, duration: 8 }, // for your companion
+    // Evolution classes: these run on the behaviour blocks of combat/abilities.js (behaviors, in order).
+    // unlockRank = the rank index from which the skill can drop.
+    // Berserker (rageOnHit = Rage when at least one enemy is hit; momentumBonus = more damage per Momentum stack)
+    frenzyCleave: { for: ['berserker'], unlockRank: 3, mana: 18, cooldown: 6, aim: 'arc', range: 6, arcDeg: 150, power: 2.3, rageOnHit: 18, momentumBonus: 0.08, melee: true, color: 0xff4a3a, behaviors: ['arcHit', 'rageOnHit'] },
+    recklessCharge: { for: ['berserker'], unlockRank: 3, mana: 20, cooldown: 9, aim: 'point', range: 11, width: 2.4, radius: 3.5, power: 1.6, endPower: 1.2, rageOnHit: 12, eliteStun: 0.6, melee: true, color: 0xff4a3a, behaviors: ['dashStrike', 'rageOnHit'] },
+    // Stormcaller (lightning = Storm Overload makes it jump; jumps / jumpRange = its own jumps)
+    thunderLance: { for: ['stormcaller'], unlockRank: 3, mana: 16, cooldown: 5, aim: 'line', range: 16, width: 1.2, power: 2.8, jumps: 0, jumpRange: 6, lightning: true, color: 0xfff07a, behaviors: ['lineHit', 'chainHit'] },
+    stormfield: { for: ['stormcaller'], unlockRank: 3, mana: 26, cooldown: 12, aim: 'point', range: 12, radius: 4.5, power: 0.55, ticks: 8, interval: 0.5, stun: 0.25, single: true, color: 0xfff07a, behaviors: ['areaTicks'] },
+    // Beastmaster (companionDamage = more damage of the companion on marked enemies; bondCost = Bond spent, more effect at full Bond)
+    preyMark: { for: ['beastmaster'], unlockRank: 3, mana: 16, cooldown: 10, aim: 'point', range: 13, radius: 3, duration: 8, companionDamage: 0.4, color: 0xff8a3a, behaviors: ['mark', 'companionBuff'] },
+    packAssault: { for: ['beastmaster'], unlockRank: 3, mana: 20, cooldown: 14, aim: 'self', radius: 10, armyDamage: 0.5, healArmy: 0.5, duration: 6, bondCost: 30, fullBond: 1.8, color: 0xff8a3a, behaviors: ['companionCommand'] },
+    // Sentinel (aegisShield = the shield and guard make Aegis; healPerHit / healCap = healing per enemy hit; aegisCost = Aegis it can spend)
+    aegisOath: { for: ['sentinel'], unlockRank: 3, mana: 20, cooldown: 14, aim: 'self', radius: 3, shield: 0.3, guard: 0.25, duration: 6, aegisShield: true, highAegis: 0.25, color: 0xffd86a, behaviors: ['shield', 'guard'] },
+    radiantSweep: { for: ['sentinel'], unlockRank: 3, mana: 18, cooldown: 6, aim: 'arc', range: 6, arcDeg: 160, power: 2, healPerHit: 0.015, healCap: 0.08, aegisCost: 25, aegisGuard: 0.2, melee: true, color: 0xffd86a, behaviors: ['arcHit', 'healOnHit'] },
   },
 
   // The ultimate charges with every enemy hit. While an ultimate with a
@@ -535,6 +549,11 @@ export const CONFIG = {
     assassinate: { for: ['rogue'], aim: 'point', range: 10, radius: 4, power: 20, finisher: true },
     arrowStorm: { for: ['ranger'], aim: 'point', range: 12, radius: 7, power: 1.1, ticks: 14, interval: 0.4 },
     primalFury: { for: ['ranger'], aim: 'self', radius: 12, armyDamage: 1, damage: 0.3, duration: 12 }, // you and your companion
+    // Evolution classes (combat/abilities.js)
+    bloodstorm: { for: ['berserker'], unlockRank: 3, aim: 'self', radius: 7, power: 2.2, ticks: 6, interval: 0.3, rageBonus: 0.5, melee: true, color: 0xff3040, behaviors: ['whirl'] }, // up to +50 % at full Rage
+    tempestAscension: { for: ['stormcaller'], unlockRank: 3, aim: 'point', range: 12, radius: 8, power: 3, ticks: 4, interval: 0.6, stun: 0.5, jumps: 3, jumpRange: 7, lightning: true, color: 0xfff07a, behaviors: ['areaTicks', 'chainHit'] },
+    primalApex: { for: ['beastmaster'], unlockRank: 3, aim: 'self', radius: 10, armyDamage: 1, armyGuard: 0.5, damage: 0.15, duration: 12, color: 0xff8a3a, behaviors: ['companionApex', 'damageBuff'] }, // armyGuard = less damage taken by the companion
+    lastBastion: { for: ['sentinel'], unlockRank: 3, aim: 'self', radius: 8, power: 3, stun: 1.5, shield: 0.6, guard: 0.45, duration: 8, aegisShield: true, aegisCost: 50, color: 0xffd86a, behaviors: ['selfNova', 'shield', 'guard'] }, // spent Aegis makes the shield up to 50 % bigger
   },
 
   // behavior: melee (bites up close), ranged (keeps distance and shoots),
@@ -737,6 +756,24 @@ export const CONFIG = {
   // and companionTier); traps = how many traps lie on the ground at most, each for trapLife seconds.
   ranger: { rangeBonus: 0.35, rangeFrom: 4, rangeTo: 14, companions: 1, companionType: 'gloomfang', companionTier: 1, traps: 4, trapLife: 25 },
 
+  // Mechanics of the evolution classes (core/classMechanics.js). They come on top of the mechanic of the base class
+  // (Rage, Arcane Charges, the companion, Faith), which keeps working as before.
+  //  Berserker Momentum: from minRage Rage on, every melee hit (at most one per gap s) gives a stack (up to max).
+  //   Each stack gives perStack more damage to the next melee skill, which spends them. After calm s without a
+  //   fight one stack is lost every decay s.
+  //  Storm Overload (Stormcaller): a lightning skill cast with at least at[0] Arcane Charges jumps to one more enemy,
+  //   with at[1] to two more (range = extra jump range); the charges it used are spent.
+  //  Companion Bond (Beastmaster): 0..max, hit / kill = points per hit and kill of the companion, at most perSec
+  //   per second; fades by decay per second after calm s without a fight.
+  //  Aegis (Sentinel): 0..max, grows with the damage the Sentinel's own shields and guards prevent (perHp = Aegis
+  //   for prevented damage of one whole health bar, at most perHit for one hit); fades by decay after calm s.
+  mechanics: {
+    berserkerMomentum: { minRage: 50, max: 3, perStack: 0.04, gap: 0.5, calm: 4, decay: 2 },
+    stormOverload: { at: [3, 5], jumps: [1, 2], range: 2, damage: 0.6 },
+    companionBond: { max: 100, hit: 1, kill: 4, perSec: 5, calm: 8, decay: 1.5 },
+    aegis: { max: 100, perHp: 120, perHit: 18, calm: 6, decay: 2 },
+  },
+
   // Main classes: chosen at the rank-up to rank index choiceRank (D); before that everyone
   // is a neutral hunter. role = what the class does in a team (for the co-op gates later);
   // army = the class has the shadow army (Arise, the Army tab); ready = it can be chosen (the
@@ -783,7 +820,7 @@ export const CONFIG = {
     list: {
       necromancer: { group: 'necromancer', weapons: '', role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
       warrior: { group: 'fighter', weapons: 'melee', role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
-      mage: { group: 'mage', weapons: 'magic', role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
+      mage: { group: 'mage', weapons: 'magic', role: 'ranged', ready: true, army: false, spellForge: true, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
       rogue: { group: 'fighter', weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
       ranger: { group: 'ranged', weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
       cleric: { group: 'mage', weapons: 'magic', role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
@@ -797,7 +834,32 @@ export const CONFIG = {
       boneArcher: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'ranger'], weapons: 'ranged', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, crit: 0.08, armyHp: 0.1 }, cores: ['slayer', 'blade', 'commander', 'delver', 'tank'] },
       warlock: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'mage'], weapons: 'magic', role: 'summoner', ready: true, army: true, bonus: { skillDamage: 0.4, mana: 0.25, armyDamage: 0.1 }, cores: ['mage', 'commander', 'slayer', 'delver', 'tank'] },
       commander: { hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer'], weapons: '', role: 'summoner', ready: true, army: true, minFit: 0.5, bonus: { armyDamage: 0.35, armySlots: 4, armyHp: 0.3 }, cores: ['commander', 'tank', 'delver', 'slayer', 'mage', 'blade'] },
+      // Class evolutions (rank B, core/awakening.js): built from the blocks of core/classComponents.js, which fill
+      // in weapons, army, companion, spellForge, cores and bonus. parents = the classes it grows from (their skills
+      // stay usable); base = the class whose mechanic infrastructure it uses; mechanic = its own mechanic on top;
+      // rank = the rank index it can be reached at; needs = the affinities it asks for (core/affinities.js).
+      berserker: { evolution: true, family: 'vanguard', parents: ['warrior'], base: 'warrior', mechanic: 'berserkerMomentum', group: 'fighter', role: 'melee', ready: true, rank: 3, needs: { might: 50, resilience: 25 },
+        startSkills: ['frenzyCleave'], startUltimate: 'bloodstorm',
+        components: { weapon: 'melee', passive: ['berserkerFury'], skillPackage: 'berserker', ultimate: 'bloodstorm', capabilities: [], pathAccess: ['blade', 'tank', 'slayer', 'delver'] } },
+      stormcaller: { evolution: true, family: 'arcanist', parents: ['mage'], base: 'mage', mechanic: 'stormOverload', group: 'mage', role: 'ranged', ready: true, rank: 3, needs: { arcana: 50, control: 25 },
+        startSkills: ['thunderLance'], startUltimate: 'tempestAscension',
+        components: { weapon: 'magic', passive: ['stormAttunement'], skillPackage: 'stormcaller', ultimate: 'tempestAscension', capabilities: ['spellForgeAccess'], pathAccess: ['mage', 'slayer', 'delver', 'tank'] } },
+      beastmaster: { evolution: true, family: 'warden', parents: ['ranger'], base: 'ranger', mechanic: 'companionBond', group: 'ranged', role: 'ranged', ready: true, rank: 3, needs: { dominion: 40, instinct: 35 },
+        startSkills: ['preyMark'], startUltimate: 'primalApex',
+        components: { weapon: 'ranged', passive: ['packInstinct'], skillPackage: 'beastmaster', ultimate: 'primalApex', capabilities: ['companionAccess'], pathAccess: ['slayer', 'delver', 'blade', 'tank'] } },
+      sentinel: { evolution: true, family: 'vanguard', families: ['vanguard', 'warden'], parents: ['cleric', 'paladin'], base: 'cleric', mechanic: 'aegis', group: 'fighter', role: 'support', ready: true, rank: 3, needs: { resilience: 45, might: 20 },
+        startSkills: ['aegisOath'], startUltimate: 'lastBastion',
+        components: { weapon: 'melee', passive: ['bulwarkFaith'], skillPackage: 'sentinel', ultimate: 'lastBastion', capabilities: [], pathAccess: ['tank', 'mage', 'delver', 'slayer'] } },
+      // prepared evolution targets: not playable yet (ready: false), never offered and their skills never drop
+      assassin: { evolution: true, family: 'predator', parents: ['rogue'], base: 'rogue', group: 'fighter', role: 'melee', ready: false, rank: 4, needs: { precision: 55, agility: 35 }, components: { weapon: 'melee', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['blade', 'slayer', 'delver'] } },
+      phantomDuelist: { evolution: true, family: 'predator', parents: ['rogue', 'spellblade'], base: 'rogue', group: 'fighter', role: 'melee', ready: false, rank: 4, needs: { agility: 55, might: 30 }, components: { weapon: 'melee', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['blade', 'slayer', 'mage'] } },
+      elementalist: { evolution: true, family: 'arcanist', parents: ['mage', 'stormcaller'], base: 'mage', group: 'mage', role: 'ranged', ready: false, rank: 4, needs: { arcana: 65, control: 30 }, components: { weapon: 'magic', passive: [], skillPackage: '', ultimate: '', capabilities: ['spellForgeAccess'], pathAccess: ['mage', 'slayer', 'delver'] } },
+      huntmaster: { evolution: true, family: 'warden', parents: ['ranger', 'beastmaster'], base: 'ranger', group: 'ranged', role: 'ranged', ready: false, rank: 4, needs: { instinct: 50, control: 30 }, components: { weapon: 'ranged', passive: [], skillPackage: '', ultimate: '', capabilities: ['companionAccess'], pathAccess: ['slayer', 'delver', 'blade'] } },
+      riftwalker: { evolution: true, family: 'abyssal', parents: ['spellblade', 'arcaneArcher'], base: 'mage', group: 'mage', role: 'melee', ready: false, rank: 5, needs: { arcana: 50, agility: 45 }, components: { weapon: 'magic', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['mage', 'blade', 'delver'] } },
+      voidReaver: { evolution: true, family: 'abyssal', parents: ['deathKnight', 'spellblade'], base: 'warrior', group: 'fighter', role: 'melee', ready: false, rank: 5, needs: { might: 55, control: 35 }, components: { weapon: 'melee', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['blade', 'tank', 'slayer'] } },
+      gravityWeaver: { evolution: true, family: 'arcanist', families: ['arcanist', 'abyssal'], parents: ['mage', 'stormcaller'], base: 'mage', group: 'mage', role: 'ranged', ready: false, rank: 5, needs: { control: 60, arcana: 45 }, components: { weapon: 'magic', passive: [], skillPackage: '', ultimate: '', capabilities: ['spellForgeAccess'], pathAccess: ['mage', 'tank', 'delver'] } },
     },
+    evolveRank: 3, // rank index (B) from which class evolutions are offered
   },
 
   // Paths (the class tree of the Necromancer): at every rank from D to M the

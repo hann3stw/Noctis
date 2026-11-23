@@ -12,6 +12,7 @@ import { castSkill, skillDef } from '../combat/skills.js';
 import { makeWeapon, weaponDamage, skillDamage, armorDefense, armorBonus, upgradeCost, dismantleValue, slotOf, itemName, ARMOR_SLOTS, itemPower, uniqueDef, attuneLevel, attuneCost } from '../core/items.js';
 import { t } from '../strings.js';
 import { play } from '../core/sfx.js';
+import { resetMechanics } from '../core/classMechanics.js';
 
 const ANIM = { moving: false, attack: 0, weapon: 'sword', combo: 0, cast: 0, dodging: false, dead: false, rate: 1 };
 // how fast the attack animation plays per weapon (1 / seconds)
@@ -108,6 +109,12 @@ export class Player {
     this.eclipseT = 0;
     this.rageT = 0; // Blood Rage
     this.chillT = 0; // slowed by a chilling shot
+    // evolution mechanics (core/classMechanics.js): Momentum (Berserker), Bond (Beastmaster), Aegis (Sentinel)
+    this.momentum = 0; this.momGap = 0; this.momDecay = 0;
+    this.overload = 0;
+    this.bond = 0; this.bondSec = 0; this.bondGot = 0;
+    this.aegis = 0; this.aegisT = 0; // aegisT: a Sentinel shield / guard is up (only then Aegis grows)
+    this.buffT = 0; this.buffV = 0; // a skill makes the hunter hit harder for a while (Primal Apex)
     this.counts = { attack: 0, dodge: 0, cast: 0 }; // for the tutorial
 
     this.dodgeT = 0;
@@ -151,6 +158,7 @@ export class Player {
       equip: Object.fromEntries(Object.entries(this.equip).map(([k, v]) => [k, v ? { ...v } : null])),
       known: [...this.known], slots: [...this.slots], newSkills: [...this.newSkills],
       mastery: { lv: this.mastery.lv, xp: this.mastery.xp, pts: this.mastery.pts, s: { ...this.mastery.s } },
+      mech: { bond: Math.round(this.bond), aegis: Math.round(this.aegis) }, // what the class mechanics keep
     };
   }
 
@@ -176,6 +184,7 @@ export class Player {
     if (d.slots) { this.slots = d.slots.map((id) => (id && valid(id) ? id : null)); while (this.slots.length < 4) this.slots.push(null); }
     this.newSkills = (d.newSkills || []).filter(valid);
     this.ult = d.ult || 0;
+    if (d.mech) { this.bond = Math.max(0, Math.min(100, Number(d.mech.bond) || 0)); this.aegis = Math.max(0, Math.min(100, Number(d.mech.aegis) || 0)); }
     if (d.mastery) {
       const m = this.mastery;
       m.lv = d.mastery.lv || 0;
@@ -318,6 +327,7 @@ export class Player {
     if (this.rage > 0) m *= 1 + this.rage * CONFIG.warrior.damage; // Warrior: Rage
     if (this.faith > 0) m *= 1 + this.faith * CONFIG.cleric.damage; // Cleric: Faith
     if (this.focusT > 0) m *= 1 + CONFIG.skills.huntersFocus.damage; // Ranger: Hunter's Focus
+    if (this.buffT > 0) m *= 1 + this.buffV; // Primal Apex and other damage buffs
     return m;
   }
 
@@ -569,6 +579,7 @@ export class Player {
     const before = this.hp;
     this.hp = Math.min(this.maxHp, this.hp + amount);
     this.game.profile.healed += this.hp - before;
+    if (this.hp > before && this.game.aff) this.game.aff.record('healEffective', { amount: (this.hp - before) / this.maxHp });
   }
 
   // a chilling shot: slower for a moment
@@ -597,13 +608,20 @@ export class Player {
     let d = amount * this.takenFactor();
     const glass = this.game.modOn('glass'); // modifier Glass Cannon
     if (glass) d *= glass.taken;
+    // Sentinel Aegis: what its own guard and shield really kept away (core/classMechanics.js)
+    const sentinel = this.aegisT > 0 && this.game.classMechanic === 'aegis';
+    const hadShield = this.shield > 0;
+    let prevented = sentinel && this.guardT > 0 && this.guardV < 1 ? d * this.guardV / (1 - this.guardV) : 0;
     if (this.shield > 0) {
       const absorbed = Math.min(this.shield, d);
       this.shield -= absorbed;
       d -= absorbed;
+      prevented += absorbed;
+      if (!sentinel && this.game.aff) this.game.aff.record('damagePrevented', { amount: absorbed / this.maxHp });
       fx.burst(this.x, 1.2, this.z, 4, 0x6aa8ff, 4, 0.14, 0.3);
-      if (d < 0.5) return;
     }
+    if (sentinel) this.game.mechImpl.onPrevented(this.game, this, prevented);
+    if (hadShield && d < 0.5) return;
     d = Math.max(1, Math.round(d));
     this.hp -= d;
     this.addRage(CONFIG.warrior.rageHurt + (d / this.maxHp) * CONFIG.warrior.rageHurtScale);
@@ -643,6 +661,8 @@ export class Player {
       this.shield = 0;
       this.eclipseT = 0;
       this.rageT = 0;
+      this.buffT = 0;
+      resetMechanics(this);
       this.ultLockT = 0;
       this.respawnT = CONFIG.player.respawnDelay;
       play('death');
@@ -694,6 +714,9 @@ export class Player {
     if (this.cds[3] > 0) this.cds[3] -= dt;
     if (this.eclipseT > 0) this.eclipseT -= dt;
     if (this.rageT > 0) this.rageT -= dt;
+    if (this.buffT > 0) this.buffT -= dt;
+    const cm = game.mechImpl; // the evolution class mechanic
+    if (cm) cm.update(game, this, dt);
     if (this.chillT > 0) {
       this.chillT -= dt;
       if (Math.random() < dt * 12) game.effects.burst(this.x, 0.6 + Math.random(), this.z, 1, 0x9fe8ff, 1.2, 0.16, 0.5);
@@ -742,6 +765,7 @@ export class Player {
         this.dodgeT = c.dodge.duration;
         this.counts.dodge++;
         game.profile.dodges++;
+        if (game.aff) game.aff.record('dodgeSuccess');
         if (game.path.skillOf('blade')) this.afterimageT = CONFIG.paths.cores.blade.skill.time; // Afterimage
         // Voidstep Treads: an explosion where the dodge started
         const V = this.uq.voidstep;
@@ -921,6 +945,13 @@ export class Player {
     if (O) this.mana = Math.min(this.maxMana, this.mana + this.manaCost(def) * O.def.value[O.level]);
     if (slot !== 2) this.addArcane(1);
     this.counts.cast++;
+    // the cast really goes off: the affinities count it here (not when it was only tried)
+    if (this.game.aff) {
+      const wg = CONFIG.weapons[this.weapon] ? CONFIG.weapons[this.weapon].group : 'melee';
+      const magic = !def.melee && (wg === 'magic' || def.custom || def.lightning || !!(def.for && (def.for.includes('mage') || def.for.includes('cleric') || def.for.includes('stormcaller'))));
+      this.game.aff.record('skillCast', { magic, ranged: !magic && wg === 'ranged' });
+      if (slot !== 2) this.game.aff.record('manaSpent', { amount: this.manaCost(def) });
+    }
     this.dirX = this.pendingX;
     this.dirZ = this.pendingZ;
     this.castAnim = 1;

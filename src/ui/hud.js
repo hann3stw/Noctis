@@ -72,6 +72,7 @@ export class Hud {
             <div class="bar hp"><em></em><i></i><span></span></div>
             <div class="bar mp"><i></i><span></span></div>
             <div class="rage" style="display:none"><div class="bar"><i></i></div></div>
+            <div class="mech2" style="display:none"></div>
             <div class="xp"><div class="bar"><i></i></div></div>
             <div class="rk"><div class="bar"><i></i></div><span></span></div>
           </div>
@@ -194,6 +195,7 @@ export class Hud {
     this.mpFill = $('.bar.mp i');
     this.rageEl = $('.rage');
     this.rageFill = $('.rage i');
+    this.mech2El = $('.mech2'); // the second display of an evolution mechanic (Momentum pips, Aegis)
     this.mpText = $('.bar.mp span');
     this.xpFill = $('.xp .bar i');
     this.xpLabel = $('.lvl-badge b');
@@ -530,8 +532,31 @@ export class Hud {
     }
 
     // the Warrior's Rage, the Mage's Arcane Charges
-    const mc = game.mech, res = mc === 'warrior' ? P.rage / CONFIG.warrior.rageMax : mc === 'mage' ? P.arcane / CONFIG.mage.arcaneMax : mc === 'cleric' ? P.faith / CONFIG.cleric.faithMax : mc === 'rogue' ? P.cp / CONFIG.rogue.cpMax : -1;
-    if (mc !== this.vRageOn) { this.vRageOn = mc; this.rageEl.style.display = res >= 0 ? '' : 'none'; this.rageEl.classList.toggle('arcane', mc === 'mage'); this.rageEl.classList.toggle('faith', mc === 'cleric'); this.rageEl.classList.toggle('combo', mc === 'rogue'); }
+    // (the Beastmaster's Bond takes the bar the Ranger leaves empty)
+    const cmech = game.classMechanic, bond = cmech === 'companionBond';
+    const mc = game.mech, res = mc === 'warrior' ? P.rage / CONFIG.warrior.rageMax : mc === 'mage' ? P.arcane / CONFIG.mage.arcaneMax : mc === 'cleric' ? P.faith / CONFIG.cleric.faithMax : mc === 'rogue' ? P.cp / CONFIG.rogue.cpMax : bond ? P.bond / CONFIG.mechanics.companionBond.max : -1;
+    const key = mc + ':' + cmech;
+    if (key !== this.vRageOn) {
+      this.vRageOn = key;
+      this.rageEl.classList.remove('overload', 'full'); this.vOver = -1;
+      this.rageEl.style.display = res >= 0 ? '' : 'none'; this.rageEl.classList.toggle('arcane', mc === 'mage'); this.rageEl.classList.toggle('faith', mc === 'cleric'); this.rageEl.classList.toggle('combo', mc === 'rogue'); this.rageEl.classList.toggle('bond', bond);
+      // Momentum: pips; Aegis: a second bar
+      const two = cmech === 'berserkerMomentum' || cmech === 'aegis';
+      this.mech2El.style.display = two ? '' : 'none';
+      this.mech2El.innerHTML = cmech === 'berserkerMomentum' ? '<i class="pip"></i>'.repeat(CONFIG.mechanics.berserkerMomentum.max) : cmech === 'aegis' ? '<div class="bar"><i></i></div>' : '';
+      this.vMech2 = -1;
+    }
+    // Storm Overload: the Arcane bar glows from 3 charges on
+    if (cmech === 'stormOverload') {
+      const o = P.arcane >= CONFIG.mechanics.stormOverload.at[1] ? 2 : P.arcane >= CONFIG.mechanics.stormOverload.at[0] ? 1 : 0;
+      if (o !== this.vOver) { this.vOver = o; this.rageEl.classList.toggle('overload', o > 0); this.rageEl.classList.toggle('full', o > 1); }
+    }
+    const m2 = cmech === 'berserkerMomentum' ? P.momentum : cmech === 'aegis' ? Math.round(P.aegis) : -1;
+    if (m2 >= 0 && m2 !== this.vMech2) {
+      this.vMech2 = m2;
+      if (cmech === 'berserkerMomentum') this.mech2El.querySelectorAll('.pip').forEach((e, k) => e.classList.toggle('on', k < m2));
+      else { const f = this.mech2El.querySelector('i'); if (f) f.style.transform = 'scaleX(' + (m2 / CONFIG.mechanics.aegis.max).toFixed(2) + ')'; }
+    }
     if (res >= 0) {
       const r = Math.round(res * 100);
       if (r !== this.vRage) { this.vRage = r; this.rageFill.style.transform = 'scaleX(' + (r / 100).toFixed(2) + ')'; }

@@ -149,6 +149,11 @@ const FAMILY = {
   blackFrost: 'frost',
   bladeDance: 'blades', daggerRain: 'blades',
   voidStorm: 'shadow', oblivionRay: 'shadow', nightfall: 'shadow', legionsCall: 'shadow', eclipse: 'heal',
+  // the evolution classes
+  frenzyCleave: 'rage', recklessCharge: 'rage', bloodstorm: 'rage',
+  thunderLance: 'frost', stormfield: 'frost', tempestAscension: 'frost',
+  preyMark: 'rage', packAssault: 'rage', primalApex: 'rage',
+  aegisOath: 'shield', radiantSweep: 'heal', lastBastion: 'shield',
 };
 
 const SKILL = {

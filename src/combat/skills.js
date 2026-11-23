@@ -2,7 +2,8 @@
 // CONFIG.skills / CONFIG.ultimates.
 import { CONFIG } from '../config.js';
 import { POWER_PER_LEVEL, COOLDOWN_PER_LEVEL } from '../core/mastery.js';
-import { hitArc, hitCircle, hitLine, playerHit } from './weapons.js';
+import { hitArc, hitCircle, hitLine, playerHit, chainHit, setHitMelee } from './weapons.js';
+import { runAbility } from './abilities.js';
 import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
 import { RUNE_KINDS } from '../core/runes.js';
 
@@ -29,6 +30,19 @@ const GLOW = {
   nightfall: { at: 'self', light: 220, big: true },
   legionsCall: { at: 'self', light: 160, big: true, rise: 5 },
   eclipse: { at: 'self', color: 0xffd24a, light: 180, big: true, rise: 4 },
+  // the evolution classes
+  frenzyCleave: { at: 'front', color: 0xff4a3a, light: 80, sparks: 30 },
+  recklessCharge: { at: 'self', color: 0xff4a3a, light: 90 },
+  bloodstorm: { at: 'self', color: 0xff3040, light: 200, big: true, rise: 4 },
+  thunderLance: { at: 'line', color: 0xfff07a, light: 100, sparks: 40 },
+  stormfield: { at: 'target', color: 0xfff07a, light: 90, sparks: 40 },
+  tempestAscension: { at: 'target', color: 0xfff07a, light: 220, big: true, sparks: 70 },
+  preyMark: { at: 'target', color: 0xff8a3a, light: 70 },
+  packAssault: { at: 'self', color: 0xff8a3a, light: 100, rise: 3 },
+  primalApex: { at: 'self', color: 0xff8a3a, light: 180, big: true, rise: 5 },
+  aegisOath: { at: 'self', color: 0xffd86a, light: 90 },
+  radiantSweep: { at: 'front', color: 0xffd86a, light: 90, sparks: 30 },
+  lastBastion: { at: 'self', color: 0xffd86a, light: 220, big: true, rise: 5 },
 };
 
 // the glow of a spell of the Forge, made from its blocks: where it shines, in the colour of its element, bigger
@@ -125,6 +139,16 @@ export function castSkill(game, id, dx, dz, power) {
   const dist = (def.range || 0) * Math.max(0.15, power);
   let tx = P.x + dx * dist, tz = P.z + dz * dist;
   const yaw = Math.atan2(dx, dz);
+  // skills built from behaviour blocks (the evolution classes): combat/abilities.js
+  if (def.behaviors) {
+    setHitMelee(def.melee ? true : def.lightning || def.aim === 'line' ? false : null);
+    runAbility(game, id, def, base, dx, dz, tx, tz, yaw, dist);
+    setHitMelee(null);
+    castGlow(game, id, tx, tz, dx, dz);
+    return;
+  }
+  // Berserker Momentum: the Warrior's melee skills spend the stacks too
+  if (game.classMechanic === 'berserkerMomentum' && def.for && def.for.includes('warrior') && def.power) base *= game.mechImpl.spend(game, P, { ...def, melee: true });
 
   switch (id) {
     case 'shadowStep': {
@@ -365,26 +389,7 @@ export function castSkill(game, id, dx, dz, power) {
         P.cds[1] = Math.min(P.cds[1], 1);
         break;
       }
-      const done = new Set();
-      let px = P.x, pz = P.z;
-      for (let n = 0; n < def.jumps && i >= 0; n++) {
-        done.add(i);
-        const ex = E.x[i] - px, ez = E.z[i] - pz, len = Math.hypot(ex, ez) || 1;
-        fx.beam(px, pz, ex / len, ez / len, len, 0.5, 0xa0d8ff);
-        fx.burst(E.x[i], 1, E.z[i], 8, 0xa0d8ff, 4, 0.2, 0.4);
-        playerHit(game, i, base, ex / len, ez / len);
-        px = E.x[i];
-        pz = E.z[i];
-        // the next one: the nearest enemy that was not hit yet
-        let best = -1, bd = def.jumpRange * def.jumpRange;
-        for (let k = 0; k < E.activeCount; k++) {
-          const j = E.active[k];
-          if (!E.alive[j] || done.has(j)) continue;
-          const d2 = (E.x[j] - px) ** 2 + (E.z[j] - pz) ** 2;
-          if (d2 < bd) { bd = d2; best = j; }
-        }
-        i = best;
-      }
+      chainHit(game, i, P.x, P.z, base, def.jumps - 1, def.jumpRange, 0xa0d8ff);
       game.cam.shake(0.18, 0.15);
       break;
     }

@@ -2,6 +2,19 @@
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 
 export const SKILL_ICONS = {
+  // the evolution classes
+  frenzyCleave: svg('M3 15C7 6 17 6 21 15l-3 1C15 10 9 10 6 16zM11 12h2v9h-2z'),
+  recklessCharge: svg('M2 11h11V7l9 5-9 5v-4H2zM2 6h6v2H2zM2 16h6v2H2z'),
+  bloodstorm: svg('M12 2a10 10 0 1 1-9.4 13.4l3-1A7 7 0 1 0 12 5zM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'),
+  thunderLance: svg('M2 13l9-2-1-3 12 4-9 2 1 3z'),
+  stormfield: svg('M4 18h16v2H4zM13 3l-5 8h4l-2 6 7-9h-4l2-5z'),
+  tempestAscension: svg('M5 10a7 7 0 0 1 14 0h-2a5 5 0 0 0-10 0zM12 11l-3 6h3l-1 5 5-7h-3l2-4z'),
+  preyMark: svg('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm-1 2h2v3h3v2h-3v3h-2v-3H8v-2h3z'),
+  packAssault: svg('M3 14l4-8 3 4 2-6 2 6 3-4 4 8-3 6H6zM9 15h6v2H9z'),
+  primalApex: svg('M12 2l3 6 6-2-3 7 3 2-9 7-9-7 3-2-3-7 6 2z'),
+  aegisOath: svg('M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zm0 4l-4 1.5V11c0 3 2 5.5 4 6.6z'),
+  radiantSweep: svg('M2 16C6 6 18 6 22 16l-3 1C16 10 8 10 5 17zM11 2h2v4h-2zM4 5l1.5-1.5 2.5 2.5L6.5 7.5zM20 5l-1.5-1.5-2.5 2.5 1.5 1.5z'),
+  lastBastion: svg('M4 21V9l3-2V4h2v2h2V3h2v3h2V4h2v3l3 2v12h-6v-5h-4v5z'),
   piercingShot: svg('M2 12l16-1-4-5 8 6-8 6 4-5z'),
   multiShot: svg('M2 4l14 6-1 2zM2 12l14 0v2zM2 20l14-6-1-2zM18 8l4 4-4 4z'),
   bearTrap: svg('M3 15h18v3H3zM4 15l2-8 3 6 3-8 3 8 3-6 2 8z'),

@@ -6,6 +6,13 @@ import { SWEEP, EXPAND } from '../render/effects.js';
 
 const DEG = Math.PI / 180;
 
+// what the hits of the moment are: a skill tells whether it is a melee one (Berserker Momentum, affinities);
+// null = the weapon decides
+let hitMelee = null;
+export function setHitMelee(v) { hitMelee = v; }
+// the enemy farthest along the last hitLine (the start of a chain), -1 = none
+export let lineLast = -1;
+
 // One hit of the player on enemy i: variance, crit, ultimate charge.
 export function playerHit(game, i, base, kx, kz) {
   const P = game.player, E = game.enemies, U = P.uq;
@@ -26,6 +33,15 @@ export function playerHit(game, i, base, kx, kz) {
   if (P.ambushT > 0) { crit = true; dmg *= 1 + CONFIG.rogue.ambush; P.ambushT = 0; }
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
   P.onHit();
+  // what kind of hit it was: affinities and the class mechanic (Berserker Momentum)
+  const wg = CONFIG.weapons[P.weapon] ? CONFIG.weapons[P.weapon].group : 'melee';
+  const melee = hitMelee === null ? wg === 'melee' : hitMelee;
+  if (game.aff) {
+    game.aff.record(melee ? 'meleeHit' : wg === 'ranged' ? 'rangedHit' : 'magicHit');
+    if (crit) game.aff.record('criticalHit');
+  }
+  const cm = game.mechImpl;
+  if (cm && cm.onHit) cm.onHit(game, P, melee);
   P.addRage(CONFIG.warrior.rageHit);
   if (game.mech === 'cleric') {
     P.addFaith(CONFIG.cleric.faithHit);
@@ -102,6 +118,7 @@ export function hitArc(game, x, z, dx, dz, range, arcDeg, base, stun = 0) {
     playerHit(game, i, base, dx, dz);
     n++;
   }
+  if (stun > 0 && n > 0 && game.aff) game.aff.record('controlApplied');
   return n;
 }
 
@@ -119,12 +136,14 @@ export function hitCircle(game, x, z, radius, base, stun = 0) {
     if (base > 0) playerHit(game, i, base, ex * inv, ez * inv);
     n++;
   }
+  if (stun > 0 && n > 0 && game.aff) game.aff.record('controlApplied');
   return n;
 }
 
 export function hitLine(game, x, z, dx, dz, len, width, base) {
   const E = game.enemies;
-  let n = 0;
+  let n = 0, far = -1;
+  lineLast = -1;
   for (let k = 0; k < E.activeCount; k++) {
     const i = E.active[k];
     if (!E.alive[i]) continue;
@@ -135,7 +154,40 @@ export function hitLine(game, x, z, dx, dz, len, width, base) {
     const side = Math.abs(ex * dz - ez * dx);
     if (side > width * 0.5 + r) continue;
     playerHit(game, i, base, dx, dz);
+    if (along > far && E.alive[i]) { far = along; lineLast = i; }
     n++;
+  }
+  return n;
+}
+
+// A chain of lightning: hits enemy `start`, then leaps to the nearest enemy not hit yet (within range), up to
+// `jumps` more times; every leap deals `base`. Used by Chain Lightning, Thunder Lance, Tempest Ascension and the
+// Storm element of the Spell Forge. from (x, z) = where the first bolt comes from. Returns the enemies hit.
+const chainDone = new Set();
+export function chainHit(game, start, x, z, base, jumps, range, color = 0xa0d8ff, skipFirst = false) {
+  const E = game.enemies, fx = game.effects;
+  chainDone.clear();
+  let i = start, px = x, pz = z, n = 0;
+  for (let k = 0; k <= jumps && i >= 0; k++) {
+    chainDone.add(i);
+    const ex = E.x[i] - px, ez = E.z[i] - pz, len = Math.hypot(ex, ez) || 1;
+    // skipFirst: the first enemy was already hit by the cast, the chain only starts from it
+    if (!(skipFirst && k === 0)) {
+      fx.beam(px, pz, ex / len, ez / len, len, 0.5, color);
+      fx.burst(E.x[i], 1, E.z[i], 8, color, 4, 0.2, 0.4);
+      playerHit(game, i, base, ex / len, ez / len);
+      n++;
+    }
+    px = E.x[i];
+    pz = E.z[i];
+    let best = -1, bd = range * range;
+    for (let m = 0; m < E.activeCount; m++) {
+      const j = E.active[m];
+      if (!E.alive[j] || chainDone.has(j)) continue;
+      const d2 = (E.x[j] - px) ** 2 + (E.z[j] - pz) ** 2;
+      if (d2 < bd) { bd = d2; best = j; }
+    }
+    i = best;
   }
   return n;
 }

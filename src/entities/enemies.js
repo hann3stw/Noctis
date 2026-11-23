@@ -16,6 +16,7 @@ import { arenaCenter, gateDiff } from '../world/gates.js';
 import { fmt } from '../core/format.js';
 import { play } from '../core/sfx.js';
 
+const BURN_TICK = 0.5; // seconds between two burn ticks
 export const ST_IDLE = 0, ST_CHASE = 1, ST_WINDUP = 2, ST_RETURN = 3, ST_CHARGE = 4;
 const B_MELEE = 0, B_RANGED = 1, B_CHARGER = 2, B_BOSS = 3;
 const BEHAVIOR = { melee: B_MELEE, ranged: B_RANGED, charger: B_CHARGER, boss: B_BOSS };
@@ -66,6 +67,9 @@ export class Enemies {
     this.retT = new Float32Array(N); // time until the target is re-evaluated
     this.stun = new Float32Array(N); // seconds the enemy cannot act
     this.vuln = new Float32Array(N); // seconds the enemy takes more damage (Hunter's Mark)
+    this.burnT = new Float32Array(N); // seconds it still burns (Spell Forge: Burn)
+    this.burnDps = new Float32Array(N); // burn damage per second
+    this.burnTick = new Float32Array(N); // time until the next burn tick
     // traits
     this.kid = new Uint8Array(N); // a smaller copy left by a splitting enemy
     this.kidOf = new Int32Array(N).fill(-1); // world enemies that split: their first copy slot
@@ -402,6 +406,7 @@ export class Enemies {
     this.tgt[i] = -1;
     this.stun[i] = 0;
     this.vuln[i] = 0;
+    this.burnT[i] = 0;
     this.buff[i] = 0;
     this.atkN[i] = 0;
     this.revived[i] = 0;
@@ -515,6 +520,39 @@ export class Enemies {
   }
 
   // Hunter's Mark: enemies in the circle take more damage for a while
+  // Pushes the enemies in the circle away from its centre by dist (bosses stand firm). Returns how many moved.
+  // In a gate the enemy loop keeps them inside the arena.
+  push(x, z, radius, dist) {
+    let n = 0;
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.active[k];
+      if (!this.alive[i] || this.tier[i] === 3) continue;
+      const dx = this.x[i] - x, dz = this.z[i] - z, d2 = dx * dx + dz * dz, r = radius + this.radius[i];
+      if (d2 > r * r) continue;
+      const d = Math.sqrt(d2) || 1, f = dist * (this.tier[i] >= 1 ? 0.5 : 1) * (1 - 0.4 * Math.min(1, d / r));
+      this.x[i] += (d2 > 1e-4 ? dx / d : Math.random() - 0.5) * f;
+      this.z[i] += (d2 > 1e-4 ? dz / d : Math.random() - 0.5) * f;
+      n++;
+    }
+    return n;
+  }
+
+  // Sets the enemies in the circle on fire: dps damage per second for time seconds (refreshes, never stacks).
+  burnArea(x, z, radius, dps, time) {
+    let n = 0;
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.active[k];
+      if (!this.alive[i]) continue;
+      const dx = this.x[i] - x, dz = this.z[i] - z, r = radius + this.radius[i];
+      if (dx * dx + dz * dz > r * r) continue;
+      this.burnDps[i] = Math.max(this.burnT[i] > 0 ? this.burnDps[i] : 0, dps);
+      if (this.burnT[i] <= 0) this.burnTick[i] = BURN_TICK;
+      this.burnT[i] = time;
+      n++;
+    }
+    return n;
+  }
+
   markArea(x, z, radius, duration) {
     let n = 0;
     for (let k = 0; k < this.activeCount; k++) {
@@ -540,7 +578,7 @@ export class Enemies {
       return;
     }
     const pf = this.game.profile;
-    if (src < 0) { pf.dmgHunter += amount; pf.hits++; if (crit) pf.crits++; } else pf.dmgArmy += amount;
+    if (src < 0) { pf.dmgHunter += amount; pf.hits++; if (crit) pf.crits++; } else { pf.dmgArmy += amount; this.game.onArmyHit(src); }
     const fx = this.game.effects;
     if (this.vuln[i] > 0) amount = Math.round(amount * (1 + CONFIG.skills.huntersMark.vuln));
     // a monster mastered in the bestiary takes a little more
@@ -849,6 +887,16 @@ export class Enemies {
         this.vuln[i] -= dt;
         // a red sign above marked enemies
         if (Math.random() < dt * 5) game.effects.burst(this.x[i], 2.4 * this.scale[i], this.z[i], 1, 0xff4060, 0.6, 0.2, 0.5);
+      }
+      if (this.burnT[i] > 0) {
+        // burning: a tick every BURN_TICK seconds (a new burn refreshes the old one, it never stacks)
+        this.burnT[i] -= dt;
+        if ((this.burnTick[i] -= dt) <= 0) {
+          this.burnTick[i] = BURN_TICK;
+          game.effects.burst(this.x[i], 1.2 * this.scale[i], this.z[i], 3, 0xff7a30, 2.5, 0.18, 0.45, 2);
+          this.damage(i, Math.max(1, Math.round(this.burnDps[i] * BURN_TICK)), 0, 0, -1, false);
+          if (!this.alive[i]) continue;
+        }
       }
       if (this.stun[i] > 0) {
         this.stun[i] -= dt;

@@ -112,9 +112,9 @@ export class Forge {
     addString('skill.' + spec.id + '.desc', t('forge.desc', { blocks: [...spec.elements.map((k) => t('forge.el.' + k)), t('forge.form.' + spec.form), ...spec.effects.map((k) => t('forge.fx.' + k))].join(' · ') }));
   }
 
-  // only the Mage has the forge
+  // the classes with the right to it (spellForge: the Mage and the Stormcaller), not just any mage-like class
   get open() {
-    return this.game.mech === 'mage';
+    return this.game.canForge();
   }
 
   unlocked(kind, key) {

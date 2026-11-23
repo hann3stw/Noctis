@@ -90,8 +90,9 @@ export function tierLevels(zi, tier) {
 // Saves from before the new rank levels (8 levels per rank) are moved to the
 // same place on the new scale: same rank, same share of it.
 export function migrateSave(s) {
-  if (!s || (s.version || 1) >= 3) return s;
-  if (s.version === 2) return migrateRarity(s);
+  if (!s || (s.version || 1) >= 4) return s;
+  if (s.version === 3) return migrateClasses(s);
+  if (s.version === 2) return migrateClasses(migrateRarity(s));
   const map = (lv) => levelFromProgress(((lv || 1) - 1) / 8);
   const items = [];
   if (s.player) {
@@ -103,7 +104,7 @@ export function migrateSave(s) {
   }
   for (const it of items) if (it && it.level) it.level = map(it.level);
   s.version = 2;
-  return migrateRarity(s);
+  return migrateClasses(migrateRarity(s));
 }
 
 function playerItems(s) {
@@ -121,5 +122,16 @@ function migrateRarity(s) {
   const map = [0, 2, 3, 4];
   for (const it of playerItems(s)) if (it && typeof it.rarity === 'number') it.rarity = map[it.rarity] ?? it.rarity;
   s.version = 3;
+  return s;
+}
+
+// Version 4: the dynamic class system (affinities, the Awakening). Nothing is taken away and nothing is made
+// up: the class, Path, items, skills, spells, army, mastery and runes stay as they are; the affinities start
+// empty (they grow from the play from now on) and the class history is filled in by the game from the class
+// it has (core/awakening.js). The class mechanics start at 0.
+function migrateClasses(s) {
+  if (!s.affinities || typeof s.affinities !== 'object') s.affinities = null;
+  if (!s.awakening || typeof s.awakening !== 'object') s.awakening = null;
+  s.version = 4;
   return s;
 }
