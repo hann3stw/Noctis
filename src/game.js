@@ -423,9 +423,11 @@ export class Game {
     if (!this.mainClass || this.rankIndex < CONFIG.classes.evolveRank || this.awakening.declined >= this.rankIndex) return false;
     if (this.classDue() || this.specDue()) return false;
     const P = this.awakening.pending;
-    if (P && P.rank === this.rankIndex) return P.ids.length > 1;
+    if (P && P.rank === this.rankIndex && P.ids.length > 1) return true;
+    // an offer is kept only when it holds a real evolution; otherwise it is looked at again later (the
+    // affinities grow while you play)
     const ids = evolutionOffers(this.mainClass, this.rankIndex, this.aff.values()).map((o) => o.id);
-    this.awakening.pending = { rank: this.rankIndex, ids };
+    this.awakening.pending = ids.length > 1 ? { rank: this.rankIndex, ids } : null;
     return ids.length > 1;
   }
 

@@ -1,4 +1,5 @@
 import '@fontsource/cinzel/latin-700.css';
+import { validateClasses } from './core/classComponents.js';
 import { initTrack } from './core/track.js';
 import '@fontsource/cinzel/latin-900.css';
 import '@fontsource/exo-2/latin-500.css';
@@ -37,6 +38,8 @@ rotate.innerHTML = `<div class="phone"></div><b>${t('rotate.title')}</b><small>$
 const app = new App(debug);
 app.init(params);
 if (debug) window.__app = app;
+// while developing: every class built from blocks is checked (core/classComponents.js)
+if (debug) { const errs = validateClasses(); if (errs.length) console.error('Class configuration errors:\n' + errs.join('\n')); }
 
 // the boot screen of index.html fades out once the title screen is there
 const boot = document.getElementById('boot');

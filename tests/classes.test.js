@@ -270,3 +270,28 @@ test('installClasses is repeatable', () => {
   installClasses();
   assert.equal(JSON.stringify(CONFIG.classes.list.berserker), before);
 });
+
+test('every rune of a new skill changes something it really has (not only its mana)', async () => {
+  const { RUNE_KINDS } = await import('../src/core/runes.js');
+  const ids = ['frenzyCleave', 'recklessCharge', 'thunderLance', 'stormfield', 'preyMark', 'packAssault', 'aegisOath', 'radiantSweep', 'bloodstorm', 'tempestAscension', 'primalApex', 'lastBastion'];
+  for (const id of ids) {
+    const d = CONFIG.skills[id] || CONFIG.ultimates[id];
+    for (const r of runesOf(id)) assert.ok(Object.keys(RUNE_KINDS[r]).some((k) => k !== 'mana' && typeof d[k] === 'number'), id + ' / ' + r);
+  }
+});
+
+test('loot: the second class skill can drop even with a full skill cap', async () => {
+  const { rollLoot, setLootClass } = await import('../src/core/items.js');
+  setLootClass('berserker');
+  // a Berserker at rank B (level 60) that already knows many skills
+  const known = ['cleave', 'shieldBash', 'groundSlam', 'shieldRush', 'challengingRoar', 'ironWill', 'shadowWave', 'nightLance', 'daggerRain', 'bladeDance', 'frenzyCleave', 'bloodstorm'];
+  let found = 0;
+  for (let k = 0; k < 4000; k++) { const it = rollLoot(60, 0, known); if (it.kind === 'skill') { assert.equal(it.type, 'recklessCharge'); found++; } }
+  assert.ok(found > 0);
+  // and never before rank B
+  setLootClass('berserker');
+  for (let k = 0; k < 4000; k++) { const it = rollLoot(20, 0, []); assert.ok(!(it.kind === 'skill' && ['frenzyCleave', 'recklessCharge', 'bloodstorm'].includes(it.type))); }
+  // a Warrior never gets Berserker skills
+  setLootClass('warrior');
+  for (let k = 0; k < 4000; k++) { const it = rollLoot(60, 0, []); assert.ok(!(it.kind === 'skill' && ['frenzyCleave', 'recklessCharge', 'bloodstorm'].includes(it.type))); }
+});

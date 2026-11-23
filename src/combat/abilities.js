@@ -7,7 +7,6 @@ import { CONFIG } from '../config.js';
 import { hitArc, hitCircle, hitLine, chainHit, lineLast } from './weapons.js';
 import { SWEEP, EXPAND, FLASH } from '../render/effects.js';
 
-const single = new Map(); // skill id -> its zone, for skills that may have only one zone (Stormfield)
 
 // moves the hunter towards (tx, tz) inside the world or the gate (the same rules as Shield Rush)
 function moveTo(game, tx, tz) {
@@ -96,9 +95,8 @@ export const BEHAVIORS = {
   areaTicks(c) {
     const { game, P, def, fx } = c;
     const self = def.aim === 'self', x = self ? P.x : c.tx, z = self ? P.z : c.tz;
-    if (def.single) game.zones.kill(single.get(c.id));
-    const zn = game.zones.add(x, z, def.radius, 0.3, def.ticks, def.interval, c.base, def.stun || 0, def.color);
-    if (def.single) single.set(c.id, zn);
+    if (def.single) game.zones.killOwner(c.id); // only one of it at a time
+    game.zones.add(x, z, def.radius, 0.3, def.ticks, def.interval, c.base, def.stun || 0, def.color, false, def.single ? { owner: c.id } : null);
     fx.ring(x, z, def.radius + 1, 0.4, def.color, 0.45);
     fx.burst(x, 1.4, z, 30, def.color, 8, 0.24, 0.7);
     c.cx = x; c.cz = z; c.cr = def.radius;

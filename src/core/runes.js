@@ -9,7 +9,7 @@ import { play } from './sfx.js';
 
 // the kinds of rune: numbers multiply the same field of the skill (when it has it)
 export const RUNE_KINDS = {
-  empowered: { power: 1.4, shield: 1.35, healSelf: 1.35, healArmy: 1.35, armyDamage: 1.35, damage: 1.35, heal: 1.4, mana: 1.25 },
+  empowered: { power: 1.4, shield: 1.35, healSelf: 1.35, healArmy: 1.35, armyDamage: 1.35, damage: 1.35, heal: 1.4, companionDamage: 1.35, healPerHit: 1.35, burn: 1.35, mana: 1.25 },
   swift: { cooldown: 0.7, power: 0.9, mana: 0.9 },
   wide: { radius: 1.35, range: 1.2, width: 1.3, arcDeg: 1.25, power: 0.9 },
   barrage: { ticks: 1.6, interval: 0.8, power: 0.85, mana: 1.2 },

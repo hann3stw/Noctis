@@ -121,12 +121,18 @@ export function rollLoot(level, luck, known, minRarity = 0, gearOnly = false, to
   const rank = rankOf(level);
   let usable = 0;
   for (const id of known) if (skillOk(id, lootClass)) usable++;
-  const kind = weighted([W.weapon, W.armor, gearOnly || usable >= cap ? 0 : W.skill]);
+  // the skills of the hunter's own evolution class (they have an unlockRank) are not held back by the cap and
+  // drop three times as often, so the second class skill can really be found
+  const own = (id) => { const d = CONFIG.skills[id] || CONFIG.ultimates[id]; return !!(d.unlockRank && d.for && d.for.includes(lootClass)); };
+  let ownOpen = 0;
+  for (const id in CONFIG.skills) if (!known.includes(id) && own(id) && skillOpenAt(id, rank)) ownOpen++;
+  const kind = weighted([W.weapon, W.armor, gearOnly || (usable >= cap && !ownOpen) ? 0 : W.skill]);
   if (kind === 2) {
     const open = [];
+    const onlyOwn = usable >= cap;
     // a skill of an evolution class drops only from its unlockRank on
-    for (const id in CONFIG.skills) if (!known.includes(id) && skillOk(id, lootClass) && skillOpenAt(id, rank)) open.push(id);
-    for (const id in CONFIG.ultimates) if (!known.includes(id) && skillOk(id, lootClass) && skillOpenAt(id, rank)) open.push(id);
+    for (const id in CONFIG.skills) if (!known.includes(id) && skillOk(id, lootClass) && skillOpenAt(id, rank) && (!onlyOwn || own(id))) { open.push(id); if (own(id)) open.push(id, id); }
+    for (const id in CONFIG.ultimates) if (!onlyOwn && !known.includes(id) && skillOk(id, lootClass) && skillOpenAt(id, rank)) { open.push(id); if (own(id)) open.push(id, id); }
     if (open.length) return { kind: 'skill', type: pick(open), rarity: 3 };
   }
   const rarity = rollRarity(luck, minRarity, level, topChance);

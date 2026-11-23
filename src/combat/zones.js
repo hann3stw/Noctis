@@ -17,7 +17,7 @@ export class Zones {
       mesh.visible = false;
       mesh.renderOrder = 3;
       game.scene.add(mesh);
-      this.list.push({ mesh, rain: false, follow: false, burn: 0, burnT: 0, knock: 0, heal: 0, live: false, x: 0, z: 0, r: 1, t: 0, total: 0, ticks: 0, interval: 0, dmg: 0, stun: 0, color: 0 });
+      this.list.push({ mesh, owner: '', rain: false, follow: false, burn: 0, burnT: 0, knock: 0, heal: 0, live: false, x: 0, z: 0, r: 1, t: 0, total: 0, ticks: 0, interval: 0, dmg: 0, stun: 0, color: 0 });
     }
     this.next = 0;
   }
@@ -38,6 +38,7 @@ export class Zones {
     zn.burn = (opts && opts.burn) || 0; zn.burnT = (opts && opts.burnT) || 0;
     zn.knock = (opts && opts.knock) || 0;
     zn.heal = (opts && opts.heal) || 0;
+    zn.owner = (opts && opts.owner) || ''; // a skill that may have only one zone (Stormfield) marks its own
     if (rain) this.game.effects.rain(x, z, r, 10, 0xe8dcff);
     zn.mesh.visible = true;
     zn.mesh.position.set(x, 0.07, z);
@@ -46,11 +47,9 @@ export class Zones {
     return zn;
   }
 
-  // ends a zone at once (a new Stormfield replaces the old one)
-  kill(zn) {
-    if (!zn || !zn.live) return;
-    zn.live = false;
-    zn.mesh.visible = false;
+  // ends the zones of an owner at once (a new Stormfield replaces the old one)
+  killOwner(owner) {
+    for (const zn of this.list) if (zn.live && zn.owner === owner) { zn.live = false; zn.mesh.visible = false; }
   }
 
   update(dt) {
