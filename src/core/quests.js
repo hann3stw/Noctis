@@ -169,11 +169,13 @@ export class Quests {
     if (q.d >= 1 && this.game.runes.canFind()) all.push({ kind: 'rune' });
     if (q.d === 2) all.push({ kind: 'key' });
     if (q.d >= 1 && this.game.path.chosen.length) all.push({ kind: 'respec' });
-    // three of them; the item stays most of the time, so gear is always an option
+    // three of them; the item stays most of the time, so gear is always an option. A hunter without a class (no
+    // army) on an easy quest has only three kinds at all: then the item is always one of them (there was an empty
+    // option here before, which broke the quest menu)
     const keepItem = rng() < 0.7;
     const rest = all.slice(1);
     for (let i = rest.length - 1; i > 0; i--) { const j = (rng() * (i + 1)) | 0; [rest[i], rest[j]] = [rest[j], rest[i]]; }
-    return keepItem ? [all[0], rest[0], rest[1]] : [rest[0], rest[1], rest[2]];
+    return (keepItem ? [all[0], ...rest] : [...rest, all[0]]).slice(0, 3);
   }
 
   // quest k, reward number i of its options
