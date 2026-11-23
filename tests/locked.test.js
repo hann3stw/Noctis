@@ -156,3 +156,59 @@ test('8. evolutions with ready: false stay invisible and cannot be taken', () =>
   panel.render();
   assert.ok(!panel.el.innerHTML.includes('data-c="assassin"') && !panel.el.innerHTML.includes('data-c="phantomDuelist"'));
 });
+
+// ---- edge cases of the continuation and of unlocked hybrids -------------------------------------
+test('an unready class does not appear through the continuation exception', () => {
+  locked('warrior', () => {
+    const out = specOffers('warrior', [{ id: 'warrior', fit: 0, stay: true }, { id: 'rogue', fit: 0.4 }], aff({}), new Set());
+    assert.ok(!out.some((o) => o.id === 'warrior'), 'the unready class itself is not offered');
+    assert.ok(out.some((o) => o.id === 'rogue'));
+    assert.ok(!specAllowed('warrior', 'warrior', aff({}), new Set()));
+    assert.equal(Game.prototype.changeClass.call(hunter('warrior', FULL), 'warrior'), false);
+  });
+});
+
+test('a valid current class stays as continuation, even when it is missing from the passed offers', () => {
+  for (const cls of ['warrior', 'mage', 'ranger', 'necromancer']) {
+    const out = specOffers(cls, [], aff({}), new Set());
+    assert.deepEqual(out.map((o) => [o.id, o.kind]), [[cls, 'continuation']]);
+  }
+});
+
+test('invalid ids, missing definitions and bad input do not break specOffers', () => {
+  const out = specOffers('warrior', [null, undefined, {}, { id: 5 }, { id: 'noSuchClass', fit: 1 }, { id: 'rogue', fit: 0.2 }], aff({}), new Set());
+  assert.deepEqual(out.map((o) => o.id), ['warrior', 'rogue']);
+  assert.doesNotThrow(() => specOffers('warrior', undefined, aff({}), undefined));
+  assert.doesNotThrow(() => specOffers('noSuchClass', [{ id: 'rogue' }], aff({}), new Set()));
+  assert.deepEqual(specOffers('noSuchClass', [{ id: 'rogue' }], aff({}), new Set()), []);
+});
+
+test('a hybrid unlocked once stays available through the class history while it is ready', () => {
+  const held = new Set(['spellblade']);
+  assert.ok(specAllowed('warrior', 'spellblade', aff({}), held)); // affinities have dropped to nothing
+  assert.ok(classOffers(hunter('warrior', {}, ['warrior', 'spellblade'])).some((o) => o.id === 'spellblade'));
+  assert.ok(specOffers('warrior', classOffers(hunter('warrior', {}, ['warrior', 'spellblade'])), aff({}), held).some((o) => o.kind === 'hybrid'));
+  // ... but not when the class is not ready
+  locked('spellblade', () => {
+    assert.ok(!specAllowed('warrior', 'spellblade', aff({}), held));
+    assert.ok(!classOffers(hunter('warrior', {}, ['warrior', 'spellblade'])).some((o) => o.id === 'spellblade'));
+  });
+});
+
+test('a class with a missing ready value is not treated as unlocked', () => {
+  const c = CONFIG.classes.list.spellblade, was = c.ready;
+  try {
+    delete c.ready;
+    assert.ok(!specAllowed('warrior', 'spellblade', FULL, new Set(['spellblade'])));
+    assert.ok(!classOffers(hunter('warrior', FULL)).some((o) => o.id === 'spellblade'));
+    assert.equal(Game.prototype.changeClass.call(hunter('warrior', FULL), 'spellblade'), false);
+    c.ready = 'yes'; // not exactly true: locked as well
+    assert.ok(!specAllowed('warrior', 'spellblade', FULL, new Set()));
+  } finally { c.ready = was; }
+  // the current class without a ready value is not offered either
+  const w = CONFIG.classes.list.warrior, wr = w.ready;
+  try {
+    delete w.ready;
+    assert.ok(!specOffers('warrior', [{ id: 'warrior', stay: true }], aff({}), new Set()).some((o) => o.id === 'warrior'));
+  } finally { w.ready = wr; }
+});

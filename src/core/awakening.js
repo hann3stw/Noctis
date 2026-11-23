@@ -84,9 +84,12 @@ export function evolutionOffers(cls, rank, aff) {
 // specAllowed) is dropped here too.
 export function specOffers(cls, offers, aff, held) {
   const list = CONFIG.classes.list;
-  const out = offers.filter((o) => o && (o.id === cls || specAllowed(cls, o.id, aff, held)))
+  // every offer, the continuation included, passes the one check (specAllowed); invalid entries are skipped
+  const out = (Array.isArray(offers) ? offers : [])
+    .filter((o) => o && typeof o.id === 'string' && specAllowed(cls, o.id, aff, held))
     .map((o) => ({ ...o, open: true, stay: o.id === cls, kind: o.id === cls ? 'continuation' : list[o.id].hybrid ? 'hybrid' : 'specialization' }));
-  if (!out.some((o) => o.stay)) out.unshift({ id: cls, kind: 'continuation', fit: 0, why: '', stay: true, open: true });
+  // the continuation is added when missing, but only when the class itself is allowed (ready)
+  if (!out.some((o) => o.stay) && specAllowed(cls, cls, aff, held)) out.unshift({ id: cls, kind: 'continuation', fit: 0, why: '', stay: true, open: true });
   const best = out.filter((o) => !o.stay && o.open).sort((a, b) => b.fit - a.fit)[0];
   if (best && best.fit > 0.3) best.rec = true;
   return out;

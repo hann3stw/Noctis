@@ -196,7 +196,7 @@ Skills pages).
 | Rank (level) | Step | What happens |
 |---|---|---|
 | D (10) | First Awakening | Fighter, Ranged, Mage or Necromancer; all four can be picked, the one that fits the affinities is marked |
-| C (25) | Specialization | stay, the plain sibling (Warrior ↔ Rogue, Mage ↔ Cleric) or a hybrid whose affinity needs are met (locked hybrids show what is missing) |
+| C (25) | Specialization | stay, the plain sibling (Warrior ↔ Rogue, Mage ↔ Cleric) or a hybrid that is unlocked (see below); a hybrid is shown only when it can really be taken |
 | B (50) | Class Evolution | Warrior → Berserker, Mage → Stormcaller, Ranger → Beastmaster, Cleric or Paladin → Sentinel, when the affinities fit; staying is always possible and you are asked again at the next rank |
 | A (100) | Advanced Mastery | an improvement of the class mechanic + a pick of a skill modifier |
 | S (200) | Class Mastery | a pick between two ways to grow the core mechanic + an ultimate improvement |
@@ -204,6 +204,16 @@ Skills pages).
 | SSS (450) | Transcendence | an extension of the core mechanic |
 | L (650) | Legendary Evolution | a pick between two legendary branches |
 | M (850) | Mythic Evolution | the Mythic Class Trait and the last step of the ultimate or core |
+
+**Hybrids at rank C.** A hybrid class is shown only when it is unlocked and can be
+picked: it is ready (`ready: true` in `CONFIG.classes.list`) and its affinity needs
+are met. Locked hybrids are hidden completely: no card, no lock symbol, no preview
+with missing requirements. A hybrid that was unlocked once stays available through
+the class history, even if the affinities drop later. `ready: false` locks a class
+for good (it is never offered, whatever the affinities say), and the same check
+(`specAllowed`) guards the offers, the class panel and the class change itself.
+The same goes for evolutions that are not playable yet: the class path shows only
+what can be taken now. The classes stay defined in `CONFIG.classes.list` for later.
 
 Steps A–M exist for all playable classes: Berserker, Stormcaller, Beastmaster,
 Sentinel, Warrior, Mage, Rogue, Ranger, Cleric and Necromancer. The hybrids
