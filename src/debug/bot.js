@@ -45,6 +45,8 @@ export function createBot(game, opts = {}) {
         if (C.weapons[item.type].group === group && (!cur || C.weapons[cur.type].group !== group || wscore(item) > wscore(cur) * 1.05)) P.equipItem(item);
       } else if (P.isUpgrade(item)) P.equipItem(item);
     }
+    // essence into the worn gear
+    for (let pass = 0; pass < 3; pass++) for (const slot in P.equip) if (P.equip[slot]) P.upgradeItem(P.equip[slot]);
     // Path picks
     try { if (game.path.due && game.path.due()) { const o = game.path.options(); if (o && o.length) game.path.pick(o[0].id); } } catch (e) { /* not ready */ }
     // skills: every known skill sits in a free slot (learn does this); fill the rest by hand
@@ -121,7 +123,7 @@ export function createBot(game, opts = {}) {
 
     // dodge when a big hit just landed
     bot.hpT -= dt;
-    if (bot.hpT <= 0) { bot.hpT = 0.4; if (bot.hpPrev - P.hp > P.maxHp * 0.12 && P.dodgeCd <= 0) { input.dodge = true; log.dodges++; } bot.hpPrev = P.hp; }
+    if (bot.hpT <= 0) { bot.hpT = 0.25; if (bot.hpPrev - P.hp > P.maxHp * 0.05 && P.dodgeCd <= 0) { input.dodge = true; log.dodges++; } bot.hpPrev = P.hp; }
 
     // too many enemies on a weak hunter: run away from them and dodge
     if (frac < (opts.kiteBelow || 0.55)) {
@@ -140,6 +142,11 @@ export function createBot(game, opts = {}) {
     const i = pickTarget();
     if (i < 0 && G.active >= 0) { steerTo(bot.arena.x, bot.arena.z, 3); return; }
     if (i < 0) {
+      // chests of the zone first
+      const L = game.loot;
+      let cb = -1, cd = 90;
+      for (let k = 0; k < L.chestCount; k++) { if (L.cT[k] > 0) continue; const d2 = dist(L.cx[k], L.cz[k]); if (d2 < cd) { cd = d2; cb = k; } }
+      if (cb >= 0 && opts.chests !== false && game.player.level >= 1 && C.world.zones[Math.min(game.rankIndex, C.world.zones.length - 1)] && Math.hypot(L.cx[cb], L.cz[cb]) > C.world.zones[Math.min(game.rankIndex, C.world.zones.length - 1)].inner - 5 && Math.hypot(L.cx[cb], L.cz[cb]) < C.world.zones[Math.min(game.rankIndex, C.world.zones.length - 1)].outer) { steerTo(L.cx[cb], L.cz[cb], 0.5); log.chestWalk = (log.chestWalk || 0) + 1; return; }
       // walk the ring of the zone of this rank
       const zones = C.world.zones, z = zones[Math.min(game.rankIndex, zones.length - 1)];
       const r = Math.max(z.inner + 15, Math.min(z.outer - 20, z.inner + (z.outer - z.inner) * 0.35)), cur = Math.hypot(P.x, P.z);
@@ -150,7 +157,12 @@ export function createBot(game, opts = {}) {
     }
     const d = dist(E.x[i], E.z[i]), w = C.weapons[P.weapon], ranged = w.range > 6;
     const want = ranged ? w.range * 0.7 : Math.max(1.6, w.range * 0.8);
-    steerTo(E.x[i], E.z[i], want);
+    // hit and run: the attack uses charges that come back slowly, so with none left the hunter steps back
+    if (P.charges <= 0 && P.eclipseT <= 0 && d < 10 && opts.kite !== false) {
+      const dx = P.x - E.x[i], dz = P.z - E.z[i], dd = Math.hypot(dx, dz) || 1;
+      input.keyX = dx / dd; input.keyZ = dz / dd;
+      log.runs = (log.runs || 0) + 1;
+    } else steerTo(E.x[i], E.z[i], want);
     const s0 = input.sticks[0];
     if (d < w.range + 2 && P.charges > 0 && P.atkCd <= 0) { s0.fire = true; s0.auto = true; }
     // skills and the ultimate
@@ -201,7 +213,7 @@ export function runBot(game, opts = {}) {
         why, level: P.level, rank: game.cfg.levels.rankNames[game.rankIndex], gameMinutes: Math.round((game.playTime - t0) / 6) / 10,
         wallSeconds: Math.round((performance.now() - wall0) / 100) / 10, kills: pf.kills(), hunterKills: pf.hunterKills, armyKills: pf.armyKills,
         deaths: pf.deaths, items: bot.log.itemsTotal, itemsByRarity: bot.log.items, rests: bot.log.rests, restMinutes: Math.round(bot.log.restTime / 6) / 10,
-        boss: bot.log.boss, dodges: bot.log.dodges, gatesEntered: bot.log.gatesEntered, gatesCleared: pf.gatesCleared - bot.log.gatesCleared0, gateMinutes: Math.round(bot.log.gateSeconds / 6) / 10, trialDone: !game.trialDue(), essence: Math.round(P.essence), ranks: bot.log.ranks, levels: bot.log.levels,
+        boss: bot.log.boss, kites: bot.log.runs || 0, chestSteps: bot.log.chestWalk || 0, upgrades: Object.values(game.player.equip).reduce((a, it) => a + (it ? it.up : 0), 0), dodges: bot.log.dodges, gatesEntered: bot.log.gatesEntered, gatesCleared: pf.gatesCleared - bot.log.gatesCleared0, gateMinutes: Math.round(bot.log.gateSeconds / 6) / 10, trialDone: !game.trialDue(), essence: Math.round(P.essence), ranks: bot.log.ranks, levels: bot.log.levels,
       });
     };
     const chunk = () => {
