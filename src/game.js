@@ -77,6 +77,8 @@ export class Game {
     this.created = save ? save.created : Date.now();
     this.playTime = save ? save.playTime || 0 : 0;
     this.progT = this.playTime;
+    this.input = input; // for the development bot (src/debug/bot.js)
+    this.cfg = CONFIG;
     // what every play-data event carries about this world (core/track.js)
     setTrackCtx(() => { const P = this.player; return P ? { lvl: P.level, rk: RANKS[this.rankIndex], cls: this.mainClass || '', df: this.difficulty, pt: Math.round(this.playTime) } : {}; });
     { const sl = (app.slots || []).filter(Boolean); track('world', { old: inSeason(this.created) ? 0 : 1, new: save ? 0 : 1, worlds: sl.length, best: Math.max(0, ...sl.map((x) => Number(x.level || (x.player && x.player.level) || 0))) }); }
