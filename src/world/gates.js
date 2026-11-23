@@ -413,7 +413,7 @@ export class Gates {
   onBossKilled(gi, x, z) {
     const game = this.game, P = game.player, E = game.enemies;
     const gate = this.list[gi], zone = CONFIG.world.zones[gate.zone], D = gateDiff(gate);
-    const modLuck = this.runMods.length * CONFIG.modifiers.luck * this.contractLuck();
+    const modLuck = this.game.goals.modCount(this.runMods) * CONFIG.modifiers.luck * this.contractLuck();
     // deadly gate tiers: more luck and a better chance for the top rarity
     const GT = CONFIG.gateTiers, tier = gate.tier || 0;
     const luck = P.luck + D.luck + modLuck + tier * GT.luck, top = Math.min(1, CONFIG.items.bossTopChance + tier * GT.topChance);
@@ -552,7 +552,7 @@ export class Gates {
     // a little reward for every stage
     const a = Math.atan2(P.dirX, P.dirZ);
     this.clamp(P.x + Math.sin(a) * 3, P.z + Math.cos(a) * 3, 1);
-    const modLuck = this.runMods.length * CONFIG.modifiers.luck * this.contractLuck();
+    const modLuck = this.game.goals.modCount(this.runMods) * CONFIG.modifiers.luck * this.contractLuck();
     game.loot.drop(this.cx, this.cz, rollLoot(g.level, P.luck + D.luck * CONFIG.gates.stageLuck + modLuck, P.known, 1, true));
     const ess = Math.round(3 * (g.zone + 1) * (g.diff + 1) * (1 + modLuck) * (1 + (g.tier || 0) * CONFIG.gateTiers.essence));
     P.essence += ess;

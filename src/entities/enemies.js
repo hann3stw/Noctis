@@ -369,7 +369,9 @@ export class Enemies {
       }
       const tough = game.modOn('tough');
       if (tough) hpM *= tough.hp;
-      xpM *= 1 + game.gates.runMods.length * CONFIG.modifiers.xp;
+      const brutal = game.modOn('brutal');
+      if (brutal) dmgM *= brutal.damage;
+      xpM *= 1 + game.goals.modCount(game.gates.runMods) * CONFIG.modifiers.xp;
     } else {
       lv = levelAt(Math.hypot(this.packX[p], this.packZ[p]));
     }

@@ -74,7 +74,7 @@ export function makeUnique(level) {
   }
   const slot = pick(ARMOR_SLOTS);
   const it = makeArmor(slot, pick(Object.keys(CONFIG.items.sets)), pick(Object.keys(CONFIG.items.bonuses)), UNIQUE, level);
-  it.uq = Object.keys(U.armor[slot])[0];
+  it.uq = pick(Object.keys(U.armor[slot]));
   return it;
 }
 

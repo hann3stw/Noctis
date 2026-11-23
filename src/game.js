@@ -1,6 +1,7 @@
 // Ties everything together: scene, world, player, enemies, input and the
 // frame loop.
 import * as THREE from 'three';
+import { Goals } from './core/goals.js';
 import { track, setTrackCtx } from './core/track.js';
 import { Forge } from './core/forge.js';
 import { Mastery } from './core/mastery.js';
@@ -160,6 +161,7 @@ export class Game {
     this.abyss = new Abyss(this, save && save.abyss);
     this.quests = new Quests(this, save && save.quests);
     this.titles = new Titles(this, save && save.titles);
+    this.goals = new Goals(this, save && save.goals);
     this.bestiary = new Bestiary(this, save && save.bestiary);
     this.menu = new Menu(uiRoot, this);
     this.abyssPanel = new AbyssPanel(uiRoot, this);
@@ -282,6 +284,7 @@ export class Game {
       path: this.path.serialize(),
       profile: this.profile.serialize(),
       titles: this.titles.serialize(),
+      goals: this.goals.serialize(),
       runes: this.runes.serialize(),
       mastery: this.mastery.serialize(),
       forge: this.forge.serialize(),
@@ -653,6 +656,7 @@ export class Game {
     this.tips.update(dt);
     this.quests.update(dt);
     this.titles.update(dt);
+    this.goals.update(dt);
     this.path.update(dt);
     this.barracks.update(dt);
     this.fort.update(dt);

@@ -240,16 +240,16 @@ export class Player {
     const oldMax = this.maxHp;
     // levels multiply health and damage, Vitality and Strength add to them
     this.levelMult = playerPower(this.level);
-    this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp) * (1 + M.hp * ms.hp));
+    this.maxHp = Math.round(c.baseHp * playerHpPower(this.level) * (1 + S.vit.hp * st.vit) * (1 + b.hp) * (1 + M.hp * ms.hp) * (1 + (this.uq.titan ? this.uq.titan.hp : 0)));
     this.hpRegen = st.vit * S.vit.regen * this.maxHp * (this.game.path ? this.game.path.mult('hpRegenMult') : 1);
     if (this.hp !== undefined && this.maxHp > oldMax && !this.dead) this.hp += this.maxHp - oldMax;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     this.maxMana = Math.round((c.baseMana + st.int * S.int.mana) * (1 + b.mana));
     if (this.mana > this.maxMana) this.mana = this.maxMana;
-    this.manaRegen = (c.manaRegen + st.int * S.int.manaRegen) * (this.game.path ? this.game.path.mult('manaRegenMult') : 1);
-    this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed);
+    this.manaRegen = (c.manaRegen + st.int * S.int.manaRegen) * (this.game.path ? this.game.path.mult('manaRegenMult') : 1) * (1 + (this.uq.focus ? this.uq.focus.manaRegen : 0));
+    this.speed = c.baseSpeed * (1 + st.agi * S.agi.speed + b.speed + (this.uq.windrunner ? this.uq.windrunner.speed : 0));
     this.reloadTime = CONFIG.weapons[this.weapon].reload / (1 + st.agi * S.agi.reload + b.reload);
-    this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit);
+    this.crit = Math.min(G.critMax, G.baseCrit + st.per * S.per.crit + b.crit + M.crit * ms.crit + (this.uq.precision ? this.uq.precision.crit : 0));
     this.critDmg = G.critDamage + st.per * S.per.critDamage + (this.uq.insight ? this.uq.insight.critDamage : 0);
     this.dodgeCdMax = c.dodge.cooldown / (1 + st.agi * S.agi.dodge) * (1 - DODGE_CD_PER_LEVEL * (this.game.mastery ? this.game.mastery.dodgeLv : 0)); // dodge mastery
     // drop = extra drop chance, luck = better rarities (Perception's part capped)
@@ -262,7 +262,7 @@ export class Player {
     this.maxCharges = c.charges.max + b.charges;
     if (this.charges > this.maxCharges) this.charges = this.maxCharges;
     this.skillMult = 1 + b.skillDamage;
-    this.cdMult = 1 / (1 + b.cooldown);
+    this.cdMult = 1 / (1 + b.cooldown + (this.uq.focus ? this.uq.focus.cooldown : 0));
     this.ultRate = 1 + b.ultCharge;
     this.killHeal = b.killHeal;
     this.hitHeal = b.hitHeal;
@@ -595,6 +595,8 @@ export class Player {
     this.game.profile.dmgTaken += amount;
     const fx = this.game.effects;
     let d = amount * this.takenFactor();
+    const glass = this.game.modOn('glass'); // modifier Glass Cannon
+    if (glass) d *= glass.taken;
     if (this.shield > 0) {
       const absorbed = Math.min(this.shield, d);
       this.shield -= absorbed;

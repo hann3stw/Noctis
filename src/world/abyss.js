@@ -176,7 +176,7 @@ export class Abyss {
       game.loot.drop(c.x, c.z + 2, item);
       game.hud.uniqueDrop(item, c.x, c.z + 2);
     }
-    const ess = Math.round(A.essencePerFloor * this.floor * (1 + game.gates.runMods.length * CONFIG.modifiers.luck));
+    const ess = Math.round(A.essencePerFloor * this.floor * (1 + game.goals.modCount(game.gates.runMods) * CONFIG.modifiers.luck));
     P.essence += ess;
     track('abyss_floor', { floor: this.floor, rec: record ? 1 : 0 });
     game.hud.banner(t('abyss.cleared', { n: this.floor }), record && this.floor > 1 ? t('abyss.record', { n: this.floor }) : t('toast.essence', { n: ess }));
@@ -198,7 +198,7 @@ export class Abyss {
   }
 
   luck() {
-    return this.game.player.luck + CONFIG.abyss.luckPerFloor * this.floor + this.game.gates.runMods.length * CONFIG.modifiers.luck;
+    return this.game.player.luck + CONFIG.abyss.luckPerFloor * this.floor + this.game.goals.modCount(this.game.gates.runMods) * CONFIG.modifiers.luck;
   }
 
   uniqueChance(boss) {

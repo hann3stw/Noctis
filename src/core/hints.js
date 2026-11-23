@@ -9,7 +9,7 @@ export function hints(game) {
     ['gear', P.inventory.some((it) => it.n) ? 1 : 0],
     ['skills', P.newSkills.length || (game.mastery && game.mastery.anyPending()) ? 1 : 0],
     ['path', game.classDue() || game.path.due() ? 1 : 0],
-    ['quests', game.quests.ready()],
+    ['quests', game.quests.ready() + game.goals.ready()],
     ['bestiary', game.bestiary.fresh.size ? 1 : 0],
     ['barracks', game.barracks && game.barracks.report ? 1 : 0],
   ];

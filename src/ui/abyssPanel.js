@@ -9,7 +9,7 @@ import { flashClass } from '../core/format.js';
 import { Board } from './board.js';
 
 const MOD_ICONS = {
-  explode: '💥', noHeal: '✚', timeLimit: '⏱', swift: '»', weakArmy: '☍', elites: '♛', tough: '⛨', manaCurse: '✦',
+  explode: '💥', noHeal: '✚', timeLimit: '⏱', swift: '»', weakArmy: '☍', elites: '♛', tough: '⛨', manaCurse: '✦', brutal: '⚔', glass: '❖',
 };
 
 export class AbyssPanel {
@@ -89,9 +89,10 @@ export class AbyssPanel {
       const on = mods.includes(id);
       const full = !on && n >= max;
       return `<button class="ab-mod${on ? ' on' : ''}" data-act="mod" data-id="${id}"${full ? ' disabled' : ''}>
-        <i>${MOD_ICONS[id] || '•'}</i><div><b>${t('mod.' + id)}</b><small>${t('modd.' + id)}</small></div></button>`;
+        <i>${MOD_ICONS[id] || '•'}</i><div><b>${t('mod.' + id)}${id === game.goals.featured() ? ` <em class="ab-feat">★ ${t('goal.weekly')}</em>` : ''}</b><small>${t('modd.' + id)}</small></div></button>`;
     }).join('');
-    const pct = Math.round(n * M.luck * lm * 100), xp = Math.round(n * M.xp * 100);
+    const nl = game.goals.modCount(mods.slice(0, max)); // the weekly featured modifier counts double
+    const pct = Math.round(nl * M.luck * lm * 100), xp = Math.round(nl * M.xp * 100);
     const count = n ? t('mods.count', { n, max, luck: pct, xp }) : t('mods.none');
     let head, side = '', buttons;
     const board = this.mode === 'abyss' && this.tab === 'board';

@@ -11,6 +11,7 @@ import { ShadowStage } from './shadowStage.js';
 import { TAB_ICONS, SKILL_ICONS, SET_ICONS, SET_CSS } from './icons.js';
 import { gearIcon, WEAPON_ICONS } from './gearIcons.js';
 import { msToMidnight, today } from '../core/quests.js';
+import { msToMonday } from '../core/goals.js';
 import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
@@ -214,6 +215,8 @@ export class Menu {
       this.qPick = -1;
     } else if (act === 'qcancel') {
       this.qPick = this.qStone = -1;
+    } else if (act === 'wkClaim') {
+      this.game.goals.claim(Number(target.dataset.k));
     } else if (act === 'qmode') {
       this.qMode = target.dataset.v;
     } else if (act === 'stoneOpen') {
@@ -295,7 +298,7 @@ export class Menu {
       stats: P.points + P.mastery.pts > 0 ? P.points + P.mastery.pts : '',
       gear: P.inventory.some((it) => it.n) ? '!' : '',
       skills: P.newSkills.length || this.game.mastery.anyPending() ? '!' : '',
-      quests: this.game.quests.ready() || '',
+      quests: this.game.quests.ready() + this.game.goals.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
       path: this.game.classDue() || this.game.path.due() ? '!' : '',
       barracks: campNews(this.game),
@@ -699,14 +702,18 @@ export class Menu {
     const head = `<div class="q-head"><b>${t('quest.title')}</b><small>${t('quest.renew', { h, m })}</small>
         <span class="q-seals" title="${t('quest.sealsHint')}">${t('quest.sealsN', { n: Q.seals })}</span></div>
       <div class="q-streak"><b>${t('quest.streak', { n: Q.streak })}</b><small>${claimedToday ? t('quest.streakDone') : t('quest.streakOpen')}${nextTxt ? ' · ' + nextTxt : ''}</small></div>
-      <div class="q-tabs"><button class="seg${shop ? '' : ' on'}" data-act="qmode" data-v="quests">${t('quest.tabQuests')}</button>
+      <div class="q-tabs"><button class="seg${this.qMode === 'quests' ? ' on' : ''}" data-act="qmode" data-v="quests">${t('quest.tabQuests')}</button>
+        <button class="seg${this.qMode === 'weekly' ? ' on' : ''}" data-act="qmode" data-v="weekly">${t('goal.tabWeekly')}${this.game.goals.ready() ? ' •' : ''}</button>
+        <button class="seg${this.qMode === 'goals' ? ' on' : ''}" data-act="qmode" data-v="goals">${t('goal.tabGoals')}</button>
         <button class="seg${shop ? ' on' : ''}" data-act="qmode" data-v="shop">${t('quest.tabShop')}</button>
         ${Q.stones.length ? `<button class="ap-btn gold" data-act="stoneOpen" data-i="0">${t('quest.useStone', { n: Q.stones.length })}</button>` : ''}
         ${Q.xpTokens ? `<button class="ap-btn gold" data-act="useXp">${t('quest.useXp', { n: Q.xpTokens })}</button>` : ''}
         ${Q.respecs ? `<span class="q-seals">${t('quest.respecN', { n: Q.respecs })}</span>` : ''}
         ${Q.keys ? `<button class="ap-btn gold" data-act="useKey"${this.game.gates.active >= 0 ? ' disabled' : ''}>${t('quest.useKey', { n: Q.keys })}</button>` : ''}</div>${this.game.xpBoostT > 0 ? `<div class="q-streak"><b>${t('quest.xpActive', { t: Math.floor(this.game.xpBoostT / 60) + ':' + String(Math.floor(this.game.xpBoostT % 60)).padStart(2, '0') })}</b></div>` : ''}`;
     let body;
-    if (shop) {
+    if (this.qMode === 'weekly') body = this.weeklyBody();
+    else if (this.qMode === 'goals') body = this.goalsBody();
+    else if (shop) {
       body = `<div class="q-list">${C.shop.filter((o) => this.game.hasArmy() || !(o.tier !== undefined || o.id === 'revive')).map((o) => {
         const left = Q.shopLeft(o), ok = Q.seals >= o.cost && left > 0 && !(o.id === 'revive' && !this.game.army.deployed.some((u) => !u.alive)) && !(o.id === 'rune' && !this.game.runes.canFind()) && !(o.id === 'xp' && Q.xpTokens >= C.xpBoost.max) && !(o.id === 'key' && Q.keys >= C.keyGate.max) && !(o.id === 'respec' && Q.respecs >= C.respec.max);
         const desc = o.tier !== undefined ? t('quest.shop.stone', { tier: t('quest.tier.' + o.tier) })
@@ -734,6 +741,39 @@ export class Menu {
         <button class="ap-btn ghost" data-act="qcancel">${t('quest.later')}</button></div></div>`;
     }
     return `<div class="quests" data-scroll="quests">${head}${body}${modal}</div>`;
+  }
+
+  // weekly goals: three a week, claimed for seals and essence; the featured modifier of the week
+  weeklyBody() {
+    const Gl = this.game.goals, W = CONFIG.goals.weekly;
+    const ms = msToMonday(), d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000);
+    const cards = Gl.list.map((q, k) => {
+      const have = Gl.have(q), done = Gl.done(q);
+      const btn = q.claimed ? `<span class="q-got">${t('quest.claimed')}</span>`
+        : done ? `<button class="ap-btn" data-act="wkClaim" data-k="${k}">${t('quest.claim')}</button>`
+          : `<span class="q-n">${fmt(have)} / ${fmt(q.n)}</span>`;
+      return `<div class="q-card d${q.d}${done ? ' done' : ''}${q.claimed ? ' got' : ''}">
+        <em>${t('quest.d' + q.d)}</em><b>${Gl.text(q)}</b>
+        <div class="q-bar"><i style="width:${Math.round((have / q.n) * 100)}%"></i></div>
+        <div class="q-foot"><small>${t('goal.reward', { seals: W.seals[q.d], ess: fmt(Gl.essence(q)) })}</small>${btn}</div></div>`;
+    }).join('');
+    const all = Gl.list.filter((q) => q.claimed).length, f = Gl.featured();
+    return `<div class="q-list"><div class="q-streak"><b>${t('goal.featured', { name: t('mod.' + f) })}</b><small>${t('goal.featuredHint')} · ${t('goal.renew', { d, h })}</small></div>${cards}</div>
+      <div class="q-bonus${Gl.bonus ? ' got' : ''}">${Gl.bonus ? t('goal.bonusDone') : t('goal.bonus', { n: all, seals: W.bonusSeals, rarity: t('rarity.' + W.bonusRarity) })}</div>`;
+  }
+
+  // achievements: the ones closest to the next tier first, finished ones last
+  goalsBody() {
+    const Gl = this.game.goals, A = CONFIG.goals;
+    const rows = A.achievements.filter((a) => Gl.usable(a)).map((a) => {
+      const v = Gl.value(a), n = Gl.tiers[a.id], top = n >= a.tiers.length, next = top ? a.tiers[a.tiers.length - 1] : a.tiers[n], prev = n > 0 ? a.tiers[n - 1] : 0;
+      return { a, v, n, top, next, ratio: top ? -1 : Math.min(1, Math.max(0, (v - prev) / (next - prev))) };
+    }).sort((x, y) => y.ratio - x.ratio);
+    const cards = rows.map(({ a, v, n, top, next, ratio }) => `<div class="q-card${top ? ' got' : ''}">
+        <em>${t('goal.tier', { n, max: a.tiers.length })}</em><b>${t('goal.a.' + a.id + '.name')}</b><small>${t('goal.a.' + a.id + '.desc', { n: fmt(next) })}</small>
+        <div class="q-bar"><i style="width:${top ? 100 : Math.round(ratio * 100)}%"></i></div>
+        <div class="q-foot"><small>${top ? t('goal.maxed') : t('goal.next', { seals: A.sealsPerTier[Math.min(A.sealsPerTier.length - 1, n)] })}</small><span class="q-n">${fmt(Math.min(v, next))} / ${fmt(next)}</span></div></div>`).join('');
+    return `<div class="q-list"><div class="q-streak"><b>${t('goal.total', { n: Gl.total(), max: Gl.max() })}</b><small>${t('goal.totalHint')}</small></div>${cards}</div>`;
   }
 
   // ---- bestiary ----------------------------------------------------------------

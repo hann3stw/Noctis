@@ -394,6 +394,8 @@ export const CONFIG = {
       elites: { chance: 0.45 }, // many more elites (gate helpers are all elites)
       tough: { hp: 1.5 }, // enemies have more health
       manaCurse: { cost: 2 }, // skills cost twice the mana
+      brutal: { damage: 1.35 }, // enemies hit 35 % harder
+      glass: { taken: 1.5 }, // you take 50 % more damage
     },
   },
 
@@ -414,12 +416,26 @@ export const CONFIG = {
       storm: { chance: 0.25, jumps: 2, damage: 0.4, range: 6 }, // a hit may zap 2 enemies nearby for 40 %
       reaper: { heal: 0.03 }, // kills heal 3 % and give an attack charge back
       execute: { below: 0.3, damage: 0.8 }, // +80 % damage on enemies below 30 % health
+      sunder: { damage: 0.6 }, // +60 % damage on elites and bosses
+      leech: { heal: 0.002 }, // every hit heals 0.2 % of the maximum health
     },
     armor: {
-      helmet: { insight: { critDamage: 0.5 } }, // +50 % crit damage
-      chest: { bastion: { shield: 0.15, time: 4, cooldown: 8 } }, // when hit: a shield of 15 % max health
-      gloves: { frenzy: { perHit: 0.03, max: 0.3, time: 4 } }, // every hit: 3 % faster reload for 4 s (up to 30 %)
-      boots: { voidstep: { power: 3, radius: 3.5, delay: 0.4 } }, // dodging leaves an explosion behind (x skill damage)
+      helmet: {
+        insight: { critDamage: 0.5 }, // +50 % crit damage
+        focus: { manaRegen: 0.5, cooldown: 0.1 }, // +50 % mana regeneration, skills 10 % faster
+      },
+      chest: {
+        bastion: { shield: 0.15, time: 4, cooldown: 8 }, // when hit: a shield of 15 % max health
+        titan: { hp: 0.3 }, // +30 % maximum health
+      },
+      gloves: {
+        frenzy: { perHit: 0.03, max: 0.3, time: 4 }, // every hit: 3 % faster reload for 4 s (up to 30 %)
+        precision: { crit: 0.12 }, // +12 % critical chance
+      },
+      boots: {
+        voidstep: { power: 3, radius: 3.5, delay: 0.4 }, // dodging leaves an explosion behind (x skill damage)
+        windrunner: { speed: 0.2 }, // +20 % movement speed
+      },
     },
   },
 
@@ -989,6 +1005,57 @@ export const CONFIG = {
   // Bestiary: every kind of monster gets a page that fills with kills (yours
   // and your army's). steps = kills for name, behaviour, mastered; a mastered
   // kind takes bonus more damage from you and your army.
+  // Goals for the middle of the game (core/goals.js). Achievements: stat = what is counted, tiers = the numbers
+  // that give a tier, paid in Soul Seals (sealsPerTier by tier number). Weekly: three goals a week from the
+  // pools (one per difficulty), numbers grow with the rank when scale is on, claimed for seals and essence
+  // (x zone number + 1); all three give a Gate Key, an item and bonus seals.
+  goals: {
+    sealsPerTier: [2, 3, 4, 6, 8, 12, 16, 20, 25, 30],
+    achievements: [
+      { id: 'kills', stat: 'kills', tiers: [100, 1000, 5000, 25000, 100000, 300000] },
+      { id: 'elites', stat: 'elites', tiers: [10, 100, 500, 2000, 5000] },
+      { id: 'bosses', stat: 'bosses', tiers: [1, 10, 50, 200] },
+      { id: 'gates', stat: 'gates', tiers: [1, 10, 50, 200, 500] },
+      { id: 'stages', stat: 'stages', tiers: [10, 100, 500, 2000] },
+      { id: 'hunts', stat: 'hunts', tiers: [1, 5, 15, 50] },
+      { id: 'chests', stat: 'chests', tiers: [5, 50, 250, 1000] },
+      { id: 'outposts', stat: 'outposts', tiers: [1, 5, 15, 30] },
+      { id: 'raised', stat: 'raised', tiers: [10, 100, 500, 2000, 10000] },
+      { id: 'casts', stat: 'casts', tiers: [50, 500, 5000, 25000] },
+      { id: 'dodges', stat: 'dodges', tiers: [50, 500, 5000, 25000] },
+      { id: 'level', stat: 'level', tiers: [10, 25, 50, 100, 200, 300, 450, 650, 850, 1000] },
+      { id: 'floor', stat: 'floor', tiers: [1, 10, 25, 50, 100] },
+      { id: 'tier', stat: 'tier', tiers: [1, 3, 5, 8, 10] },
+      { id: 'mastered', stat: 'mastered', tiers: [1, 10, 25, 50] },
+      { id: 'hours', stat: 'hours', tiers: [1, 5, 10, 25, 50, 100] },
+      { id: 'streak', stat: 'streak', tiers: [3, 7, 14, 30] },
+      { id: 'duels', stat: 'duels', tiers: [1, 10, 50] },
+      { id: 'spells', stat: 'spells', tiers: [1, 3, 6, 12] },
+    ],
+    weekly: {
+      rankScale: 0.35,
+      seals: [6, 12, 20],
+      essence: [60, 120, 240],
+      bonusSeals: 10,
+      bonusRarity: 3,
+      kinds: {
+        kills: { n: [300, 700, 1500], scale: true },
+        chests: { n: [6, 12, 20] },
+        casts: { n: [100, 250, 500] },
+        raised: { n: [30, 60, 120], scale: true },
+        elites: { n: [12, 25, 50], scale: true },
+        stages: { n: [8, 16, 28] },
+        gates: { n: [2, 4, 7] },
+        bosses: { n: [1, 3, 5] },
+      },
+      pools: [
+        ['kills', 'chests', 'casts', 'raised'],
+        ['elites', 'stages', 'gates', 'kills'],
+        ['gates', 'stages', 'bosses', 'elites'],
+      ],
+    },
+  },
+
   bestiary: {
     steps: [1, 25, 100],
     bossSteps: [1, 3, 5],

@@ -12,6 +12,9 @@ export function playerHit(game, i, base, kx, kz) {
   let dmg = base * (1 + (Math.random() * 2 - 1) * CONFIG.combat.damageVariance);
   // Last Rites: more damage on wounded enemies
   if (U.execute && E.hp[i] < E.maxHp[i] * U.execute.below) dmg *= 1 + U.execute.damage;
+  // Sunder: more damage on elites and bosses; Leech: every hit heals a little
+  if (U.sunder && E.tier[i] >= 1) dmg *= 1 + U.sunder.damage;
+  if (U.leech) P.heal(P.maxHp * U.leech.heal);
   let crit = Math.random() < P.crit + P.cp * CONFIG.rogue.critPerPoint; // Rogue: Combo Points
   // class skill Execute (Slayer): more damage on elites and bosses
   const ex = game.path.skillOf('slayer');

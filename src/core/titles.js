@@ -22,6 +22,7 @@ export const TITLES = {
   unbroken: (g) => g.profile.time >= 3 * HOUR && g.profile.deaths === 0,
   soul_weaver: (g) => g.profile.casts >= 5000,
   beast_scholar: (g) => g.bestiary.counts().mastered >= 20,
+  completionist: (g) => g.goals.total() >= 60,
   apex_hunter: (g) => g.rankIndex >= 9,
   duelist: (g) => g.duel.won >= 10,
   iron_commander: (g) => g.path.chosen.some((c) => c.core === 'commander'),
