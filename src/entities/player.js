@@ -112,7 +112,7 @@ export class Player {
     // evolution mechanics (core/classMechanics.js): Momentum (Berserker), Bond (Beastmaster), Aegis (Sentinel)
     this.momentum = 0; this.momGap = 0; this.momDecay = 0;
     this.overload = 0;
-    this.bond = 0; this.bondSec = 0; this.bondGot = 0;
+    this.bond = 0; this.bondSec = 0; this.bondGot = 0; this.bondCalm = 0;
     this.aegis = 0; this.aegisT = 0; // aegisT: a Sentinel shield / guard is up (only then Aegis grows)
     this.buffT = 0; this.buffV = 0; // a skill makes the hunter hit harder for a while (Primal Apex)
     this.counts = { attack: 0, dodge: 0, cast: 0 }; // for the tutorial

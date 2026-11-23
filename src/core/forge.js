@@ -1,5 +1,5 @@
-// The Spell Forge, for the Mage only. A spell is built from blocks: a FORM (how it hits: wave, bolt, nova,
-// strike), an ELEMENT (what it is made of) and an EFFECT (what else it does). A new spell has one element and one
+// The Spell Forge, for the classes with the right to it (the Mage, the Stormcaller). A spell is built from blocks: a
+// FORM (how it hits: wave, bolt, nova, strike, eruption, aura), an ELEMENT (what it is made of) and an EFFECT (what else it does). A new spell has one element and one
 // effect. A spell can then be FUSED: its blocks are the start of a new spell that may carry a second element and
 // up to three effects (the old spell stays). More blocks make a spell stronger and dearer. Blocks open with the
 // rank. The spells are skills like all others (they go into the skill slots, grow with mastery, can get perks);
@@ -14,6 +14,10 @@ export const FORMS = {
   bolt: { unlock: 1, aim: 'line', mana: 16, cooldown: 5, power: 2.4, range: 17, width: 1.3, icon: 'M2 12l12-3 1-4 7 7-7 7-1-4z' },
   nova: { unlock: 2, aim: 'self', mana: 24, cooldown: 9, power: 1.7, radius: 5.5, icon: 'M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-5 4 1-6-6-1 5-3-3-5 6 2z' },
   strike: { unlock: 3, aim: 'point', mana: 22, cooldown: 8, power: 2.6, range: 12, radius: 4, icon: 'M11 2h2v9l4 2-5 9-5-9 4-2z' },
+  // power is per pulse: an eruption breaks out of the ground at the target in 3 pulses; an aura pulses 6 times
+  // where it was cast (it does not follow the hunter)
+  eruption: { unlock: 3, aim: 'point', mana: 26, cooldown: 10, power: 1, range: 12, radius: 4.5, ticks: 3, interval: 0.5, delay: 0.6, icon: 'M4 20h16v2H4zM12 3l3 7-2-1-1 6-1-6-2 1zM5 14l3-4 1 5zM19 14l-3-4-1 5z' },
+  aura: { unlock: 4, aim: 'self', mana: 28, cooldown: 12, power: 0.55, radius: 5.5, ticks: 6, interval: 0.6, delay: 0.2, icon: 'M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4z' },
 };
 export const ELEMENTS = {
   fire: { unlock: 1, color: 0xff7a30, power: 1.25 },
@@ -21,6 +25,9 @@ export const ELEMENTS = {
   arcane: { unlock: 1, color: 0x8aa8ff, mana: 0.75, cooldown: 0.9 },
   lightning: { unlock: 2, color: 0xfff07a, range: 1.25, radius: 1.2 },
   shadow: { unlock: 3, color: 0xb27cff, leech: 0.4, power: 0.95 },
+  earth: { unlock: 2, color: 0xb08850, power: 0.88, knock: 3, stun: 0.3 }, // control: pushes and staggers, a little less damage
+  nature: { unlock: 3, color: 0x6ad060, power: 0.9, heal: 0.03 }, // a small heal with every cast
+  storm: { unlock: 4, color: 0xa8e8ff, range: 1.2, chain: 2 }, // longer reach and a bolt that leaps on to 2 enemies
 };
 export const EFFECTS = {
   damage: { unlock: 1, power: 1.3, mana: 1.15 },
@@ -29,7 +36,12 @@ export const EFFECTS = {
   heal: { unlock: 2, heal: 0.08 },
   shield: { unlock: 3, shield: 0.12 },
   haste: { unlock: 4, cooldown: 0.75 },
+  burn: { unlock: 2, burn: 0.36, mana: 1.1 }, // the enemies burn for 3 s: burn x the damage over that time
+  stun: { unlock: 3, stun: 0.8, mana: 1.1 },
+  knockback: { unlock: 3, knock: 4 },
 };
+// the limits of a spell, however it is built
+export const CAPS = { power: 12, stun: 2.5, heal: 0.25, shield: 0.4, range: 22, radius: 9, chain: 3, chainRange: 8, knock: 6, burn: 0.8, burnTime: 3 };
 const MAX_SPELLS = 12;
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 
@@ -37,8 +49,8 @@ const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 export function buildDef(spec) {
   const F = FORMS[spec.form];
   const d = { aim: F.aim, mana: F.mana, cooldown: F.cooldown, power: F.power };
-  for (const k of ['range', 'arcDeg', 'width', 'radius']) if (F[k]) d[k] = F[k];
-  let stun = 0, leech = 0, mark = 0, pull = 0, heal = 0, shield = 0;
+  for (const k of ['range', 'arcDeg', 'width', 'radius', 'ticks', 'interval', 'delay']) if (F[k]) d[k] = F[k];
+  let stun = 0, leech = 0, mark = 0, pull = 0, heal = 0, shield = 0, knock = 0, burn = 0, chain = 0;
   for (const b of [...spec.elements.map((k) => ELEMENTS[k]), ...spec.effects.map((k) => EFFECTS[k])]) {
     if (b.power) d.power *= b.power;
     if (b.mana) d.mana *= b.mana;
@@ -51,12 +63,21 @@ export function buildDef(spec) {
     if (b.pull) pull = b.pull;
     if (b.heal) heal += b.heal;
     if (b.shield) shield += b.shield;
+    if (b.knock) knock = Math.max(knock, b.knock);
+    if (b.burn) burn += b.burn;
+    if (b.chain) chain = Math.max(chain, b.chain);
   }
   // more blocks: stronger, dearer; a crafted spell is a little stronger than a normal skill (the Mage's edge)
   const extra = spec.elements.length + spec.effects.length - 2;
   d.power *= 1.1 * (1 + 0.15 * extra);
   d.mana *= 1 + 0.2 * extra;
-  d.power = Math.round(d.power * 100) / 100;
+  // the limits (CAPS), so no mix of blocks can go wild
+  d.power = Math.round(Math.min(CAPS.power, d.power) * 100) / 100;
+  if (d.range) d.range = Math.min(CAPS.range, d.range);
+  if (d.radius) d.radius = Math.min(CAPS.radius, d.radius);
+  stun = Math.min(CAPS.stun, stun);
+  heal = Math.min(CAPS.heal, heal);
+  shield = Math.min(CAPS.shield, shield);
   d.mana = Math.max(1, Math.round(d.mana));
   d.cooldown = Math.round(d.cooldown * 10) / 10;
   if (d.range) d.range = Math.round(d.range * 10) / 10;
@@ -67,6 +88,9 @@ export function buildDef(spec) {
   if (pull) d.pull = pull;
   if (heal) d.healSelf = heal;
   if (shield) d.shield = shield;
+  if (knock) d.knock = Math.min(CAPS.knock, knock);
+  if (burn) { d.burn = Math.round(Math.min(CAPS.burn, burn) * 100) / 100; d.burnTime = CAPS.burnTime; }
+  if (chain) { d.chain = Math.min(CAPS.chain, chain); d.chainRange = Math.min(CAPS.chainRange, 6); }
   d.custom = true;
   d.form = spec.form;
   d.els = [...spec.elements];

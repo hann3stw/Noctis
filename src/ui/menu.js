@@ -16,6 +16,7 @@ import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 import { skillOk } from '../core/classes.js';
+import { affinityHtml, historyHtml } from './classPanel.js';
 import { hints } from '../core/hints.js';
 import { campView, campHub, campAct, campSections, campNews, SECTIONS } from './camp.js';
 
@@ -608,7 +609,8 @@ export class Menu {
         <div class="s-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${t('hud.level', { level: P.level })}</b><span>${t('stats.xp', { xp: fmt(Math.floor(P.xp)), need: fmt(P.xpNeed()) })}</span>
           <small class="s-rank">${rank}</small>${tiers ? `<small class="s-rank">${t('stats.tiers', { list: tiers })}</small>` : ''}
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
-      <div class="s-right" data-scroll="derived">${d}</div></div>`;
+      <div class="s-right" data-scroll="derived">${d}
+        <h4 class="rune-h">${t('aff.title')}</h4><small class="mp-note">${t('aff.hint')}</small>${affinityHtml(this.game, true)}${historyHtml(this.game)}</div></div>`;
   }
 
   // The tab row must fit (tablets have wide but short screens, phones narrow
@@ -899,6 +901,12 @@ export class Menu {
     if (def.combo) row('combo', '+' + def.combo);
     if (def.finisher) row('finisher', t('ks.finisherYes'));
     if (def.rage) row('rage', '+' + def.rage);
+    if (def.burn) row('burn', Math.round(def.burn * 100) + '% / ' + def.burnTime + 's');
+    if (def.chain) row('chain', def.chain);
+    if (def.knock) row('knock', def.knock);
+    if (def.bondCost) row('bond', '-' + def.bondCost);
+    if (def.aegisCost) row('aegis', '-' + def.aegisCost);
+    if (def.rageOnHit) row('rage', '+' + def.rageOnHit);
     if (def.duration) row('duration', def.duration + 's');
     return rows.join('');
   }
@@ -956,6 +964,10 @@ export class Menu {
       if (def.healSelf) rows.push(['healSelf', Math.round(def.healSelf * 100) + '%']);
       if (def.shield) rows.push(['shield', Math.round(def.shield * 100) + '%']);
       if (def.leech) rows.push(['leech', '✓']);
+      if (def.ticks) rows.push(['pulses', def.ticks + ' × ' + fmt(Math.round(P.skillPower() * def.power))]);
+      if (def.burn) rows.push(['burn', fmt(Math.round(P.skillPower() * def.power * def.burn)) + ' / ' + def.burnTime + 's']);
+      if (def.chain) rows.push(['chain', def.chain]);
+      if (def.knock) rows.push(['knock', def.knock]);
       preview = `<h3>${spellName(spec)}</h3>${rows.map(([k, v]) => `<div class="row"><span>${t('ks.' + k)}</span><b>${v}</b></div>`).join('')}`;
     }
     const err = fg.elements.length && fg.effects.length ? F.check(spec, from) : '';
@@ -988,12 +1000,14 @@ export class Menu {
     }).join('');
     const skillIds = Object.keys(CONFIG.skills).filter((s) => skillOk(s, this.game.mainClass)), ultIds = Object.keys(CONFIG.ultimates).filter((s) => skillOk(s, this.game.mainClass));
     const count = (ids) => ids.filter((id) => P.known.includes(id)).length;
+    // skills of an earlier class that this one cannot use: kept, only put away
+    const away = P.known.filter((id) => !skillOk(id, this.game.mainClass)).length;
     // found ones first
     const order = (ids) => [...ids].sort((x, y) => P.known.includes(y) - P.known.includes(x));
     const list = `<h4>${t('skills.listSkills', { n: count(skillIds), max: skillIds.length })}</h4>
       <div class="k-grid">${order(skillIds).map((id) => this.skillCard(id, '')).join('')}</div>
       <h4>${t('skills.listUlts', { n: count(ultIds), max: ultIds.length })}</h4>
-      <div class="k-grid">${order(ultIds).map((id) => this.skillCard(id, '')).join('')}</div>`;
+      <div class="k-grid">${order(ultIds).map((id) => this.skillCard(id, '')).join('')}</div>${away ? `<small class="mp-note">${t('skills.away', { n: away })}</small>` : ''}`;
 
     let detail = `<div class="g-none">${t('skills.select')}</div>`;
     const id = this.selSkill;

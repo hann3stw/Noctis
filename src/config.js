@@ -550,7 +550,7 @@ export const CONFIG = {
     arrowStorm: { for: ['ranger'], aim: 'point', range: 12, radius: 7, power: 1.1, ticks: 14, interval: 0.4 },
     primalFury: { for: ['ranger'], aim: 'self', radius: 12, armyDamage: 1, damage: 0.3, duration: 12 }, // you and your companion
     // Evolution classes (combat/abilities.js)
-    bloodstorm: { for: ['berserker'], unlockRank: 3, aim: 'self', radius: 7, power: 2.2, ticks: 6, interval: 0.3, rageBonus: 0.5, melee: true, color: 0xff3040, behaviors: ['whirl'] }, // up to +50 % at full Rage
+    bloodstorm: { for: ['berserker'], unlockRank: 3, aim: 'self', radius: 7, power: 1.8, ticks: 6, interval: 0.3, rageBonus: 0.5, melee: true, color: 0xff3040, behaviors: ['whirl'] }, // up to +50 % at full Rage
     tempestAscension: { for: ['stormcaller'], unlockRank: 3, aim: 'point', range: 12, radius: 8, power: 3, ticks: 4, interval: 0.6, stun: 0.5, jumps: 3, jumpRange: 7, lightning: true, color: 0xfff07a, behaviors: ['areaTicks', 'chainHit'] },
     primalApex: { for: ['beastmaster'], unlockRank: 3, aim: 'self', radius: 10, armyDamage: 1, armyGuard: 0.5, damage: 0.15, duration: 12, color: 0xff8a3a, behaviors: ['companionApex', 'damageBuff'] }, // armyGuard = less damage taken by the companion
     lastBastion: { for: ['sentinel'], unlockRank: 3, aim: 'self', radius: 8, power: 3, stun: 1.5, shield: 0.6, guard: 0.45, duration: 8, aegisShield: true, aegisCost: 50, color: 0xffd86a, behaviors: ['selfNova', 'shield', 'guard'] }, // spent Aegis makes the shield up to 50 % bigger

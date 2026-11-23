@@ -4264,9 +4264,10 @@ input.shake {
 
 /* ---- the Awakening (class panel) ---- */
 .aw-box { gap: calc(var(--u) * 0.8); }
-.aw-card { position: relative; }
+.aw-card { position: relative; overflow: visible; }
+.aw-grid { padding-top: calc(var(--u) * 1.4); }
 .aw-card.rec { box-shadow: inset 0 0 0 calc(var(--u) * 0.6) #ffd24a, 0 0 calc(var(--u) * 2.4) rgba(255, 210, 74, 0.45); }
-.aw-badge { position: absolute; top: calc(var(--u) * 0.8); right: calc(var(--u) * 0.8); text-decoration: none; font-size: calc(var(--u) * 1.8); padding: calc(var(--u) * 0.2) calc(var(--u) * 0.9); border-radius: calc(var(--u) * 1); background: #ffd24a; color: #2a1a00; font-weight: 700; }
+.aw-badge { position: absolute; top: calc(var(--u) * -1.2); left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 2; text-decoration: none; font-size: calc(var(--u) * 1.8); padding: calc(var(--u) * 0.2) calc(var(--u) * 0.9); border-radius: calc(var(--u) * 1); background: #ffd24a; color: #2a1a00; font-weight: 700; }
 .aw-card em { font-style: normal; font-size: calc(var(--u) * 1.9); color: #c9b8ff; }
 .aw-facts { list-style: none; margin: calc(var(--u) * 0.4) 0; padding: 0; width: 100%; display: grid; gap: calc(var(--u) * 0.2); }
 .aw-facts li { display: flex; justify-content: space-between; gap: calc(var(--u) * 1); font-size: calc(var(--u) * 1.9); border-bottom: 1px solid rgba(255, 255, 255, 0.07); }

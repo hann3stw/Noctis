@@ -746,7 +746,15 @@ function stunLine(game, x, z, dx, dz, len, width, secs) {
 function castCustom(game, def, dx, dz, tx, tz, base, yaw) {
   const P = game.player, E = game.enemies, fx = game.effects, col = def.color;
   let n = 0, cx = P.x, cz = P.z, cr = def.radius || 6;
-  if (def.aim === 'arc') {
+  const burnDps = def.burn ? (base * def.burn) / def.burnTime : 0;
+  if (def.ticks) {
+    // Eruption (at the target) and Aura (where it was cast): pulses of a zone; burn and push come with every pulse
+    const self = def.aim === 'self', x = self ? P.x : tx, z = self ? P.z : tz;
+    game.zones.add(x, z, def.radius, def.delay || 0.3, def.ticks, def.interval, base, def.stun || 0, col, false, { burn: burnDps, burnT: def.burnTime || 0, knock: def.knock || 0 });
+    fx.ring(x, z, def.radius + 1, 0.4, col, 0.45);
+    fx.burst(x, self ? 1.4 : 0.4, z, 30, col, 8, 0.26, 0.8, self ? 2 : 4);
+    cx = x; cz = z; cr = def.radius;
+  } else if (def.aim === 'arc') {
     n = hitArc(game, P.x, P.z, dx, dz, def.range, def.arcDeg, base, def.stun || 0);
     fx.slash(P.x, P.z, yaw, def.range, def.arcDeg, col, EXPAND, 1, 0.4);
     fx.slash(P.x, P.z, yaw, def.range * 0.75, def.arcDeg, 0xffffff, EXPAND, 1, 0.3);
@@ -770,6 +778,14 @@ function castCustom(game, def, dx, dz, tx, tz, base, yaw) {
   }
   // a second element adds its colour
   if (def.colors && def.colors[1]) fx.burst(cx, 1.2, cz, 22, def.colors[1], 6, 0.22, 0.7);
+  // Burn and Knockback of the spells that hit at once (pulse forms do it with every pulse)
+  if (!def.ticks && def.burn) E.burnArea(cx, cz, cr, burnDps, def.burnTime);
+  if (!def.ticks && def.knock && E.push(cx, cz, cr, def.knock) && game.aff) game.aff.record('controlApplied');
+  // Storm: a bolt leaps from where the spell landed to more enemies
+  if (def.chain) {
+    const st = E.nearest(cx, cz, cr);
+    if (st >= 0) chainHit(game, st, cx, cz, base * 0.5, def.chain - 1, def.chainRange, col);
+  }
   if (def.pull) E.pull(cx, cz, cr, def.pull);
   if (def.mark) E.markArea(cx, cz, cr, def.mark);
   if (def.healSelf) { P.heal(P.maxHp * def.healSelf); fx.burst(P.x, 1.4, P.z, 14, 0x5cf08a, 4, 0.18, 0.6); }

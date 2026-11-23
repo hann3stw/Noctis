@@ -57,13 +57,16 @@ export const MECHANIC_IMPL = {
 
   // ---- Beastmaster: Bond grows with the hits and kills of the companion (capped per second), fades out of a fight
   companionBond: {
-    reset(P) { P.bondSec = 0; P.bondGot = 0; },
+    reset(P) { P.bondSec = 0; P.bondGot = 0; P.bondCalm = 0; },
     update(game, P, dt) {
       const B = M().companionBond;
-      if (P.bond > 0 && P.calmT > B.calm) P.bond = Math.max(0, P.bond - B.decay * dt);
+      P.bondCalm += dt;
+      // it fades only when neither the hunter nor the companion has fought for a while
+      if (P.bond > 0 && P.calmT > B.calm && P.bondCalm > B.calm) P.bond = Math.max(0, P.bond - B.decay * dt);
     },
     onCompanion(game, P, kill) {
       const B = M().companionBond, sec = Math.floor(game.playTime || 0);
+      P.bondCalm = 0;
       if (P.bondSec !== sec) { P.bondSec = sec; P.bondGot = 0; }
       const add = Math.min(kill ? B.kill : B.hit, B.perSec - P.bondGot);
       if (add <= 0) return;
