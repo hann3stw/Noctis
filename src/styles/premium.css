@@ -4312,3 +4312,5 @@ input.shake {
 .tr-pick.on { border-color: #ffd24a; box-shadow: 0 0 calc(var(--u) * 1.4) rgba(255, 210, 74, 0.5); }
 .tr-pick:disabled:not(.on) { opacity: 0.55; }
 .aw-card.lock { opacity: 0.6; filter: grayscale(0.4); }
+/* the Class path button in the Path tab */
+.pa-top .pa-class { flex: none; align-self: center; }

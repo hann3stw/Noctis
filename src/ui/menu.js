@@ -306,7 +306,7 @@ export class Menu {
       skills: P.newSkills.length || this.game.mastery.anyPending() ? '!' : '',
       quests: this.game.quests.ready() + this.game.goals.ready() || '',
       bestiary: this.game.bestiary.fresh.size ? '!' : '',
-      path: this.game.classDue() || this.game.path.due() ? '!' : '',
+      path: this.game.classDue() || this.game.path.due() || this.game.progressionPending() ? '!' : '', // also a pick of the class progression
       barracks: campNews(this.game),
     };
     if (this.tab === 'army' && !this.game.hasArmy()) this.tab = 'gear'; // no army without the Necromancer
@@ -615,7 +615,6 @@ export class Menu {
           <small class="s-rank">${rank}</small>${tiers ? `<small class="s-rank">${t('stats.tiers', { list: tiers })}</small>` : ''}
           <em class="${P.points > 0 ? 'on' : ''}">${t('stats.points', { n: P.points })}</em></div>${rows}</div>
       <div class="s-right" data-scroll="derived">${d}
-        ${this.game.mainClass ? `<button class="ap-btn" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}
         <h4 class="rune-h">${t('aff.title')}</h4><small class="mp-note">${t('aff.hint')}</small>${affinityHtml(this.game, true)}${historyHtml(this.game)}</div></div>`;
   }
 
@@ -671,7 +670,7 @@ export class Menu {
     }).join('');
     return `<div class="path" data-scroll="path">
       <div class="pa-top"><div class="pa-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
-        <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
+        <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}${this.game.mainClass ? `<button class="ap-btn pa-class" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}</div>
       ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}
       ${titles ? `<div class="pa-sub">${t('title.heading')}</div><div class="ttl-list">${titles}</div>` : ''}</div>`;
@@ -1051,7 +1050,7 @@ export class Menu {
         <div class="d-btns k-btns">${btns}</div>`;
     }
     return `<div class="skills">
-      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}${this.game.forge.open ? `<button class="ap-btn" data-act="forgeOpen">${t('forge.open')}</button>` : ''}${this.game.mainClass ? `<button class="ap-btn ghost" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}</div>
+      <div class="k-left"><h4>${t('skills.equipped')}</h4>${slots}${this.dodgeCard()}${this.game.forge.open ? `<button class="ap-btn" data-act="forgeOpen">${t('forge.open')}</button>` : ''}</div>
       <div class="k-mid" data-scroll="skills">${list}</div>
       <div class="g-right">${detail}</div></div>`;
   }
