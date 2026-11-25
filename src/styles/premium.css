@@ -4347,3 +4347,4 @@ input.shake {
 .pa-reroll, .pa-respec { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 1); }
 .pa-reroll small, .pa-respec small { color: #b9add6; font-size: calc(var(--u) * 1.8); }
 .pa-offer { padding-top: calc(var(--u) * 1.2); }
+.pa-role.new { background: #ffd24a; color: #2a1a00; }

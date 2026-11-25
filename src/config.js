@@ -826,38 +826,38 @@ export const CONFIG = {
     },
     weaponPick: 0.7, // chance that a weapon drop is of the weapons of the class group
     list: {
-      necromancer: { needs: { dominion: 30 }, group: 'necromancer', weapons: '', role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'] },
-      warrior: { needs: { might: 30 }, group: 'fighter', weapons: 'melee', role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver'] },
-      mage: { needs: { arcana: 30 }, group: 'mage', weapons: 'magic', role: 'ranged', ready: true, army: false, spellForge: true, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank'] },
-      rogue: { needs: { agility: 25, precision: 20 }, group: 'fighter', weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage'] },
-      ranger: { needs: { precision: 30 }, group: 'ranged', weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank'] },
-      cleric: { needs: { resilience: 25, arcana: 20 }, group: 'mage', weapons: 'magic', role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer'] },
+      necromancer: { needs: { dominion: 30 }, group: 'necromancer', weapons: '', role: 'summoner', ready: true, army: true, bonus: { damage: 0.15, armyDamage: 0.2, armySlots: 2, armyHp: 0.15 }, cores: ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver', 'blood', 'sanctum', 'fortune', 'void'] },
+      warrior: { needs: { might: 30 }, group: 'fighter', weapons: 'melee', role: 'tank', ready: true, army: false, startSkills: ['shieldBash'], startUltimate: 'earthshatter', bonus: { damage: 0.25, hp: 0.15 }, cores: ['tank', 'blade', 'slayer', 'delver', 'blood', 'flow', 'fortune', 'void'] },
+      mage: { needs: { arcana: 30 }, group: 'mage', weapons: 'magic', role: 'ranged', ready: true, army: false, spellForge: true, startSkills: ['arcaneBolt'], startUltimate: 'cataclysm', bonus: { mana: 0.3, skillDamage: 0.5, cooldown: 0.15 }, cores: ['mage', 'slayer', 'delver', 'tank', 'elemental', 'flow', 'fortune', 'void'] },
+      rogue: { needs: { agility: 25, precision: 20 }, group: 'fighter', weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['backstab'], startUltimate: 'deathBlossom', bonus: { crit: 0.1, speed: 0.08, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'mage', 'predator', 'blood', 'flow', 'fortune', 'void'] },
+      ranger: { needs: { precision: 30 }, group: 'ranged', weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['piercingShot'], startUltimate: 'arrowStorm', bonus: { speed: 0.1, crit: 0.06, damage: 0.18 }, cores: ['slayer', 'delver', 'blade', 'tank', 'predator', 'flow', 'fortune', 'void'] },
+      cleric: { needs: { resilience: 25, arcana: 20 }, group: 'mage', weapons: 'magic', role: 'support', ready: true, army: false, startSkills: ['smite'], startUltimate: 'divineIntervention', bonus: { hp: 0.12, skillDamage: 0.1 }, cores: ['mage', 'tank', 'delver', 'slayer', 'sanctum', 'elemental', 'fortune', 'void'] },
       // hybrids: a class that grows from the way you play (the second choice)
-      spellblade: { needs: { might: 30, arcana: 30 }, hybrid: true, group: 'fighter', base: 'warrior', skillFrom: ['warrior', 'mage'], weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, hp: 0.1 }, cores: ['blade', 'mage', 'tank', 'slayer'] },
-      paladin: { needs: { might: 25, resilience: 30 }, hybrid: true, group: 'fighter', base: 'cleric', skillFrom: ['cleric', 'warrior'], weapons: 'melee', role: 'support', ready: true, army: false, startSkills: ['shieldBash'], bonus: { hp: 0.2, damage: 0.15 }, cores: ['tank', 'mage', 'delver', 'slayer'] },
-      arcaneArcher: { needs: { precision: 30, arcana: 25 }, hybrid: true, group: 'ranged', base: 'ranger', skillFrom: ['ranger', 'mage'], weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, speed: 0.05 }, cores: ['slayer', 'mage', 'delver', 'blade'] },
-      skirmisher: { needs: { agility: 35, precision: 25 }, hybrid: true, group: 'ranged', base: 'rogue', skillFrom: ['rogue', 'ranger'], weapons: 'ranged', role: 'melee', ready: true, army: false, startSkills: ['piercingShot'], bonus: { crit: 0.1, speed: 0.1, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'tank'] },
+      spellblade: { needs: { might: 30, arcana: 30 }, hybrid: true, group: 'fighter', base: 'warrior', skillFrom: ['warrior', 'mage'], weapons: 'melee', role: 'melee', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, hp: 0.1 }, cores: ['blade', 'mage', 'tank', 'slayer', 'blood', 'elemental', 'flow', 'fortune', 'void'] },
+      paladin: { needs: { might: 25, resilience: 30 }, hybrid: true, group: 'fighter', base: 'cleric', skillFrom: ['cleric', 'warrior'], weapons: 'melee', role: 'support', ready: true, army: false, startSkills: ['shieldBash'], bonus: { hp: 0.2, damage: 0.15 }, cores: ['tank', 'mage', 'delver', 'slayer', 'sanctum', 'blood', 'fortune', 'void'] },
+      arcaneArcher: { needs: { precision: 30, arcana: 25 }, hybrid: true, group: 'ranged', base: 'ranger', skillFrom: ['ranger', 'mage'], weapons: 'ranged', role: 'ranged', ready: true, army: false, startSkills: ['arcaneBolt'], bonus: { damage: 0.15, skillDamage: 0.25, speed: 0.05 }, cores: ['slayer', 'mage', 'delver', 'blade', 'predator', 'elemental', 'fortune', 'void'] },
+      skirmisher: { needs: { agility: 35, precision: 25 }, hybrid: true, group: 'ranged', base: 'rogue', skillFrom: ['rogue', 'ranger'], weapons: 'ranged', role: 'melee', ready: true, army: false, startSkills: ['piercingShot'], bonus: { crit: 0.1, speed: 0.1, damage: 0.1 }, cores: ['blade', 'slayer', 'delver', 'tank', 'predator', 'flow', 'fortune', 'void'] },
       // the Necromancer's ways: the army stays, the way you fight decides what is added
-      deathKnight: { needs: { dominion: 30, might: 35 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'warrior'], weapons: 'melee', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, hp: 0.2, armyDamage: 0.1 }, cores: ['blade', 'tank', 'commander', 'slayer', 'delver'] },
-      boneArcher: { needs: { dominion: 30, precision: 30 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'ranger'], weapons: 'ranged', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, crit: 0.08, armyHp: 0.1 }, cores: ['slayer', 'blade', 'commander', 'delver', 'tank'] },
-      warlock: { needs: { dominion: 30, arcana: 35 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'mage'], weapons: 'magic', role: 'summoner', ready: true, army: true, bonus: { skillDamage: 0.4, mana: 0.25, armyDamage: 0.1 }, cores: ['mage', 'commander', 'slayer', 'delver', 'tank'] },
-      commander: { needs: { dominion: 55 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer'], weapons: '', role: 'summoner', ready: true, army: true, minFit: 0.5, bonus: { armyDamage: 0.35, armySlots: 4, armyHp: 0.3 }, cores: ['commander', 'tank', 'delver', 'slayer', 'mage', 'blade'] },
+      deathKnight: { needs: { dominion: 30, might: 35 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'warrior'], weapons: 'melee', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, hp: 0.2, armyDamage: 0.1 }, cores: ['blade', 'tank', 'commander', 'slayer', 'delver', 'blood', 'fortune', 'void'] },
+      boneArcher: { needs: { dominion: 30, precision: 30 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'ranger'], weapons: 'ranged', role: 'summoner', ready: true, army: true, bonus: { damage: 0.25, crit: 0.08, armyHp: 0.1 }, cores: ['slayer', 'blade', 'commander', 'delver', 'tank', 'predator', 'fortune', 'void'] },
+      warlock: { needs: { dominion: 30, arcana: 35 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer', 'mage'], weapons: 'magic', role: 'summoner', ready: true, army: true, bonus: { skillDamage: 0.4, mana: 0.25, armyDamage: 0.1 }, cores: ['mage', 'commander', 'slayer', 'delver', 'tank', 'elemental', 'blood', 'fortune', 'void'] },
+      commander: { needs: { dominion: 55 }, hybrid: true, group: 'necromancer', base: 'necromancer', skillFrom: ['necromancer'], weapons: '', role: 'summoner', ready: true, army: true, minFit: 0.5, bonus: { armyDamage: 0.35, armySlots: 4, armyHp: 0.3 }, cores: ['commander', 'tank', 'delver', 'slayer', 'mage', 'blade', 'sanctum', 'fortune', 'void'] },
       // Class evolutions (rank B, core/awakening.js): built from the blocks of core/classComponents.js, which fill
       // in weapons, army, companion, spellForge, cores and bonus. parents = the classes it grows from (their skills
       // stay usable); base = the class whose mechanic infrastructure it uses; mechanic = its own mechanic on top;
       // rank = the rank index it can be reached at; needs = the affinities it asks for (core/affinities.js).
       berserker: { evolution: true, family: 'vanguard', parents: ['warrior'], base: 'warrior', mechanic: 'berserkerMomentum', group: 'fighter', role: 'melee', ready: true, rank: 3, needs: { might: 50, resilience: 25 },
         startSkills: ['frenzyCleave'], startUltimate: 'bloodstorm',
-        components: { weapon: 'melee', passive: ['berserkerFury'], skillPackage: 'berserker', ultimate: 'bloodstorm', capabilities: [], pathAccess: ['blade', 'tank', 'slayer', 'delver'] } },
+        components: { weapon: 'melee', passive: ['berserkerFury'], skillPackage: 'berserker', ultimate: 'bloodstorm', capabilities: [], pathAccess: ['blade', 'tank', 'slayer', 'delver', 'blood', 'flow', 'fortune', 'void'] } },
       stormcaller: { evolution: true, family: 'arcanist', parents: ['mage'], base: 'mage', mechanic: 'stormOverload', group: 'mage', role: 'ranged', ready: true, rank: 3, needs: { arcana: 50, control: 25 },
         startSkills: ['thunderLance'], startUltimate: 'tempestAscension',
-        components: { weapon: 'magic', passive: ['stormAttunement'], skillPackage: 'stormcaller', ultimate: 'tempestAscension', capabilities: ['spellForgeAccess'], pathAccess: ['mage', 'slayer', 'delver', 'tank'] } },
+        components: { weapon: 'magic', passive: ['stormAttunement'], skillPackage: 'stormcaller', ultimate: 'tempestAscension', capabilities: ['spellForgeAccess'], pathAccess: ['mage', 'slayer', 'delver', 'tank', 'elemental', 'flow', 'fortune', 'void'] } },
       beastmaster: { evolution: true, family: 'warden', parents: ['ranger'], base: 'ranger', mechanic: 'companionBond', group: 'ranged', role: 'ranged', ready: true, rank: 3, needs: { dominion: 40, instinct: 35 },
         startSkills: ['preyMark'], startUltimate: 'primalApex',
-        components: { weapon: 'ranged', passive: ['packInstinct'], skillPackage: 'beastmaster', ultimate: 'primalApex', capabilities: ['companionAccess'], pathAccess: ['slayer', 'delver', 'blade', 'tank'] } },
+        components: { weapon: 'ranged', passive: ['packInstinct'], skillPackage: 'beastmaster', ultimate: 'primalApex', capabilities: ['companionAccess'], pathAccess: ['slayer', 'delver', 'blade', 'tank', 'predator', 'flow', 'fortune', 'void'] } },
       sentinel: { evolution: true, family: 'vanguard', families: ['vanguard', 'warden'], parents: ['cleric', 'paladin'], base: 'cleric', mechanic: 'aegis', group: 'fighter', role: 'support', ready: true, rank: 3, needs: { resilience: 45, might: 20 },
         startSkills: ['aegisOath'], startUltimate: 'lastBastion',
-        components: { weapon: 'melee', passive: ['bulwarkFaith'], skillPackage: 'sentinel', ultimate: 'lastBastion', capabilities: [], pathAccess: ['tank', 'mage', 'delver', 'slayer'] } },
+        components: { weapon: 'melee', passive: ['bulwarkFaith'], skillPackage: 'sentinel', ultimate: 'lastBastion', capabilities: [], pathAccess: ['tank', 'mage', 'delver', 'slayer', 'sanctum', 'blood', 'fortune', 'void'] } },
       // prepared evolution targets: not playable yet (ready: false), never offered and their skills never drop
       assassin: { evolution: true, family: 'predator', parents: ['rogue'], base: 'rogue', group: 'fighter', role: 'melee', ready: false, rank: 4, needs: { precision: 55, agility: 35 }, components: { weapon: 'melee', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['blade', 'slayer', 'delver'] } },
       phantomDuelist: { evolution: true, family: 'predator', parents: ['rogue', 'spellblade'], base: 'rogue', group: 'fighter', role: 'melee', ready: false, rank: 4, needs: { agility: 55, might: 30 }, components: { weapon: 'melee', passive: [], skillPackage: '', ultimate: '', capabilities: [], pathAccess: ['blade', 'slayer', 'mage'] } },
@@ -938,6 +938,64 @@ export const CONFIG = {
         like: { gates: 1 },
         skill: { id: 'resolve', value: [0.15, 0.25, 0.4] }, // value = share of max health healed per gate stage cleared
         unlocks: [{ id: 'contracts', stage: 3 }],
+      },
+      // ---- the cores that open later (minRank = the rank index from which they are offered). Their `like`
+      // weights read the affinities (core/affinities.js, 0..1), the older ones the play measures of metrics().
+      predator: {
+        minRank: 2,
+        bonus: { damage: 0.05, crit: 0.01, speed: 0.01, companionDamage: 0.06 },
+        rule: { selfXp: 0.02 },
+        like: { instinct: 0.6, precision: 0.4 },
+        skill: { id: 'huntersInstinct', value: [0.25, 0.25, 0.25], time: [3, 5, 7] }, // time = seconds an enemy stays marked after your first hit (marked: value more damage taken)
+        unlocks: [],
+      },
+      blood: {
+        minRank: 2,
+        bonus: { damage: 0.06, hp: 0.04, killHeal: 0.004 },
+        rule: {},
+        like: { might: 0.6, instinct: 0.2, resilience: 0.2 },
+        skill: { id: 'bloodPact', value: [0.2, 0.35, 0.5], below: 0.35, leech: 0.03 }, // more damage below `below` health; hits heal `leech` of the damage
+        unlocks: [],
+      },
+      elemental: {
+        minRank: 2,
+        bonus: { skillDamage: 0.08, damage: 0.03, mana: 0.05 },
+        rule: { killMana: 0.005 },
+        like: { arcana: 0.6, control: 0.4 },
+        skill: { id: 'elementalSurge', value: [0.1, 0.15, 0.22], power: 0.4 }, // value = chance per hit of a burn, frost or shock (power = its share of the hit)
+        unlocks: [],
+      },
+      flow: {
+        minRank: 3,
+        bonus: { speed: 0.02, reload: 0.03, cooldown: 0.02, crit: 0.005 },
+        rule: {},
+        like: { agility: 0.7, precision: 0.3 },
+        skill: { id: 'flowState', value: [0, 0, 0], time: [0.4, 0.7, 1] }, // time = seconds taken off every skill cooldown by each of your kills
+        unlocks: [],
+      },
+      sanctum: {
+        minRank: 3,
+        bonus: { hp: 0.06, damageTaken: -0.012, killHeal: 0.002 },
+        rule: { hpRegenMult: 0.05 },
+        like: { resilience: 0.8, arcana: 0.2 },
+        skill: { id: 'sanctuary', value: [0.06, 0.1, 0.15], time: 3, cooldown: 6 }, // value = share of max health healed over `time` s after a skill
+        unlocks: [],
+      },
+      fortune: {
+        minRank: 3,
+        bonus: { damage: 0.03, hp: 0.03, ultCharge: 0.02 },
+        rule: { selfXp: 0.04 },
+        like: { discovery: 1 },
+        skill: { id: 'luckyStrike', value: [0.08, 0.12, 0.18], essence: 6 }, // value = chance per kill of bonus essence (essence x (zone + 1))
+        unlocks: [],
+      },
+      void: {
+        minRank: 5,
+        bonus: { damage: 0.07, skillDamage: 0.05, damageTaken: 0.01 },
+        rule: { manaRegenMult: 0.03 },
+        like: { gates: 0.5, discovery: 0.25, might: 0.25 },
+        skill: { id: 'abyssalHunger', value: [0.15, 0.25, 0.4] }, // value = more damage inside a gate or the Abyss
+        unlocks: [],
       },
     },
   },

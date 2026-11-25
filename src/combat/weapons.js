@@ -32,6 +32,13 @@ export function playerHit(game, i, base, kx, kz) {
   // Rogue: an Ambush is a critical hit that hits harder
   if (P.ambushT > 0) { crit = true; dmg *= 1 + CONFIG.rogue.ambush; P.ambushT = 0; }
   if (crit) dmg *= P.critDmg * (ai ? 1 + ai.def.value[ai.level] : 1);
+  // class skill Blood Pact (Blood): low on health, the hits are harder and heal
+  const bp = game.path.skillOf('blood');
+  const bloody = bp && P.hp < P.maxHp * bp.def.below;
+  if (bloody) dmg *= 1 + bp.def.value[bp.level];
+  // class skill Hunter's Instinct (Predator): the first hit marks the prey (marked enemies take more damage)
+  const pr = game.path.skillOf('predator');
+  if (pr && E.vuln[i] <= 0) E.vuln[i] = pr.def.time[pr.level];
   P.onHit();
   // what kind of hit it was: affinities and the class mechanic (Berserker Momentum)
   const wg = CONFIG.weapons[P.weapon] ? CONFIG.weapons[P.weapon].group : 'melee';
@@ -70,8 +77,30 @@ export function playerHit(game, i, base, kx, kz) {
   }
   const x = E.x[i], z = E.z[i];
   E.damage(i, Math.max(1, Math.round(dmg)), kx, kz, -1, crit);
+  if (bloody) P.heal(Math.min(P.maxHp * 0.02, dmg * bp.def.leech));
+  // class skill Elemental Surge (Elemental): now and then a burn, a frost or a shock comes with the hit
+  const es = game.path.skillOf('elemental');
+  if (es && Math.random() < es.def.value[es.level]) surge(game, i, x, z, dmg * es.def.power);
   // Stormbinder: the hit may jump to enemies nearby
   if (U.storm && !zapping && Math.random() < U.storm.chance) zap(game, i, x, z, dmg * U.storm.damage, U.storm);
+}
+
+// Elemental Surge: one of three, at random: the enemy burns, freezes for a moment, or a shock jumps to a neighbour
+function surge(game, i, x, z, dmg) {
+  const E = game.enemies, fx = game.effects, k = Math.floor(Math.random() * 3);
+  if (k === 0) { E.burnArea(x, z, 0.5, dmg / 3, 3); fx.burst(x, 1, z, 8, 0xff7a30, 4, 0.2, 0.5); return; }
+  if (k === 1) { if (E.alive[i]) E.applyStun(i, 0.5); fx.burst(x, 1, z, 8, 0x9fe0ff, 4, 0.2, 0.5); return; }
+  let best = -1, bd = 36;
+  for (let m = 0; m < E.activeCount; m++) {
+    const o = E.active[m];
+    if (o === i || !E.alive[o]) continue;
+    const d2 = (E.x[o] - x) ** 2 + (E.z[o] - z) ** 2;
+    if (d2 < bd) { bd = d2; best = o; }
+  }
+  if (best < 0) return;
+  const dx = E.x[best] - x, dz = E.z[best] - z, d = Math.sqrt(bd) || 1;
+  fx.beam(x, z, dx / d, dz / d, d, 0.3, 0xfff07a);
+  E.damage(best, Math.max(1, Math.round(dmg)), dx / d, dz / d, -1, false);
 }
 
 let zapping = false;

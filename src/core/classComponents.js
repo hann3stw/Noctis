@@ -97,7 +97,7 @@ export const SKILL_PACKAGES = {
 // what a class may use. A companion is not an army: they are separate rights.
 export const CAPABILITIES = ['armyAccess', 'companionAccess', 'spellForgeAccess', 'specialMechanics'];
 
-export const PATH_CORES = ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver'];
+export const PATH_CORES = ['blade', 'commander', 'mage', 'tank', 'slayer', 'delver', 'predator', 'blood', 'elemental', 'flow', 'sanctum', 'fortune', 'void'];
 
 // every class a class grows from (parents and skillFrom, all the way up), without itself; safe against loops
 export function ancestors(id, list = CONFIG.classes.list) {

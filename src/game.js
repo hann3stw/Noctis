@@ -1172,9 +1172,24 @@ export class Game {
     } else if (kill) this.aff.record('shadowKill');
   }
 
+  // class skills of the Path that act on the hunter's own kills: Flow State (Flow) takes time off every skill
+  // cooldown; Lucky Strike (Fortune) may give bonus essence
+  coreSkillsOnKill(i) {
+    const P = this.player, Pa = this.path;
+    const fl = Pa.skillOf('flow');
+    if (fl) { const v = fl.def.time[fl.level]; for (const k of [0, 1, 3]) if (P.cds[k] > 0) P.cds[k] = Math.max(0, P.cds[k] - v); }
+    const fo = Pa.skillOf('fortune');
+    if (fo && Math.random() < fo.def.value[fo.level]) {
+      const n = Math.round(fo.def.essence * ((this.enemies.zone[i] || 0) + 1));
+      P.essence += n;
+      this.effects.number(this.enemies.x[i], 2.4, this.enemies.z[i], '+' + n, 'crit');
+    }
+  }
+
   // src: -1 = killed by the player, otherwise the slot of the shadow
   onEnemyKilled(i, src) {
     this.kills++;
+    if (src < 0) this.coreSkillsOnKill(i);
     if (src < 0) this.profile.hunterKills++; else this.profile.armyKills++;
     const E = this.enemies;
     if (E.tier[i] === 3) this.profile.bossKills++; else if (E.tier[i] >= 1) this.profile.eliteKills++;

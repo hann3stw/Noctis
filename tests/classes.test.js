@@ -120,7 +120,7 @@ test('the four new classes are playable and correctly filled in', () => {
   assert.equal(L.stormcaller.spellForge, true);
   assert.equal(L.beastmaster.companion, true);
   assert.equal(L.beastmaster.army, false);
-  assert.deepEqual(L.sentinel.cores, ['tank', 'mage', 'delver', 'slayer']);
+  assert.deepEqual(L.sentinel.cores, ['tank', 'mage', 'delver', 'slayer', 'sanctum', 'blood', 'fortune', 'void']);
   for (const id of ['berserker', 'stormcaller', 'beastmaster', 'sentinel']) assert.ok(L[id].ready && L[id].bonus && Object.keys(L[id].bonus).length);
   for (const id of ['assassin', 'phantomDuelist', 'elementalist', 'huntmaster', 'riftwalker', 'voidReaver', 'gravityWeaver']) assert.equal(L[id].ready, false);
   assert.equal(baseOf('beastmaster'), 'ranger');

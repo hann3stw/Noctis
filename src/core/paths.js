@@ -105,20 +105,30 @@ export class Paths {
 
   // how well each core fits the way the hunter plays: 0 .. 1
   scores() {
+    // the play measures and the affinities (0..1) together: the newer cores read the affinities
     const m = this.metrics(), out = {};
+    const aff = this.game.aff ? this.game.aff.values() : {};
+    for (const a in aff) m[a] = aff[a] / 100;
     for (const c of this.cores()) {
       const like = C().cores[c].like;
       let s = 0, w = 0;
-      for (const k in like) { const a = Math.abs(like[k]); s += a * (like[k] > 0 ? m[k] : 1 - m[k]); w += a; }
+      for (const k in like) { const a = Math.abs(like[k]), v = m[k] || 0; s += a * (like[k] > 0 ? v : 1 - v); w += a; }
       out[c] = w ? s / w : 0;
     }
     return out;
   }
 
-  // the cores the main class gets
+  // the cores the main class gets, as far as the rank has opened them (minRank)
   cores() {
-    const k = CONFIG.classes.list[this.game.mainClass];
-    return k ? k.cores : Object.keys(C().cores);
+    const k = CONFIG.classes.list[this.game.mainClass], r = this.game.rankIndex;
+    const all = k && k.cores ? k.cores : Object.keys(C().cores);
+    return all.filter((c) => C().cores[c] && (C().cores[c].minRank || 0) <= r);
+  }
+
+  // cores that opened at the rank of this stage and were never picked: they come as "newly found"
+  freshCores(st) {
+    const rank = this.stageRank(st);
+    return this.cores().filter((c) => C().cores[c].minRank === rank && !this.coreCount(c));
   }
 
   // the core of the last pick ('' = none)
@@ -161,8 +171,9 @@ export class Paths {
     const main = this.currentCore() || byFit[0];
     const free = (c, used) => c && !used.includes(c);
     const used = [main];
-    // branch: least picked, then best fitting (a core never picked comes first)
-    const branch = all.filter((c) => free(c, used) && !avoid.includes(c)).sort((a, b) => this.coreCount(a) - this.coreCount(b) || sc[b] - sc[a])[0]
+    // branch: a core that just opened at this rank, else the least picked, then best fitting
+    const fresh = this.freshCores(st).filter((c) => free(c, used) && !avoid.includes(c)).sort((a, b) => sc[b] - sc[a])[0];
+    const branch = fresh || all.filter((c) => free(c, used) && !avoid.includes(c)).sort((a, b) => this.coreCount(a) - this.coreCount(b) || sc[b] - sc[a])[0]
       || byFit.find((c) => free(c, used));
     used.push(branch);
     // wild: any other core, the best fitting one that does not make the same three as the last offer
@@ -171,7 +182,7 @@ export class Paths {
     const wild = rest.filter((c) => !avoid.includes(c)).find((c) => !same(c)) || rest.find((c) => !same(c)) || rest[0] || byFit.find((c) => c !== main) || main;
     const mod = (core, c) => (c && c !== core && sc[c] >= 0.4 ? c : '');
     const make = (core, m, role) => ({ core, mod: m, rarity: this.rarityOf(st, sc[core], m ? sc[m] : 0), role });
-    const list = [make(main, mod(main, branch), 'deepen'), make(branch, mod(branch, main), 'branch'), make(wild, mod(wild, branch), 'wild')];
+    const list = [make(main, mod(main, branch), 'deepen'), make(branch, mod(branch, main), fresh ? 'new' : 'branch'), make(wild, mod(wild, branch), 'wild')];
     this.lastCores = list.map((c) => c.core);
     return list;
   }

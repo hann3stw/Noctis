@@ -23,7 +23,7 @@ test('every offer has the three roles and three different cores', () => {
     const g = world(cls);
     for (let k = 0; k < 9; k++) {
       const o = g.path.options();
-      assert.deepEqual(o.map((c) => c.role), ['deepen', 'branch', 'wild'], cls);
+      assert.equal(o[0].role, 'deepen'); assert.ok(['branch', 'new'].includes(o[1].role)); assert.equal(o[2].role, 'wild');
       assert.equal(new Set(o.map((c) => c.core)).size, 3, cls + ' stage ' + (k + 1));
       assert.ok(g.path.pick(k % 3));
     }
@@ -90,4 +90,43 @@ test('respec: one token takes the last pick back, all picks cost more; the third
   assert.ok(P.respec());
   assert.equal(P.chosen.length, 0);
   assert.equal(g.player.slots[3], null); // no picks: no third skill slot
+});
+
+test('new cores open with the rank and come as "newly found" once', () => {
+  const g = world('warrior', 1);
+  const P = g.path;
+  assert.ok(!P.cores().includes('blood') && !P.cores().includes('void')); // rank D: only the first cores
+  P.pick(0);
+  g.rankIndex = 2; // rank C: Blood opens
+  assert.ok(P.cores().includes('blood'));
+  const o = P.options();
+  assert.equal(o[1].core, 'blood'); assert.equal(o[1].role, 'new');
+  for (let r = 3; r <= 9; r++) { g.rankIndex = r; P.pick(0); }
+  assert.ok(P.cores().includes('void') && P.cores().includes('flow') && P.cores().includes('fortune'));
+  // every class ends with 7 or more cores, all of them real
+  for (const id in CONFIG.classes.list) {
+    const c = CONFIG.classes.list[id];
+    if (!c.ready) continue;
+    assert.ok(c.cores.length >= 7, id + ' has ' + c.cores.length);
+    for (const k of c.cores) assert.ok(CONFIG.paths.cores[k], id + ': ' + k);
+  }
+});
+
+test('every core is complete: names, mod, skill text and numbers, only rules the game reads', async () => {
+  const { t } = await import('../src/strings.js');
+  const { PATH_CORES } = await import('../src/core/classComponents.js');
+  const KNOWN_RULES = ['selfXp', 'slotCapPlus', 'armyKillXp', 'reviveCostMult', 'killMana', 'hpRegenMult', 'manaRegenMult']; // each read in game.js / player.js / army.js
+  const BONUS = ['hp', 'speed', 'mana', 'crit', 'reload', 'damage', 'damageTaken', 'armyDamage', 'armyHp', 'armySlots', 'skillDamage', 'ultCharge', 'charges', 'cooldown', 'killHeal', 'hitHeal', 'companionDamage', 'companionHp'];
+  const has = (k) => t(k) !== k;
+  assert.deepEqual(Object.keys(CONFIG.paths.cores).sort(), [...PATH_CORES].sort());
+  for (const c in CONFIG.paths.cores) {
+    const d = CONFIG.paths.cores[c];
+    assert.ok(has('class.core.' + c) && has('class.mod.' + c), c);
+    for (let n = 1; n <= 9; n++) assert.ok(has('class.n.' + c + '.' + n), c + ' name ' + n);
+    assert.ok(has('cskill.' + d.skill.id) && has('cskill.' + d.skill.id + '.desc'), c + ' skill text');
+    assert.equal(d.skill.value.length, 3, c);
+    for (const k in d.rule) assert.ok(KNOWN_RULES.includes(k), c + ' rule ' + k);
+    for (const k in d.bonus) assert.ok(BONUS.includes(k), c + ' bonus ' + k);
+    for (const k in d.like) assert.ok(typeof d.like[k] === 'number', c);
+  }
 });

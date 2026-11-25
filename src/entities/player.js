@@ -339,6 +339,8 @@ export class Player {
     if (this.rage > 0) m *= 1 + this.rage * CONFIG.warrior.damage; // Warrior: Rage
     if (this.faith > 0) m *= 1 + this.faith * CONFIG.cleric.damage; // Cleric: Faith
     if (this.focusT > 0) m *= 1 + CONFIG.skills.huntersFocus.damage; // Ranger: Hunter's Focus
+    const vh = this.game.path && this.game.path.skillOf('void'); // class skill Abyssal Hunger (Void): in a gate or the Abyss
+    if (vh && (this.game.gates.active >= 0 || (this.game.abyss && this.game.abyss.on))) m *= 1 + vh.def.value[vh.level];
     if (this.buffT > 0) m *= 1 + this.buffV; // Primal Apex and other damage buffs
     return m;
   }
@@ -739,6 +741,7 @@ export class Player {
     if (this.bulwarkCd > 0) this.bulwarkCd -= dt;
     if (this.guardT > 0) this.guardT -= dt;
     if (this.surgeT > 0) this.surgeT -= dt;
+    if (this.sanctCd > 0) this.sanctCd -= dt;
     if (this.hotT > 0) { this.hotT -= dt; this.heal(this.maxHp * this.hotV * dt); } // healing over time
     if (this.cpCd > 0) this.cpCd -= dt;
     if (this.faithCd > 0) this.faithCd -= dt;
@@ -958,6 +961,9 @@ export class Player {
     if (O) this.mana = Math.min(this.maxMana, this.mana + this.manaCost(def) * O.def.value[O.level]);
     if (slot !== 2) this.addArcane(1);
     this.counts.cast++;
+    // class skill Sanctuary (Sanctum): a skill heals over a few seconds (with a gap between two)
+    const sa = this.game.path.skillOf('sanctum');
+    if (sa && slot !== 2 && !(this.sanctCd > 0)) { this.sanctCd = sa.def.cooldown; this.hotT = sa.def.time; this.hotV = sa.def.value[sa.level] / sa.def.time; this.game.effects.ring(this.x, this.z, 0.5, 3, 0xfff0a0, 0.4); }
     // the cast really goes off: the affinities count it here (not when it was only tried)
     if (this.game.aff) {
       const wg = CONFIG.weapons[this.weapon] ? CONFIG.weapons[this.weapon].group : 'melee';
