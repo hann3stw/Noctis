@@ -297,8 +297,7 @@ export class Screens {
       case 'tutorial': this.ed.tutorial = !this.ed.tutorial; this.render(); break;
       // difficulty: in the new world editor, or of the running world
       case 'diff':
-        if (this.ed) this.ed.diff = v;
-        else if (app.game) app.game.setDifficulty(v);
+        if (this.ed) this.ed.diff = v; // only when a world is made: it cannot be changed later
         this.render();
         break;
       // settings
@@ -678,11 +677,11 @@ export class Screens {
     const toggle = (act, on) => `<button class="seg wide${on ? ' on' : ''}" data-act="${act}">${on ? t('set.on') : t('set.off')}</button>`;
     const vol = Math.round(settings.volume * 100);
     const mus = Math.round((settings.music ?? 0.5) * 100);
-    // the difficulty belongs to the world: only while one is running
+    // the difficulty belongs to the world and is chosen when it is made: here it is only shown
     const g = this.app.game;
     const diff = g && this.params.back === 'pause'
-      ? `<div class="set-row"><div><b>${t('set.difficulty')}</b><small>${t('diff.' + g.difficulty + '.desc')}</small></div>
-          <div class="segs">${diffSegs(g.difficulty)}</div></div>`
+      ? `<div class="set-row"><div><b>${t('set.difficulty')}</b><small>${t('diff.fixed')}</small></div>
+          <div class="segs"><span class="seg on dif-${g.difficulty}">${t('diff.' + g.difficulty)}</span></div></div>`
       : '';
     return `<div class="scr-page">${this.header(t('title.settings'), 'setBack').replace('<h2>', '<h2 data-act="devTap">')}
       <div class="set-list" data-scroll="set">${diff}

@@ -127,8 +127,8 @@ export const CONFIG = {
     chestMinRarity: 2, // at least rare
   },
 
-  // Difficulty of a world: chosen when it is made, can be changed in the
-  // settings while playing. Every enemy (bosses too) gets this much health and
+  // Difficulty of a world: chosen when it is made, it cannot be changed later
+  // (the settings only show it). Every enemy (bosses too) gets this much health and
   // damage; luck = a little better loot on the harder ones.
   difficulty: {
     levels: {

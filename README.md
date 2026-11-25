@@ -121,10 +121,10 @@ HTTPS (or localhost) for offline mode and installing.
   next zone must come from better gear, stat points and the army. All level
   values sit in `src/config.js` -> `levels`. Old saves are moved to the new
   levels automatically.
-- Four difficulties, chosen when a world is made and changeable in the
-  settings while playing: Easy (enemies 70 % health, 60 % damage), Normal
-  (x1 / x1.1), Hard (x1.5 / x1.75, slightly better loot) and Extreme
-  (x2.4 / x2.8, better loot). Worlds from before keep Hard.
+- Four difficulties, chosen when a world is made; they cannot be changed
+  later (the settings only show it): Easy (enemies 70 % health, 60 % damage),
+  Normal (x1 / x1.1), Hard (x1.5 / x1.75, slightly better loot) and Extreme
+  (x2.4 / x2.8, better loot; in rank E x1.6 / x1.8). Worlds from before keep Hard.
   Values: `src/config.js` -> `difficulty`.
 - Kills of your shadows give you half the XP.
 - Every zone has three enemy types (melee, ranged, charger). Elites (gold

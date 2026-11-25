@@ -366,6 +366,7 @@ export class Game {
     return CONFIG.difficulty.levels[this.difficulty];
   }
 
+  // (no longer reachable in the game: the difficulty is chosen when a world is made and stays)
   setDifficulty(id) {
     const L = CONFIG.difficulty.levels;
     if (!L[id] || id === this.difficulty) return;

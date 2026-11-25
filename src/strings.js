@@ -684,6 +684,7 @@ const STRINGS = {
     'diff.normal.desc': 'The intended challenge',
     'diff.hard.desc': 'Enemies x1.5 health, x1.75 damage, slightly better loot',
     'diff.extreme.desc': 'Enemies x2.4 health, x2.8 damage, better loot (a little gentler in rank E)',
+    'diff.fixed': 'Chosen when the world was made; it cannot be changed',
     'diff.extreme.warn': 'For experienced hunters: try Normal or Hard for your first world.',
     'set.on': 'On',
     'set.off': 'Off',
