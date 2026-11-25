@@ -12,6 +12,7 @@
 import { CONFIG } from '../config.js';
 import { t } from '../strings.js';
 import { play } from './sfx.js';
+import { stepsOf, progName } from './classProgression.js';
 
 const clamp = (v) => Math.max(0, Math.min(1, v));
 const C = () => CONFIG.paths;
@@ -323,17 +324,49 @@ export class Paths {
     }
   }
 
+  // ---- one choice per rank-up: the class step that rides on a pick ---------------------------
+  // The rank of a stage (stage 4 = rank A ...). A stage can carry the class step of that rank (A, S, L: a step
+  // with two options, core/classProgression.js): then each card of the offer brings one of the two options
+  // (cards 1 and 3 the first, card 2 the second), and one pick decides both.
+  stageRank(stage) {
+    return C().stages[stage - 1];
+  }
+
+  // the class step the due stage carries: { tree, key, node } or null (none, or already decided)
+  stepFor(stage = this.stage()) {
+    const g = this.game, tree = g.classTree, rank = this.stageRank(stage);
+    if (!tree || rank === undefined || !g.progression) return null;
+    const st = stepsOf(tree, Math.max(rank, 0), g.aff.values(), g.progression).find((s) => s.rank === rank);
+    if (!st || !st.node.pick || st.picked) return null;
+    return { tree, key: st.key, node: st.node };
+  }
+
+  // the option of the class step on card i (or null)
+  stepOption(i, step = this.stepFor()) {
+    return step ? step.node.pick[i % 2] : null;
+  }
+
+  // the card that fits the play best (the first of the offer: the way on, or the best core at the first pick)
+  bestIndex() {
+    return 0;
+  }
+
   // ---- picking --------------------------------------------------------------------------
-  pick(i) {
+  // auto = taken by the game (the rank-up already had an Awakening choice): no class step rides on it, so the
+  // class step of that rank stays open in the Path tab
+  pick(i, auto = false) {
     if (!this.due()) return false;
     const cls = this.options()[i];
     if (!cls) return false;
+    const stage = this.stage(), step = auto ? null : this.stepFor(stage), opt = this.stepOption(i, step);
     this.chosen.push({ core: cls.core, mod: cls.mod, rarity: cls.rarity });
     this.offer = null;
     this.dirty = true;
+    if (opt) this.game.progression.pick(step.tree, step.key, opt.id, this.stageRank(stage)); // the class step of this rank
+    if (this.game.refreshProgression) this.game.refreshProgression();
     this.game.player.recalc();
     this.game.hud.syncSkills();
-    this.game.hud.banner(t('path.picked'), this.chosenName(this.chosen.length - 1));
+    this.game.hud.banner(auto ? t('path.autoPicked') : t('path.picked'), this.chosenName(this.chosen.length - 1) + (opt ? ' · ' + progName(opt.id) : ''));
     play('levelup');
     this.game.save();
     return true;

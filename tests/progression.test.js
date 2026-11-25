@@ -170,3 +170,17 @@ test('version 5: the companion of a Ranger world leaves the army, the rest stays
   // version 3 and older come all the way
   assert.equal(migrateSave({ version: 3, mainClass: 'beastmaster', army: { units: [{ type: 'gloomfang', level: 4 }] }, player: { inventory: [], equip: {} } }).companion.level, 4);
 });
+
+test('every class step and option reads as text (no raw string keys)', async () => {
+  await import('./dom-stub.js');
+  const { describeOps } = await import('../src/ui/classPanel.js');
+  const { progName } = await import('../src/core/classProgression.js');
+  const raw = /\b(pf|ks|prog|class|cskill|tree|path)\.[a-zA-Z]/;
+  for (const tree in TREES) for (const k in TREES[tree]) {
+    const n = TREES[tree][k];
+    for (const x of [n, ...(n.pick || [])]) {
+      assert.ok(!raw.test(progName(x.id)), tree + ' ' + x.id);
+      for (const line of describeOps(x.ops)) assert.ok(!raw.test(line), tree + ' ' + x.id + ': ' + line);
+    }
+  }
+});

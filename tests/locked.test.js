@@ -23,6 +23,7 @@ function hunter(cls, values, history = [cls]) {
     specDue() { return !this.specDone; },
     takeClass(id) { this.taken = id; this.mainClass = id; },
     hud: { banner() {} }, save() {}, setPaused() {},
+    path: { due: () => false, pick() {}, bestIndex: () => 0 }, autoPathPick() {},
   };
 }
 // runs fn while class id is not ready (ready: false), then puts it back

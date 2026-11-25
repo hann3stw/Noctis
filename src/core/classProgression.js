@@ -160,6 +160,17 @@ export function titleOf(id) {
   return String(id).replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 }
 
+// the shown name of a step or option: its own string (prog.<id>) or one made from the id
+const NAMES = {
+  wideCleaveW: 'Wide Cleave', huntersMarkFang: "Hunter's Fang", eyeOfTheStorm: 'Eye of the Storm',
+  legendBerserker: 'Legendary Fury', legendStorm: 'Legendary Storm', legendBeast: 'Legendary Beast', legendSentinel: 'Legendary Ward',
+  legendWarrior: 'Legendary Warlord', legendMage: 'Legendary Arcanum', legendRogue: 'Legendary Shade', legendRanger: 'Legendary Hunt',
+  legendCleric: 'Legendary Grace', legendMonarch: 'Legendary Monarch', bigFireball: 'Great Fireball', longChain: 'Long Chain',
+};
+export function progName(id) {
+  return NAMES[id] || titleOf(id);
+}
+
 // the tree a class grows along: its own, or the one of its base class (hybrids)
 export function treeOf(cls) {
   if (TREES[cls]) return cls;

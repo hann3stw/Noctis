@@ -39,7 +39,7 @@ import { Menu } from './ui/menu.js';
 import { Abyss } from './world/abyss.js';
 import { AbyssPanel } from './ui/abyssPanel.js';
 import { skillDef, setRunes, setMastery, bumpSkillCache } from './combat/skills.js';
-import { ClassProgression, treeOf, GUARANTEED, stepsOf, titleOf } from './core/classProgression.js';
+import { ClassProgression, treeOf, GUARANTEED, stepsOf, progName } from './core/classProgression.js';
 import { t } from './strings.js';
 import { Hud } from './ui/hud.js';
 import { Tutorial, OLD_STEP_COUNT } from './ui/tutorial.js';
@@ -446,7 +446,7 @@ export class Game {
   refreshProgression() {
     const tree = this.classTree, aff = this.aff.values(), P = this.player;
     if (!P) return;
-    for (const st of this.progression.openUniques(tree, this.rankIndex, aff)) if (this.hud) this.hud.banner(t('prog.uniqueOpen'), titleOf(st.node.id));
+    for (const st of this.progression.openUniques(tree, this.rankIndex, aff)) if (this.hud) this.hud.banner(t('prog.uniqueOpen'), progName(st.node.id));
     if (this.progression.apply(tree, this.rankIndex, aff)) {
       bumpSkillCache();
       P.recalc();
@@ -508,6 +508,7 @@ export class Game {
     if (id === this.mainClass) {
       this.awakening.declined = this.rankIndex; // asked again at the next rank
       this.awakening.pending = null;
+      this.autoPathPick();
       this.save();
       return true;
     }
@@ -517,6 +518,7 @@ export class Game {
     this.takeClass(id, c.unique ? 'unique' : 'evolution');
     this.hud.banner(t('mc.evolved'), t('mc.' + id));
     play('levelup');
+    this.autoPathPick();
     this.save();
     return true;
   }
@@ -547,10 +549,11 @@ export class Game {
     if (!specAllowed(this.mainClass, id, this.aff.values(), held) || !classOffers(this).some((o) => o.id === id)) return false;
     this.specDone = true;
     track('spec', { id, from: this.mainClass });
-    if (id === this.mainClass) { this.save(); return true; }
+    if (id === this.mainClass) { this.autoPathPick(); this.save(); return true; }
     this.takeClass(id, c.hybrid ? 'hybrid' : 'specialization');
     this.hud.banner(t('mc.chosen'), t('mc.' + id));
     play('levelup');
+    this.autoPathPick();
     this.save();
     return true;
   }
@@ -564,10 +567,21 @@ export class Game {
     this.hud.banner(t('mc.chosen'), t('mc.' + id));
     play('levelup');
     if (c.army && this.tips) this.tips.show('necro');
-    // the first pick of the Path comes at once
-    if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
+    this.autoPathPick(); // the class was the choice of this rank-up: its Path pick is taken for it
     this.save();
     return true;
+  }
+
+  // One choice per rank-up: when the rank-up brought an Awakening choice (class, specialization, evolution), that
+  // was the choice; the Path pick of the rank is then taken by the game (the card that fits the play best; a Respec
+  // Token can change it). A class step of that rank stays open in the Path tab.
+  autoPathPick() {
+    if (this.path.due()) this.path.pick(this.path.bestIndex(), true);
+  }
+
+  // an Awakening choice waits (it is the choice of the rank-up; the Path menu does not open on top of it)
+  awakeningPending() {
+    return this.classDue() || (this.specDue() && openOffers(this).length >= 2) || this.evolveDue();
   }
 
   // rank that belongs to the player's level
@@ -629,8 +643,10 @@ export class Game {
     this.hud.banner(t('toast.rankUp', { rank: RANKS[r] }), t('toast.rankUpSub', { n: pts }));
     track('rank_up', { rank: RANKS[r], pt: Math.round(this.playTime) });
     this.effects.ring(P.x, P.z, 0.5, 8, 0xffd24a, 0.8);
-    // a new pick of the Path: the window opens (in the arena of the trial it waits for the Leave button)
-    if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
+    // a new pick of the Path: the window opens (in the arena of the trial it waits for the Leave button), unless
+    // an Awakening choice comes with this rank: then that is the one choice, and the Path pick is taken after it
+    if (this.awakeningPending()) this.path.announced = true;
+    else if (this.path.due() && this.gates.active < 0) { this.path.announced = true; this.menu.open('path'); }
     else this.path.check();
     this.save();
   }
@@ -748,7 +764,7 @@ export class Game {
       this.evoT = 5; // the evolution offer is looked at every few seconds (the affinities change slowly)
       this.refreshProgression();
       if (this.evolveDue()) this.classPanel.open('evolve');
-      else if (this.progressionPickDue()) { (this.treeAskedSet || (this.treeAskedSet = new Set())).add(this.progressionPickDue()); this.classPanel.open('tree'); }
+
     }
     this.aff.tick(dt); // only active play counts for the affinities
     if (!this.path.announced && this.path.due() && this.playTime > 3) this.path.check(); // a pick waits (older worlds, or after a gate)

@@ -8,7 +8,7 @@
 import { CONFIG } from '../config.js';
 import { classOffers } from '../core/style.js';
 import { firstOffers, specOffers, evolutionOffers, evolutionsOf, reasonFor } from '../core/awakening.js';
-import { stepsOf, GUARANTEED, titleOf } from '../core/classProgression.js';
+import { stepsOf, GUARANTEED, progName } from '../core/classProgression.js';
 import { identityOf } from '../core/classComponents.js';
 import { AFFINITIES } from '../core/affinities.js';
 import { familyOf, mechanicOf } from '../core/classComponents.js';
@@ -34,12 +34,17 @@ export function historyHtml(game) {
 const affNames = (list) => list.map((a) => t('aff.' + a)).join(t('aw.and'));
 
 const PCT = new Set(['guard', 'shield', 'healSelf', 'healArmy', 'companionDamage', 'damage', 'armyDamage', 'burn', 'highAegis', 'aegisGuard', 'armyGuard', 'healPerHit', 'perStack', 'reduction', 'hitHeal', 'critPerPoint', 'finisher', 'ambush', 'rangeBonus', 'arcaneDamage', 'share', 'xpShare', 'fullBond', 'rageBonus']);
+// skill numbers whose label on the skill page has another key
+const KS_FIELD = { arcDeg: 'cone', power: 'damage', ticks: 'pulses', damage: 'damageUp', armyDamage: 'army' };
 // what the ops of a step do, as short lines (made from the data, so the text always matches the effect)
 export function describeOps(ops) {
   const out = [];
   const label = (path) => {
     const p = path.split('.');
-    if (p[0] === 'skills' || p[0] === 'ultimates') return t('skill.' + p[1]) + ': ' + (t('ks.' + p[2]) !== 'ks.' + p[2] ? t('ks.' + p[2]) : t('pf.f.' + p[2]));
+    if (p[0] === 'skills' || p[0] === 'ultimates') {
+      const f = KS_FIELD[p[2]] || p[2]; // the label of a skill number: the one the skill page uses
+      return t('skill.' + p[1]) + ': ' + (t('ks.' + f) !== 'ks.' + f ? t('ks.' + f) : t('pf.f.' + p[2]));
+    }
     return t('pf.' + path);
   };
   const val = (path, v, mul) => {
@@ -53,6 +58,49 @@ export function describeOps(ops) {
   for (const p in ops.mul) out.push(label(p) + ' ' + val(p, ops.mul[p], true));
   for (const k in ops.bonus) out.push(t('prog.b.' + k) + ' ' + (ops.bonus[k] < 0 ? '−' : '+') + Math.round(Math.abs(ops.bonus[k]) * 100) + '%');
   return out;
+}
+
+// The class part of the Path: where the class comes from, the evolutions that can be taken now, the progression
+// from A to M, and the guaranteed skill. carried = the key of a class step that comes with the next Path pick (it
+// is decided there, so its options are shown but cannot be picked here). '' when there is no class yet.
+export function classTreeHtml(g, carried = '') {
+  const list = CONFIG.classes.list, cls = g.mainClass, c = list[cls], aff = g.aff.values(), rank = g.rankIndex;
+  const RN = CONFIG.levels.rankNames, RL = CONFIG.levels.rankLevels;
+  if (!c) return '';
+  const id = identityOf(cls);
+  const parent = (c.parents && c.parents[0]) || (c.base && c.base !== cls ? c.base : '');
+  const head = `<div class="tr-cls"><i class="emb" data-c="${cls}"></i><b>${t('mc.' + cls)}</b>${parent ? `<small>${t('tree.from', { name: t('mc.' + parent) })}</small>` : ''}${id ? `<small>${t('tree.identity', { channel: t('id.ch.' + id.channel), defense: t('id.def.' + id.defense), mobility: t('id.mob.' + id.mobility), weak: t('id.weak.' + id.weakness) })}</small>` : ''}</div>`;
+  // only evolutions that can be taken now (locked or not ready ones are not shown)
+  const evo = evolutionsOf(cls, rank, aff).filter((o) => o.open && list[o.id].ready === true).map((o) => {
+    const e = list[o.id], need = Object.keys(e.needs || {}).map((a) => `${t('aff.' + a)} ${aff[a] || 0}/${e.needs[a]}`).join(', ');
+    return `<div class="tr-row open"><i class="emb" data-c="${o.id}"></i><b>${t('mc.' + o.id)}</b><em>${t('tree.evoOpen')}</em><small>${need}</small></div>`;
+  }).join('') || `<p class="k-hint">${t('tree.noEvo')}</p>`;
+  const tree = g.classTree;
+  const steps = stepsOf(tree, rank, aff, g.progression).map((st) => {
+    const n = st.node, lines = describeOps(n.ops);
+    let status = '', body = '';
+    if (st.status === 'rank') status = t('tree.rank', { rank: RN[st.rank], level: RL[st.rank] });
+    else if (st.status === 'needs') status = t('tree.uniqueNeeds', { list: Object.keys(n.needs).map((a) => `${t('aff.' + a)} ${aff[a] || 0}/${n.needs[a]}`).join(', ') });
+    else if (st.status === 'pick') status = st.key === carried ? t('tree.withPath') : t('tree.pickNow');
+    else status = t('tree.active');
+    if (n.needs && st.status !== 'needs') lines.unshift(t('tree.uniqueOk', { list: Object.keys(n.needs).map((a) => t('aff.' + a) + ' ' + n.needs[a]).join(', ') }));
+    if (n.pick) {
+      body = `<div class="tr-picks">${n.pick.map((p) => {
+        const chosen = st.picked === p.id, can = st.status === 'pick' && st.key !== carried;
+        return `<button class="tr-pick${chosen ? ' on' : ''}" data-act="step" data-k="${st.key}" data-id="${p.id}"${can ? '' : ' disabled'}><b>${progName(p.id)}</b><small>${describeOps(p.ops).join(' · ')}</small></button>`;
+      }).join('')}</div>`;
+    }
+    return `<div class="tr-step ${st.status}"><div class="tr-k">${st.key}<small>${t('tree.step.' + st.key)}</small></div><div class="tr-b"><b>${progName(n.id)}</b><em>${status}</em><small>${lines.join(' · ')}</small>${body}</div></div>`;
+  }).join('');
+  const G = GUARANTEED[cls];
+  let gs = '';
+  if (G) {
+    const has = g.player.known.includes(G.skill), lv = g.mastery.level(G.quest.mastery);
+    gs = `<p class="tr-guar">${has ? t('tree.guarHave', { skill: t('skill.' + G.skill) }) : t('tree.guar', { skill: t('skill.' + G.skill), quest: t('skill.' + G.quest.mastery), lv, need: G.quest.level, rank: RN[G.rank] })}</p>`;
+  }
+  return `${head}${historyHtml(g)}${gs}
+    <h4>${t('tree.evolutions')}</h4><div class="tr-evo">${evo}</div>
+    <h4>${t('tree.progression')}</h4>${tree ? steps : `<p class="k-hint">${t('tree.noTree')}</p>`}`;
 }
 
 export class ClassPanel {
@@ -140,53 +188,12 @@ export class ClassPanel {
     return rows.map(([k, v]) => `<li><span>${k}</span><b>${v}</b></li>`).join('');
   }
 
-  // The evolution tree of the class: where it comes from, the evolutions (open, locked and why), the progression
-  // from A to M (with the picks that wait), and the guaranteed skill. Locked entries cannot be picked.
+  // The evolution tree of the class (shown in the Path tab; this window stays for older calls)
   renderTree() {
-    const g = this.game, list = CONFIG.classes.list, cls = g.mainClass, c = list[cls], aff = g.aff.values(), rank = g.rankIndex;
-    const RN = CONFIG.levels.rankNames, RL = CONFIG.levels.rankLevels;
-    if (!c) { this.el.innerHTML = `<div class="ab-box mods aw-box"><div class="ab-head"><h2>${t('tree.title')}</h2><small>${t('tree.noClass')}</small></div><div class="ab-btns"><button class="ap-btn go" data-act="close">${t('tree.close')}</button></div></div>`; return; }
-    const id = identityOf(cls);
-    const parent = (c.parents && c.parents[0]) || (c.base && c.base !== cls ? c.base : '');
-    const head = `<div class="tr-cls"><i class="emb" data-c="${cls}"></i><b>${t('mc.' + cls)}</b>${parent ? `<small>${t('tree.from', { name: t('mc.' + parent) })}</small>` : ''}${id ? `<small>${t('tree.identity', { channel: t('id.ch.' + id.channel), defense: t('id.def.' + id.defense), mobility: t('id.mob.' + id.mobility), weak: t('id.weak.' + id.weakness) })}</small>` : ''}</div>`;
-    // evolutions
-    // only evolutions that can be taken now (locked or not ready ones are not shown)
-    const evo = evolutionsOf(cls, rank, aff).filter((o) => o.open && CONFIG.classes.list[o.id].ready === true).map((o) => {
-      const e = list[o.id], need = Object.keys(e.needs || {}).map((a) => `${t('aff.' + a)} ${aff[a] || 0}/${e.needs[a]}`).join(', ');
-      const status = !e.ready ? t('tree.later') : o.open ? t('tree.evoOpen') : rank < (e.rank || CONFIG.classes.evolveRank) ? t('tree.rank', { rank: RN[e.rank || CONFIG.classes.evolveRank], level: RL[e.rank || CONFIG.classes.evolveRank] }) : t('tree.needs');
-      return `<div class="tr-row${o.open ? ' open' : ' lock'}"><i class="emb" data-c="${o.id}"></i><b>${t('mc.' + o.id)}</b><em>${status}</em>${e.ready ? `<small>${need}</small>` : ''}</div>`;
-    }).join('') || `<p class="k-hint">${t('tree.noEvo')}</p>`;
-    // progression A to M
-    const tree = g.classTree;
-    const steps = stepsOf(tree, rank, aff, g.progression).map((st) => {
-      const n = st.node, name = titleOf(n.id);
-      const lines = describeOps(n.ops);
-      let status = '', body = '';
-      if (st.status === 'rank') status = t('tree.rank', { rank: RN[st.rank], level: RL[st.rank] });
-      else if (st.status === 'needs') status = t('tree.uniqueNeeds', { list: Object.keys(n.needs).map((a) => `${t('aff.' + a)} ${aff[a] || 0}/${n.needs[a]}`).join(', ') });
-      else if (st.status === 'pick') status = t('tree.pickNow');
-      else status = t('tree.active');
-      if (n.needs && st.status !== 'needs') lines.unshift(t('tree.uniqueOk', { list: Object.keys(n.needs).map((a) => t('aff.' + a) + ' ' + n.needs[a]).join(', ') }));
-      if (n.pick) {
-        body = `<div class="tr-picks">${n.pick.map((p) => {
-          const chosen = st.picked === p.id, can = st.status === 'pick';
-          return `<button class="tr-pick${chosen ? ' on' : ''}" data-act="step" data-k="${st.key}" data-id="${p.id}"${can ? '' : ' disabled'}><b>${titleOf(p.id)}</b><small>${describeOps(p.ops).join(' · ')}</small></button>`;
-        }).join('')}</div>`;
-      }
-      return `<div class="tr-step ${st.status}"><div class="tr-k">${st.key}<small>${t('tree.step.' + st.key)}</small></div><div class="tr-b"><b>${name}</b><em>${status}</em><small>${lines.join(' · ')}</small>${body}</div></div>`;
-    }).join('');
-    // the guaranteed skill of an evolution class
-    const G = GUARANTEED[cls];
-    let gs = '';
-    if (G) {
-      const has = g.player.known.includes(G.skill), lv = g.mastery.level(G.quest.mastery);
-      gs = `<p class="tr-guar">${has ? t('tree.guarHave', { skill: t('skill.' + G.skill) }) : t('tree.guar', { skill: t('skill.' + G.skill), quest: t('skill.' + G.quest.mastery), lv, need: G.quest.level, rank: RN[G.rank] })}</p>`;
-    }
+    const body = classTreeHtml(this.game);
     this.el.innerHTML = `<div class="ab-box mods aw-box tr-box">
-      <div class="ab-head"><h2>${t('tree.title')}</h2><small>${t('tree.hint')}</small></div>
-      <div class="tr-scroll">${head}${historyHtml(g)}${gs}
-        <h4>${t('tree.evolutions')}</h4><div class="tr-evo">${evo}</div>
-        <h4>${t('tree.progression')}</h4>${tree ? steps : `<p class="k-hint">${t('tree.noTree')}</p>`}</div>
+      <div class="ab-head"><h2>${t('tree.title')}</h2><small>${body ? t('tree.hint') : t('tree.noClass')}</small></div>
+      <div class="tr-scroll">${body}</div>
       <div class="ab-btns"><button class="ap-btn go" data-act="close">${t('tree.close')}</button></div></div>`;
   }
 

@@ -16,8 +16,8 @@ import { TITLES } from '../core/titles.js';
 import { runesOf } from '../core/runes.js';
 import { play } from '../core/sfx.js';
 import { skillOk } from '../core/classes.js';
-import { affinityHtml, historyHtml } from './classPanel.js';
-import { GUARANTEED } from '../core/classProgression.js';
+import { affinityHtml, historyHtml, classTreeHtml, describeOps } from './classPanel.js';
+import { GUARANTEED, stepsOf, progName, STEPS } from '../core/classProgression.js';
 import { hints } from '../core/hints.js';
 import { campView, campHub, campAct, campSections, campNews, SECTIONS } from './camp.js';
 
@@ -227,6 +227,8 @@ export class Menu {
       if (this.game.quests.useStone(this.qStone, target.dataset.t)) this.qStone = -1;
     } else if (act === 'pathPick') {
       this.game.path.pick(Number(target.dataset.id));
+    } else if (act === 'step') {
+      this.game.progressionPick(target.dataset.k, target.dataset.id); // a class step that waits on its own
     } else if (act === 'classTree') {
       this.close();
       this.game.classPanel.open('tree');
@@ -652,13 +654,33 @@ export class Menu {
   // The Path of the Necromancer: the classes of the pick that is due (cards), and what was picked
   pathView() {
     const Pa = this.game.path, Q = this.game.quests, pb = CONFIG.paths.pickBonus, due = Pa.due();
+    // the class step this pick carries (A, S, L): every card brings one of its two options
+    const step = due ? Pa.stepFor() : null;
     const card = (cls, i) => {
       const st = Pa.stage(), lvl = Math.min(2, Math.floor(Pa.coreCount(cls.core) / CONFIG.paths.skillStep));
       const un = Pa.unlocksOf(cls, st).map((id) => `<li class="rule">${t('unlock.' + id)}</li>`).join('');
+      const opt = Pa.stepOption(i, step);
+      const cs = opt ? `<div class="pa-step"><small>${t('path.withStep', { rank: step.key, step: t('tree.step.' + step.key) })}</small><b>${progName(opt.id)}</b><span>${describeOps(opt.ops).join(' · ')}</span></div>` : '';
       return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}"><em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
-        <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>
+        <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>${cs}
         <button class="ap-btn gold" data-act="pathPick" data-id="${i}">${t('path.choose')}</button></div>`;
     };
+    // a class step that waits on its own (no Path pick carries it: older worlds, or a class taken later)
+    const G = this.game, aff = G.aff.values(), tree = G.classTree;
+    const loose = tree ? stepsOf(tree, G.rankIndex, aff, G.progression).filter((s) => s.status === 'pick' && (!step || s.key !== step.key)) : [];
+    const looseHtml = loose.map((s) => `<div class="pa-sub">${t('path.stepWaits', { rank: s.key, step: t('tree.step.' + s.key) })}</div>
+      <div class="pa-row pa-offer">${s.node.pick.map((p) => `<div class="pa-card pick pa-stepcard"><em>${t('tree.step.' + s.key)} · ${progName(s.node.id)}</em><b>${progName(p.id)}</b>
+        <ul>${describeOps(p.ops).map((l) => `<li>${l}</li>`).join('')}</ul><button class="ap-btn gold" data-act="step" data-k="${s.key}" data-id="${p.id}">${t('path.choose')}</button></div>`).join('')}</div>`).join('');
+    // the way from D to M: the Path pick of every rank and the class step that belongs to it
+    const RN = CONFIG.levels.rankNames, picks = Pa.chosen;
+    const steps = tree ? stepsOf(tree, G.rankIndex, aff, G.progression) : [];
+    const line = CONFIG.paths.stages.map((rk, k) => {
+      const c = picks[k], reached = G.rankIndex >= rk, cst = steps.find((s) => s.rank === rk);
+      const mark = cst ? `<i class="pl-step ${cst.status}" title="${progName(cst.node.id)}">${cst.key}</i>` : '';
+      const what = c ? `<b class="l-${c.core}">${Pa.chosenName(k)}</b>` : reached ? `<b class="pl-due">${t('path.lineDue')}</b>` : `<b class="pl-off">—</b>`;
+      return `<div class="pl-pt${c ? ' done' : reached ? ' due' : ''}"><u>${RN[rk]}</u>${what}${mark}</div>`;
+    }).join('');
+    const classBox = tree || G.mainClass ? `<details class="pa-cls"${loose.length ? ' open' : ''}><summary>${t('path.classBox', { name: t('mc.' + G.mainClass) })}</summary><div class="pa-cls-in">${classTreeHtml(G, step ? step.key : '')}</div></details>` : '';
     const mine = !Pa.chosen.length ? `<p class="pa-none">${t('path.none')}</p>`
       : Pa.chosen.map((c, i) => `<span class="pa-pill l-${c.core} r-${c.rarity}">${Pa.chosenName(i)}</span>`).join('');
     const sk = Pa.skill(), unl = Pa.unlockedList();
@@ -670,9 +692,10 @@ export class Menu {
     }).join('');
     return `<div class="path" data-scroll="path">
       <div class="pa-top"><div class="pa-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
-        <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}${this.game.mainClass ? `<button class="ap-btn pa-class" data-act="classTree">${t('tree.open')}${this.game.progressionPending() ? ` <b class="nw">${t('tree.pickBadge')}</b>` : ''}</button>` : ''}</div>
-      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}
-      <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}
+        <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
+      <div class="pa-line">${line}</div>
+      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}${looseHtml}
+      <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}${classBox}
       ${titles ? `<div class="pa-sub">${t('title.heading')}</div><div class="ttl-list">${titles}</div>` : ''}</div>`;
   }
 
