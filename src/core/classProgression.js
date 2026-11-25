@@ -195,6 +195,11 @@ for (const tree of Object.values(TREES)) for (const k in tree) {
   const n = tree[k];
   for (const ops of [n.ops, ...(n.pick || []).map((p) => p.ops)]) for (const p of [...Object.keys(ops.add), ...Object.keys(ops.mul)]) PATHS.add(p);
 }
+// the numbers the class cards of the Path change (CONFIG.paths.specials.classCards) come back from the snapshot too
+for (const key in (CONFIG.paths.specials || {}).classCards || {}) {
+  const k = CONFIG.paths.specials.classCards[key];
+  for (const p of [...Object.keys(k.add || {}), ...Object.keys(k.mul || {})]) PATHS.add(p);
+}
 const BASE = new Map();
 for (const p of PATHS) { const r = resolve(p); BASE.set(p, r.obj ? r.obj[r.key] : undefined); }
 
@@ -296,9 +301,11 @@ export class ClassProgression {
 
   // Puts the numbers of CONFIG back to their base and applies the steps in force. Returns true when anything
   // changed (the caller then recalculates the hunter, the army and the skill numbers).
-  apply(tree, rank, aff) {
+  // extra = more ops from outside (the class cards of the Path): [{ id, ops }]
+  apply(tree, rank, aff, extra = []) {
     this.compUp = [];
     const { ops, ids } = this.activeOps(tree, rank, aff);
+    for (const x of extra) { ops.push(x.ops); ids.push('path:' + x.id); }
     const sig = tree + '|' + ids.join(',');
     if (sig === this.sig) return false;
     this.sig = sig;

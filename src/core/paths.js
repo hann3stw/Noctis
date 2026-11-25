@@ -30,16 +30,24 @@ for (const [core, ids] of Object.entries({
 })) for (const id of ids.split(' ')) LEGACY[id] = core;
 const OLD_STAGES = [1, 3, 5, 8]; // the ranks the old picks were made at
 
+// a special card by its key ('pact:id', 'class:key', 'syn:id'), or null
+export function specialOf(sp) {
+  const S = CONFIG.paths.specials;
+  if (typeof sp !== 'string' || !S) return null;
+  const [kind, id] = sp.split(':');
+  return kind === 'pact' ? S.pacts[id] || null : kind === 'class' ? S.classCards[id] || null : kind === 'syn' ? S.synergies[id] || null : null;
+}
+
 export class Paths {
   constructor(game, saved) {
     this.game = game;
     const S = saved || {};
     const cores = CONFIG.paths.cores;
-    const okClass = (c) => c && cores[c.core] && (!c.mod || cores[c.mod]) && Number.isInteger(c.rarity) && c.rarity >= 0 && c.rarity < C().rarityMult.length;
+    const okClass = (c) => c && cores[c.core] && (!c.mod || cores[c.mod]) && Number.isInteger(c.rarity) && c.rarity >= 0 && c.rarity < C().rarityMult.length && (!c.sp || !!specialOf(c.sp));
     this.chosen = []; // [{ core, mod, rarity, st? }] one per stage
     this.legacy = false; // the picks were converted from the old nodes: a Respec Token is due
     if (S.v === 2 && Array.isArray(S.chosen)) {
-      this.chosen = S.chosen.filter(okClass).map((c) => ({ core: c.core, mod: c.mod || '', rarity: c.rarity, ...(c.st ? { st: c.st } : {}) }));
+      this.chosen = S.chosen.filter(okClass).map((c) => ({ core: c.core, mod: c.mod || '', rarity: c.rarity, ...(c.st ? { st: c.st } : {}), ...(c.sp ? { sp: c.sp } : {}) }));
       this.legacy = !!S.legacy;
     } else if (Array.isArray(S.chosen)) {
       S.chosen.filter((id) => LEGACY[id]).forEach((id, i) => this.chosen.push({ core: LEGACY[id], mod: '', rarity: 1, st: OLD_STAGES[i] || i + 1 }));
@@ -52,13 +60,14 @@ export class Paths {
     // the cores of the last offer (the next one is never the same three) and the stage that was rolled anew
     this.lastCores = Array.isArray(S.lastCores) ? S.lastCores.filter((c) => cores[c]).slice(0, 3) : [];
     this.rerolled = Number.isInteger(S.rerolled) ? S.rerolled : 0;
+    this.lastSp = typeof S.lastSp === 'string' ? S.lastSp : ''; // the kind of the last special card offered
     this.announced = false;
     this.rallyCd = 0;
     this.dirty = true;
   }
 
   serialize() {
-    return { v: 2, chosen: this.chosen.map((c) => ({ ...c })), offer: this.offer, legacy: this.legacy, lastCores: [...this.lastCores], rerolled: this.rerolled };
+    return { v: 2, chosen: this.chosen.map((c) => ({ ...c })), offer: this.offer, legacy: this.legacy, lastCores: [...this.lastCores], rerolled: this.rerolled, lastSp: this.lastSp };
   }
 
   // how many picks the hunter's rank has unlocked
@@ -183,8 +192,62 @@ export class Paths {
     const mod = (core, c) => (c && c !== core && sc[c] >= 0.4 ? c : '');
     const make = (core, m, role) => ({ core, mod: m, rarity: this.rarityOf(st, sc[core], m ? sc[m] : 0), role });
     const list = [make(main, mod(main, branch), 'deepen'), make(branch, mod(branch, main), fresh ? 'new' : 'branch'), make(wild, mod(wild, branch), 'wild')];
+    // the Wildcard may carry a special card (a pact, a class card or a synergy), never the same kind twice in a row
+    const sp = st >= 2 && Math.random() < C().specials.chance ? this.pickSpecial() : '';
+    if (sp) { list[2].sp = sp; this.lastSp = sp.split(':')[0]; }
     this.lastCores = list.map((c) => c.core);
     return list;
+  }
+
+  // ---- special cards ----------------------------------------------------------------------
+  // the special cards that can come now: 'pact:id', 'class:key', 'syn:id' (each once, the class card of the class)
+  specialsOpen() {
+    const S = C().specials, taken = new Set(this.chosen.map((c) => c.sp).filter(Boolean)), out = [];
+    if (this.game.rankIndex >= 2) for (const id in S.pacts) if (!taken.has('pact:' + id) && (!S.pacts[id].army || this.game.hasArmy())) out.push('pact:' + id);
+    const ck = this.classCardKey();
+    if (ck && !taken.has('class:' + ck)) out.push('class:' + ck);
+    for (const id in S.synergies) { const f = S.synergies[id].from; if (!taken.has('syn:' + id) && this.cores().includes(f) && this.coreCount(f) >= 1) out.push('syn:' + id); }
+    return out;
+  }
+
+  // the class card of the class: the one of its own mechanic, else the one of its base class
+  classCardKey() {
+    const g = this.game, K = C().specials.classCards;
+    if (!g.mainClass) return '';
+    if (K[g.classMechanic]) return g.classMechanic;
+    const base = { warrior: 'rage', mage: 'arcane', rogue: 'combo', cleric: 'faith', ranger: 'rangerCompanion', necromancer: 'shadowArmy' }[g.mech];
+    return base && K[base] ? base : '';
+  }
+
+  pickSpecial() {
+    const open = this.specialsOpen();
+    const other = open.filter((x) => x.split(':')[0] !== this.lastSp);
+    const pool = other.length ? other : open;
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : '';
+  }
+
+  // the bonus of the special cards picked (pacts: as they are; synergies: per pick of their core)
+  specialBonus() {
+    const b = {}, S = C().specials;
+    for (const c of this.chosen) {
+      if (!c.sp) continue;
+      const [kind, id] = c.sp.split(':');
+      const src = kind === 'pact' ? S.pacts[id].bonus : kind === 'syn' ? S.synergies[id].per : null;
+      const n = kind === 'syn' ? this.coreCount(S.synergies[id].from) : 1;
+      if (src) for (const k in src) b[k] = (b[k] || 0) + src[k] * n;
+    }
+    return b;
+  }
+
+  // the ops of the class cards picked, for the class progression (core/classProgression.js apply)
+  classCardOps() {
+    const out = [], K = C().specials.classCards;
+    for (const c of this.chosen) {
+      if (!c.sp || !c.sp.startsWith('class:')) continue;
+      const k = K[c.sp.slice(6)];
+      if (k) out.push({ id: k.id, ops: { add: k.add || {}, mul: k.mul || {}, bonus: {} } });
+    }
+    return out;
   }
 
   // roll the offer of the due stage anew (once per stage, for essence); the new cards avoid the old ones
@@ -293,6 +356,8 @@ export class Paths {
     });
     for (const ks of this.allKeystones()) for (const k in ks.bonus) b[k] = (b[k] || 0) + ks.bonus[k];
     for (const id of this.combos()) { const bo = C().combos[id].bonus; for (const k in bo) b[k] = (b[k] || 0) + bo[k]; }
+    const sb = this.specialBonus();
+    for (const k in sb) b[k] = (b[k] || 0) + sb[k];
     if (b.armySlots) b.armySlots = Math.round(b.armySlots);
     return b;
   }
@@ -445,7 +510,7 @@ export class Paths {
     const cls = this.options()[i];
     if (!cls) return false;
     const stage = this.stage(), step = auto ? null : this.stepFor(stage), opt = this.stepOption(i, step);
-    this.chosen.push({ core: cls.core, mod: cls.mod, rarity: cls.rarity });
+    this.chosen.push({ core: cls.core, mod: cls.mod, rarity: cls.rarity, ...(cls.sp ? { sp: cls.sp } : {}) });
     this.offer = null;
     this.dirty = true;
     if (opt) this.game.progression.pick(step.tree, step.key, opt.id, this.stageRank(stage)); // the class step of this rank
@@ -484,6 +549,7 @@ export class Paths {
     this.dirty = true;
     this.announced = false;
     if (this.skillSlots() < 3 && P.slots[3]) P.slots[3] = null; // the third skill slot went with the picks
+    if (this.game.refreshProgression) this.game.refreshProgression(); // a class card may have gone
     P.recalc();
     this.game.hud.syncSkills();
     play('ui');

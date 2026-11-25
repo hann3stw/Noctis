@@ -912,6 +912,44 @@ export const CONFIG = {
       fortune: [[2, {}, { selfXp: 0.05 }], [4, { ultCharge: 0.05 }], [6, {}, { selfXp: 0.05 }], [8, { damage: 0.08, hp: 0.08 }]],
       void: [[2, { skillDamage: 0.05 }], [4, {}, { manaRegenMult: 0.08 }], [6, { damage: 0.1, damageTaken: 0.02 }], [8, { damage: 0.15, skillDamage: 0.1 }]],
     },
+    // Special cards: the Wildcard of an offer may carry one (each can be taken once). The card keeps its core.
+    //  pact:    a strong bonus with a real cost (negative values), from rank C on
+    //  class:   changes the core mechanic of the class line (key = the class mechanic or the base class);
+    //           add / mul are numbers in CONFIG, like the class progression steps
+    //  synergy: grows with the picks of another core (per = bonus per pick of `from`)
+    specials: {
+      chance: 0.6, // chance that the Wildcard is a special card (from the second offer on)
+      pacts: {
+        berserkPact: { bonus: { damage: 0.35, damageTaken: 0.15 } },
+        arcaneDebt: { bonus: { skillDamage: 0.4, mana: -0.25 } },
+        swiftBargain: { bonus: { speed: 0.08, reload: 0.1, hp: -0.12 } },
+        ironOath: { bonus: { hp: 0.3, damage: -0.1 } },
+        soulTithe: { army: true, bonus: { armyDamage: 0.4, hp: -0.1 } },
+        glassCannon: { bonus: { crit: 0.08, damage: 0.15, damageTaken: 0.2 } },
+      },
+      classCards: {
+        rage: { id: 'ragingSoul', add: { 'warrior.rageHit': 1 }, mul: { 'warrior.decay': 0.7 } },
+        arcane: { id: 'arcaneFlood', add: { 'mage.arcaneMax': 1, 'mage.arcaneTime': 2 } },
+        combo: { id: 'shadowFlurry', add: { 'rogue.cpMax': 1, 'rogue.critPerPoint': 0.01 } },
+        faith: { id: 'radiantFaith', add: { 'cleric.faithHit': 1, 'cleric.faithMax': 20 } },
+        rangerCompanion: { id: 'eagleEye', add: { 'ranger.rangeBonus': 0.15, 'ranger.trapLife': 10 } },
+        shadowArmy: { id: 'soulTide', add: { 'shadows.baseSlots': 2 }, mul: { 'shadows.revive.cooldown': 0.85 } },
+        berserkerMomentum: { id: 'relentless', add: { 'mechanics.berserkerMomentum.max': 1 } },
+        stormOverload: { id: 'stormSurge', add: { 'mechanics.stormOverload.range': 1, 'mechanics.stormOverload.damage': 0.1 } },
+        companionBond: { id: 'kindredSpirit', add: { 'mechanics.companionBond.perSec': 2 } },
+        aegis: { id: 'unyieldingAegis', add: { 'mechanics.aegis.perHit': 4 } },
+      },
+      synergies: {
+        ironEdge: { from: 'tank', per: { damage: 0.01 } },
+        arcaneBlade: { from: 'mage', per: { reload: 0.02 } },
+        bloodFlow: { from: 'blood', per: { speed: 0.01 } },
+        deepHunt: { from: 'delver', per: { crit: 0.01 } },
+        fortunesFavour: { from: 'fortune', per: { ultCharge: 0.02 } },
+        stalkersEdge: { from: 'predator', per: { damage: 0.012 } },
+        sanctifiedArms: { from: 'sanctum', per: { hp: 0.015 } },
+        stormHeart: { from: 'elemental', per: { skillDamage: 0.012 } },
+      },
+    },
     // Combos: two picks or more of both cores give this bonus on top (like the armour sets)
     combos: {
       executioner: { cores: ['blade', 'slayer'], bonus: { crit: 0.04, damage: 0.05 } },

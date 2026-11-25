@@ -639,7 +639,11 @@ export class Menu {
   pathLines(bo, ro) {
     const out = [];
     for (const k in bo) {
-      const v = bo[k], n = k === 'armySlots' ? Math.round(Math.abs(v)) : Math.round(Math.abs(v) * 100);
+      const whole = k === 'armySlots' || k === 'charges';
+      const v = bo[k];
+      // small shares (healing per hit) keep two decimals instead of becoming 0
+      let n = whole ? Math.round(Math.abs(v)) : Math.round(Math.abs(v) * 100);
+      if (!n && v && !whole) n = Math.round(Math.abs(v) * 10000) / 100;
       if (n) out.push(`<li>${t('path.b.' + k, { v: (v < 0 ? '-' : '+') + n })}</li>`);
     }
     for (const k in ro) {
@@ -647,6 +651,16 @@ export class Menu {
       if (n && t('path.r.' + k) !== 'path.r.' + k) out.push(`<li class="rule">${t('path.r.' + k, { v: n })}</li>`);
     }
     return out.join('');
+  }
+
+  // a special card of the Path (pact, class card, synergy), as a part of its card
+  specialHtml(sp) {
+    const S = CONFIG.paths.specials, Pa = this.game.path, [kind, id] = sp.split(':');
+    const flat = (h) => h.replace(/<\/?li[^>]*>/g, ' ');
+    if (kind === 'pact') return `<div class="pa-sp pact"><small>${t('path.sp.pact', { name: t('special.' + id) })}</small><span>${flat(this.pathLines(S.pacts[id].bonus, {}))}</span></div>`;
+    if (kind === 'class') { const k = S.classCards[id]; return `<div class="pa-sp class"><small>${t('path.sp.class', { name: t('special.' + k.id) })}</small><span>${describeOps({ add: k.add || {}, mul: k.mul || {}, bonus: {} }).join(' · ')}</span></div>`; }
+    const y = S.synergies[id];
+    return `<div class="pa-sp syn"><small>${t('path.sp.syn', { name: t('special.' + id) })}</small><span>${t('path.sp.per', { core: t('class.core.' + y.from), n: Pa.coreCount(y.from) })} ${flat(this.pathLines(y.per, {}))}</span></div>`;
   }
 
   // a class skill of a core at a level (0 .. 2), as text
@@ -671,8 +685,9 @@ export class Menu {
       const flat = (h) => h.replace(/<\/?li[^>]*>/g, ' ');
       const extra = (ks ? `<div class="pa-ks"><small>${t('path.keystone', { name: t('keystone.' + ks.core + '.' + ks.at) })}</small><span>${flat(this.pathLines(ks.bonus, ks.rule))}</span></div>` : '')
         + (cb ? `<div class="pa-ks combo"><small>${t('path.combo', { name: t('combo.' + cb) })}</small><span>${flat(this.pathLines(CONFIG.paths.combos[cb].bonus, {}))}</span></div>` : '');
-      return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}">${role}<em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
-        <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>${extra}${cs}
+      const spHtml = cls.sp ? this.specialHtml(cls.sp) : '';
+      return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}${cls.sp ? ' sp sp-' + cls.sp.split(':')[0] : ''}">${role}<em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
+        <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>${spHtml}${extra}${cs}
         <button class="ap-btn gold" data-act="pathPick" data-id="${i}">${t('path.choose')}</button></div>`;
     };
     // a class step that waits on its own (no Path pick carries it: older worlds, or a class taken later)
@@ -690,9 +705,13 @@ export class Menu {
       const what = c ? `<b class="l-${c.core}">${Pa.chosenName(k)}</b>` : reached ? `<b class="pl-due">${t('path.lineDue')}</b>` : `<b class="pl-off">—</b>`;
       return `<div class="pl-pt${c ? ' done' : reached ? ' due' : ''}"><u>${RN[rk]}</u>${what}${mark}</div>`;
     }).join('');
+    // what this rank brings: cores that just opened, the class step that rides on the pick
+    const nst = Pa.stage(), fresh = due ? Pa.freshCores(nst) : [];
+    const newBits = [...fresh.map((c) => t('path.newCore', { name: t('class.core.' + c) })), ...(step ? [t('path.newStep', { key: step.key })] : [])];
+    const newHtml = newBits.length ? `<p class="pa-new">${t('path.newAt', { rank: RN[Pa.stageRank(nst)] })} <b>${newBits.join(' · ')}</b></p>` : '';
     // keystones and combos in force
-    const kss = Pa.allKeystones(), cbs = Pa.combos();
-    const devHtml = kss.length || cbs.length ? `<div class="pa-dev">${kss.length ? `<div><small>${t('path.devKeys')}</small>${kss.map((k) => `<span class="pa-pill l-${k.core}">${t('keystone.' + k.core + '.' + k.at)}</span>`).join('')}</div>` : ''}${cbs.length ? `<div><small>${t('path.devCombos')}</small>${cbs.map((id) => `<span class="pa-pill combo">${t('combo.' + id)}</span>`).join('')}</div>` : ''}</div>` : '';
+    const kss = Pa.allKeystones(), cbs = Pa.combos(), sps = Pa.chosen.map((c) => c.sp).filter(Boolean);
+    const devHtml = kss.length || cbs.length || sps.length ? `<div class="pa-dev">${kss.length ? `<div><small>${t('path.devKeys')}</small>${kss.map((k) => `<span class="pa-pill l-${k.core}">${t('keystone.' + k.core + '.' + k.at)}</span>`).join('')}</div>` : ''}${cbs.length ? `<div><small>${t('path.devCombos')}</small>${cbs.map((id) => `<span class="pa-pill combo">${t('combo.' + id)}</span>`).join('')}</div>` : ''}${sps.length ? `<div><small>${t('path.devSpecials')}</small>${sps.map((sp) => `<span class="pa-pill sp-${sp.split(':')[0]}">${t('special.' + (sp.startsWith('class:') ? CONFIG.paths.specials.classCards[sp.slice(6)].id : sp.split(':')[1]))}</span>`).join('')}</div>` : ''}</div>` : '';
     const classBox = tree || G.mainClass ? `<details class="pa-cls"${loose.length ? ' open' : ''}><summary>${t('path.classBox', { name: t('mc.' + G.mainClass) })}</summary><div class="pa-cls-in">${classTreeHtml(G, step ? step.key : '')}</div></details>` : '';
     const mine = !Pa.chosen.length ? `<p class="pa-none">${t('path.none')}</p>`
       : Pa.chosen.map((c, i) => `<span class="pa-pill l-${c.core} r-${c.rarity}">${Pa.chosenName(i)}</span>`).join('');
@@ -709,6 +728,7 @@ export class Menu {
       <div class="pa-top"><div class="pa-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
         <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
       <div class="pa-line">${line}</div>
+      ${due ? newHtml : ''}
       ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>${reroll}` : ''}${looseHtml}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}${devHtml}${classBox}
       ${titles ? `<div class="pa-sub">${t('title.heading')}</div><div class="ttl-list">${titles}</div>` : ''}</div>`;

@@ -4358,3 +4358,19 @@ input.shake {
 .pa-dev > div { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 0.6); }
 .pa-dev small { color: #b9add6; font-size: calc(var(--u) * 1.9); min-width: calc(var(--u) * 12); }
 .pa-pill.combo { border-color: #ffb070; color: #ffd0a0; }
+/* ---- Path: special cards and the news of a rank ---- */
+.pa-sp { margin-top: calc(var(--u) * 0.5); padding: calc(var(--u) * 0.6) calc(var(--u) * 0.8); border-radius: calc(var(--u) * 1); display: flex; flex-direction: column; gap: calc(var(--u) * 0.2); border: 1px solid; }
+.pa-sp small { font-size: calc(var(--u) * 1.8); font-weight: 700; }
+.pa-sp span { color: #e9ddff; font-size: calc(var(--u) * 1.8); }
+.pa-sp.pact { background: rgba(255, 48, 64, 0.12); border-color: rgba(255, 90, 100, 0.6); }
+.pa-sp.pact small { color: #ff8a8a; }
+.pa-sp.class { background: rgba(178, 124, 255, 0.14); border-color: rgba(178, 124, 255, 0.6); }
+.pa-sp.class small { color: #d2bcff; }
+.pa-sp.syn { background: rgba(92, 240, 138, 0.1); border-color: rgba(92, 240, 138, 0.5); }
+.pa-sp.syn small { color: #8ff0b0; }
+.pa-card.sp-pact { box-shadow: 0 0 calc(var(--u) * 2) rgba(255, 48, 64, 0.35); }
+.pa-new { margin: calc(var(--u) * 0.4) 0 0; color: #b9add6; font-size: calc(var(--u) * 2); }
+.pa-new b { color: #ffe08a; }
+.pa-pill.sp-pact { border-color: #ff8a8a; color: #ffc0c0; }
+.pa-pill.sp-class { border-color: #b27cff; color: #e2d0ff; }
+.pa-pill.sp-syn { border-color: #5cf08a; color: #c0ffd4; }

@@ -447,7 +447,7 @@ export class Game {
     const tree = this.classTree, aff = this.aff.values(), P = this.player;
     if (!P) return;
     for (const st of this.progression.openUniques(tree, this.rankIndex, aff)) if (this.hud) this.hud.banner(t('prog.uniqueOpen'), progName(st.node.id));
-    if (this.progression.apply(tree, this.rankIndex, aff)) {
+    if (this.progression.apply(tree, this.rankIndex, aff, this.path ? this.path.classCardOps() : [])) {
       bumpSkillCache();
       P.recalc();
       this.army.recalcAll();

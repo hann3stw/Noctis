@@ -13,6 +13,7 @@ function world(cls = 'necromancer', rank = 9) {
     classDue: () => false, profile: new Profile(), army: { deployed: [] },
     player: { stats: { int: 5, str: 5 }, maxHp: 100, essence: 1e9, slots: [null, null, null, 'x'], recalc() {} },
     hud: { syncSkills() {}, banner() {} }, save() {}, quests: { respecs: 0 }, aff: { values: () => ({}) },
+    hasArmy: () => !!(CONFIG.classes.list[cls] && CONFIG.classes.list[cls].army), classMechanic: '', mech: cls,
   };
   g.path = new Paths(g, null);
   return g;
@@ -176,4 +177,56 @@ test('every keystone and combo has a name and only known numbers', async () => {
     assert.notEqual(t('combo.' + id), 'combo.' + id);
     for (const c of CONFIG.paths.combos[id].cores) assert.ok(CONFIG.paths.cores[c], id + ': ' + c);
   }
+});
+
+test('special cards: each once, never the same kind twice in a row, real effects, readable', async () => {
+  const { t } = await import('../src/strings.js');
+  const { specialOf } = await import('../src/core/paths.js');
+  const S = CONFIG.paths.specials;
+  for (const id in S.pacts) {
+    assert.notEqual(t('special.' + id), 'special.' + id);
+    const b = S.pacts[id].bonus;
+    assert.ok(Object.values(b).some((v) => v > 0) && Object.entries(b).some(([k, v]) => (k === 'damageTaken' ? v > 0 : v < 0)), id + ' needs a gain and a cost');
+  }
+  for (const k in S.classCards) assert.notEqual(t('special.' + S.classCards[k].id), 'special.' + S.classCards[k].id);
+  for (const id in S.synergies) { assert.notEqual(t('special.' + id), 'special.' + id); assert.ok(CONFIG.paths.cores[S.synergies[id].from], id); }
+  assert.equal(specialOf('pact:nope'), null);
+  // a pact really changes the numbers, a synergy grows with its core
+  const g = world('warrior');
+  const P = g.path;
+  P.chosen = [{ core: 'tank', mod: '', rarity: 1 }, { core: 'tank', mod: '', rarity: 1 }, { core: 'blade', mod: '', rarity: 1, sp: 'syn:ironEdge' }, { core: 'slayer', mod: '', rarity: 1, sp: 'pact:ironOath' }];
+  P.dirty = true;
+  const sb = P.specialBonus();
+  assert.ok(Math.abs(sb.damage - (0.02 - 0.1)) < 1e-9); // Iron Edge: 2 Tank picks x 1 %; Iron Oath: -10 %
+  assert.ok(sb.hp > 0.29);
+  // a picked special does not come again; the class card fits the class
+  g.rankIndex = 4; g.classMechanic = 'rage';
+  const open = P.specialsOpen();
+  assert.ok(!open.includes('syn:ironEdge') && !open.includes('pact:ironOath'));
+  assert.ok(open.includes('class:rage'));
+  // over many offers: the kind of special card changes
+  let last = '', twice = 0, seen = 0;
+  for (let k = 0; k < 60; k++) {
+    P.lastSp = last;
+    const sp = P.pickSpecial();
+    if (!sp) continue;
+    seen++;
+    if (sp.split(':')[0] === last) twice++;
+    last = sp.split(':')[0];
+  }
+  assert.ok(seen > 0 && twice === 0);
+  // the saved pick keeps its special card
+  const back = new Paths(g, JSON.parse(JSON.stringify(P.serialize())));
+  assert.equal(back.chosen[3].sp, 'pact:ironOath');
+});
+
+test('every bonus a Path card can show has a text', async () => {
+  const { t } = await import('../src/strings.js');
+  const keys = new Set();
+  for (const c in CONFIG.paths.cores) for (const k in CONFIG.paths.cores[c].bonus) keys.add(k);
+  for (const c in CONFIG.paths.keystones) for (const k of CONFIG.paths.keystones[c]) for (const b in k[1] || {}) keys.add(b);
+  for (const id in CONFIG.paths.combos) for (const b in CONFIG.paths.combos[id].bonus) keys.add(b);
+  for (const id in CONFIG.paths.specials.pacts) for (const b in CONFIG.paths.specials.pacts[id].bonus) keys.add(b);
+  for (const id in CONFIG.paths.specials.synergies) for (const b in CONFIG.paths.specials.synergies[id].per) keys.add(b);
+  for (const k of keys) assert.notEqual(t('path.b.' + k, { v: '+1' }), 'path.b.' + k, k);
 });
