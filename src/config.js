@@ -893,6 +893,8 @@ export const CONFIG = {
     pickBonus: { damage: 0.02, hp: 0.02 }, // on top of every pick
     sockets: [3, 6], // picks needed for the 2nd and the 3rd rune socket
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
+    reroll: 150, // essence x (rank + 1) to roll the offer of a stage anew (once per stage)
+    respecAll: 2, // Respec Tokens to take every pick back (one token takes back the last pick)
     live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'],
     cores: {
       blade: {

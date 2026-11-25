@@ -277,7 +277,11 @@ export class Menu {
     } else if (act === 'titlePick') {
       this.game.titles.wear(target.dataset.id);
     } else if (act === 'pathRespec') {
+      this.game.path.respecLast();
+    } else if (act === 'pathRespecAll') {
       this.game.path.respec();
+    } else if (act === 'pathReroll') {
+      this.game.path.reroll();
     } else if (act === 'useXp') {
       this.game.quests.useXp();
     } else if (act === 'useKey') {
@@ -661,7 +665,8 @@ export class Menu {
       const un = Pa.unlocksOf(cls, st).map((id) => `<li class="rule">${t('unlock.' + id)}</li>`).join('');
       const opt = Pa.stepOption(i, step);
       const cs = opt ? `<div class="pa-step"><small>${t('path.withStep', { rank: step.key, step: t('tree.step.' + step.key) })}</small><b>${progName(opt.id)}</b><span>${describeOps(opt.ops).join(' · ')}</span></div>` : '';
-      return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}"><em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
+      const role = cls.role ? `<u class="pa-role ${cls.role}">${t('path.role.' + cls.role)}</u>` : '';
+      return `<div class="pa-card pick l-${cls.core} r-${cls.rarity}">${role}<em>${t('rarity.' + cls.rarity)} · ${t('class.core.' + cls.core)}${cls.mod ? ' + ' + t('class.core.' + cls.mod) : ''}</em><b>${Pa.offerName(cls)}</b>
         <ul>${this.pathLines(Pa.bonusOf(cls, st), Pa.rulesOf(cls, st))}${un}</ul><p>${this.skillText(cls.core, lvl)}</p>${cs}
         <button class="ap-btn gold" data-act="pathPick" data-id="${i}">${t('path.choose')}</button></div>`;
     };
@@ -685,7 +690,9 @@ export class Menu {
       : Pa.chosen.map((c, i) => `<span class="pa-pill l-${c.core} r-${c.rarity}">${Pa.chosenName(i)}</span>`).join('');
     const sk = Pa.skill(), unl = Pa.unlockedList();
     const info = sk ? `<div class="pa-info"><p>${this.skillText(sk.core, sk.level)}</p>${unl.length ? `<ul class="pa-tot pa-unl">${unl.map((id) => `<li class="rule">${t('unlock.' + id)}</li>`).join('')}</ul>` : ''}<ul class="pa-tot">${this.pathLines(Pa.totals(), Pa.rules())}</ul></div>` : '';
-    const respec = Pa.chosen.length ? `<div class="pa-respec"><button class="ap-btn ghost" data-act="pathRespec"${Q.respecs ? '' : ' disabled'}>${t('path.respecToken', { n: Q.respecs })}</button>${Q.respecs ? '' : `<small>${t('path.noToken')}</small>`}</div>` : '';
+    const all = CONFIG.paths.respecAll;
+    const respec = Pa.chosen.length ? `<div class="pa-respec"><button class="ap-btn ghost" data-act="pathRespec"${Q.respecs ? '' : ' disabled'}>${t('path.respecLast', { n: Q.respecs })}</button><button class="ap-btn ghost" data-act="pathRespecAll"${Q.respecs >= all ? '' : ' disabled'}>${t('path.respecAll', { n: all })}</button><small>${Q.respecs ? t('path.respecKeep') : t('path.noToken')}</small></div>` : '';
+    const reroll = due ? `<div class="pa-reroll"><button class="ap-btn ghost" data-act="pathReroll"${Pa.canReroll() ? '' : ' disabled'}>${t('path.reroll', { n: fmt(Pa.rerollCost()) })}</button><small>${Pa.rerolled === Pa.stage() ? t('path.rerolled') : t('path.rerollHint')}</small></div>` : '';
     const titles = Object.keys(TITLES).filter((id) => this.game.titles.has(id)).map((id) => {
       const worn = this.game.titles.worn === id;
       return `<button class="ttl${worn ? ' on' : ''}" data-act="titlePick" data-id="${id}" title="${t('title.' + id + '.how')}"><b>${t('title.' + id)}</b></button>`;
@@ -694,7 +701,7 @@ export class Menu {
       <div class="pa-top"><div class="pa-head">${this.game.mainClass ? `<i class="emb" data-c="${this.game.mainClass}"></i>` : ''}<b>${this.game.mainClass ? t('path.title', { class: t('mc.' + this.game.mainClass) }) : t('path.titleNone')}</b><small>${due ? t('path.dueText') : t('path.hint')}</small></div>
         <div class="pa-chips"><span>${t('path.chipSlots', { n: Pa.skillSlots() })}</span><span>${t('path.chipRunes', { n: Pa.runeSockets() })}</span><span>${t('path.chipPick', { d: Math.round(pb.damage * 100), h: Math.round(pb.hp * 100) })}</span></div>${respec}</div>
       <div class="pa-line">${line}</div>
-      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>` : ''}${looseHtml}
+      ${due ? `<div class="pa-row pa-offer">${Pa.options().map((cls, i) => card(cls, i)).join('')}</div>${reroll}` : ''}${looseHtml}
       <div class="pa-sub">${t('path.yours')}</div><div class="pa-strip">${mine}</div>${info}${classBox}
       ${titles ? `<div class="pa-sub">${t('title.heading')}</div><div class="ttl-list">${titles}</div>` : ''}</div>`;
   }

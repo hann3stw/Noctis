@@ -48,14 +48,17 @@ export class Paths {
     this.chosen = this.chosen.slice(0, C().stages.length);
     // the offer of the stage that is due: { stage, list: [{ core, mod, rarity }] }
     const o = S.v === 2 && S.offer;
-    this.offer = o && o.stage === this.chosen.length + 1 && Array.isArray(o.list) && o.list.length && o.list.every(okClass) ? o : null;
+    this.offer = o && o.stage === this.chosen.length + 1 && Array.isArray(o.list) && o.list.length === 3 && o.list.every(okClass) ? o : null;
+    // the cores of the last offer (the next one is never the same three) and the stage that was rolled anew
+    this.lastCores = Array.isArray(S.lastCores) ? S.lastCores.filter((c) => cores[c]).slice(0, 3) : [];
+    this.rerolled = Number.isInteger(S.rerolled) ? S.rerolled : 0;
     this.announced = false;
     this.rallyCd = 0;
     this.dirty = true;
   }
 
   serialize() {
-    return { v: 2, chosen: this.chosen.map((c) => ({ ...c })), offer: this.offer, legacy: this.legacy };
+    return { v: 2, chosen: this.chosen.map((c) => ({ ...c })), offer: this.offer, legacy: this.legacy, lastCores: [...this.lastCores], rerolled: this.rerolled };
   }
 
   // how many picks the hunter's rank has unlocked
@@ -138,23 +141,59 @@ export class Paths {
   }
 
   // The three classes of the stage that is due, made from the way the hunter plays:
-  //  - the way on: the core of the last pick (the best fitting core at the first pick),
-  //  - a branch: the best fitting other core, and
-  //  - a new direction: the next one.
-  // Each gets the best fitting other core as its mod when that fits well enough.
-  // The offer stays the same until a pick is made.
+  // The offer of a stage: three cards with three roles, so they are never the same kind of choice:
+  //  - deepen: the core of the last pick (the best fitting core at the first pick)
+  //  - branch: the core picked least so far (a core that is new to the hunter first)
+  //  - wild:   another core; never the same three cores as the last offer
+  // Each card gets the best fitting other core as its mod when that fits well enough.
+  // The offer stays the same until a pick is made (it is saved; reloading rolls nothing).
   options() {
     const st = this.stage();
     if (this.offer && this.offer.stage === st) return this.offer.list;
-    const sc = this.scores();
-    const order = this.cores().slice().sort((a, b) => sc[b] - sc[a]);
-    const main = this.currentCore() || order[0];
-    const rest = order.filter((c) => c !== main);
+    this.offer = { stage: st, list: this.makeOffer(st, []) };
+    return this.offer.list;
+  }
+
+  // avoid: cores that should not come (a roll anew avoids the cards it replaces)
+  makeOffer(st, avoid) {
+    const sc = this.scores(), all = this.cores();
+    const byFit = all.slice().sort((a, b) => sc[b] - sc[a]);
+    const main = this.currentCore() || byFit[0];
+    const free = (c, used) => c && !used.includes(c);
+    const used = [main];
+    // branch: least picked, then best fitting (a core never picked comes first)
+    const branch = all.filter((c) => free(c, used) && !avoid.includes(c)).sort((a, b) => this.coreCount(a) - this.coreCount(b) || sc[b] - sc[a])[0]
+      || byFit.find((c) => free(c, used));
+    used.push(branch);
+    // wild: any other core, the best fitting one that does not make the same three as the last offer
+    const rest = byFit.filter((c) => free(c, used));
+    const same = (c) => this.lastCores.length === 3 && [main, branch, c].every((x) => this.lastCores.includes(x));
+    const wild = rest.filter((c) => !avoid.includes(c)).find((c) => !same(c)) || rest.find((c) => !same(c)) || rest[0] || byFit.find((c) => c !== main) || main;
     const mod = (core, c) => (c && c !== core && sc[c] >= 0.4 ? c : '');
-    const make = (core, m) => ({ core, mod: m, rarity: this.rarityOf(st, sc[core], m ? sc[m] : 0) });
-    const list = [make(main, mod(main, rest[0])), make(rest[0], mod(rest[0], main)), make(rest[1], mod(rest[1], rest[0]))];
-    this.offer = { stage: st, list };
+    const make = (core, m, role) => ({ core, mod: m, rarity: this.rarityOf(st, sc[core], m ? sc[m] : 0), role });
+    const list = [make(main, mod(main, branch), 'deepen'), make(branch, mod(branch, main), 'branch'), make(wild, mod(wild, branch), 'wild')];
+    this.lastCores = list.map((c) => c.core);
     return list;
+  }
+
+  // roll the offer of the due stage anew (once per stage, for essence); the new cards avoid the old ones
+  rerollCost() {
+    return CONFIG.paths.reroll * (this.game.rankIndex + 1);
+  }
+
+  canReroll() {
+    return this.due() && this.rerolled !== this.stage() && this.game.player.essence >= this.rerollCost();
+  }
+
+  reroll() {
+    if (!this.canReroll()) return false;
+    const st = this.stage(), old = this.options().map((c) => c.core);
+    this.game.player.essence -= this.rerollCost();
+    this.rerolled = st;
+    this.offer = { stage: st, list: this.makeOffer(st, old.slice(1)) }; // the way on (deepen) stays
+    play('ui');
+    this.game.save();
+    return true;
   }
 
   // ---- names, bonuses, rules ------------------------------------------------------------
@@ -372,20 +411,36 @@ export class Paths {
     return true;
   }
 
-  // takes every pick back (a Respec Token); the ranks reached give the picks again
-  respec() {
+  // one Respec Token takes the last pick back (its stage is offered again); class steps that came with picks stay
+  respecLast() {
     const Q = this.game.quests;
     if (!this.chosen.length || Q.respecs <= 0) return false;
     Q.respecs--;
+    this.chosen.pop();
+    this.afterRespec();
+    return true;
+  }
+
+  // CONFIG.paths.respecAll tokens take every pick back; the ranks reached give the picks again
+  respec() {
+    const Q = this.game.quests;
+    if (!this.chosen.length || Q.respecs < CONFIG.paths.respecAll) return false;
+    Q.respecs -= CONFIG.paths.respecAll;
     this.chosen = [];
+    this.afterRespec();
+    return true;
+  }
+
+  afterRespec() {
+    const P = this.game.player;
     this.offer = null;
     this.dirty = true;
     this.announced = false;
-    this.game.player.recalc();
+    if (this.skillSlots() < 3 && P.slots[3]) P.slots[3] = null; // the third skill slot went with the picks
+    P.recalc();
     this.game.hud.syncSkills();
     play('ui');
     this.game.save();
-    return true;
   }
 
   // the core with most picks ('' = none)
