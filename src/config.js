@@ -135,8 +135,10 @@ export const CONFIG = {
       easy: { enemyHp: 0.7, enemyDamage: 0.6, luck: 0 },
       normal: { enemyHp: 1, enemyDamage: 1.1, luck: 0 },
       hard: { enemyHp: 1.5, enemyDamage: 1.75, luck: 0.15 },
-      extreme: { enemyHp: 2.4, enemyDamage: 2.8, luck: 0.4 },
+      extreme: { enemyHp: 2.4, enemyDamage: 2.8, luck: 0.4, early: { until: 10, enemyHp: 1.6, enemyDamage: 1.8 } },
     },
+    // early = gentler numbers for enemies below level `until` (rank E): Extreme as a first world was close to
+    // unplayable there (play data: 60 deaths per hour in rank E against 3 on Normal); from rank D on it is full force
     default: 'normal', // new worlds
     oldSaves: 'hard', // worlds made before there was a choice
   },
@@ -715,7 +717,7 @@ export const CONFIG = {
     //   eliteAdds    the boss's helpers are elites (elite shadows)
     difficulties: [
       // minRarity: 2 = rare, 3 = epic (never above what the rank can drop)
-      { id: 'normal', level: 0.2, hp: 1, damage: 1, items: 3, minRarity: 2, luck: 1, eliteAdds: false, color: 0xffffff, stages: ['wave', 'wave'], wave: 7, elite: 0.08, survive: 20, guards: 1 },
+      { id: 'normal', level: 0.35, hp: 1, damage: 1, items: 3, minRarity: 2, luck: 1, eliteAdds: false, color: 0xffffff, stages: ['wave', 'wave', 'guard'], wave: 7, elite: 0.08, survive: 20, guards: 1 },
       { id: 'hard', level: 0.5, hp: 1.6, damage: 1.25, items: 4, minRarity: 2, luck: 1.8, eliteAdds: true, color: 0xffb040, stages: ['wave', 'survive', 'guard'], wave: 9, elite: 0.15, survive: 25, guards: 1 },
       { id: 'deadly', level: 0.85, hp: 2.6, damage: 1.5, items: 5, minRarity: 3, luck: 3, eliteAdds: true, color: 0xff3050, stages: ['wave', 'survive', 'wave', 'guard'], wave: 11, elite: 0.25, survive: 30, guards: 2 },
     ],

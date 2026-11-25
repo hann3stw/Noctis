@@ -371,7 +371,7 @@ export class Game {
     if (!L[id] || id === this.difficulty) return;
     const a = L[this.difficulty], b = L[id];
     this.difficulty = id;
-    this.enemies.rescale(b.enemyHp / a.enemyHp, b.enemyDamage / a.enemyDamage);
+    this.enemies.rescaleDiff(a, b);
     this.player.recalc();
     this.save();
   }

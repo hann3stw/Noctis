@@ -383,9 +383,11 @@ export class Enemies {
     const pw = enemyPower(lv);
     // later ranks: tougher normal enemies, gate bosses a share of it
     const rk = def.boss ? (abyss ? 1 : Math.pow(rankHp(lv), CONFIG.boss.rankHp)) : rankHp(lv);
-    this.maxHp[i] = Math.round(def.hp * pw * T.hp * D.enemyHp * hpM * rk);
+    // a difficulty may be gentler for the first levels (Extreme in rank E, see CONFIG.difficulty)
+    const early = D.early && lv < D.early.until ? D.early : null;
+    this.maxHp[i] = Math.round(def.hp * pw * T.hp * (early ? early.enemyHp : D.enemyHp) * hpM * rk);
     this.hp[i] = this.maxHp[i];
-    this.dmg[i] = def.damage * pw * T.dmg * D.enemyDamage * dmgM;
+    this.dmg[i] = def.damage * pw * T.dmg * (early ? early.enemyDamage : D.enemyDamage) * dmgM;
     this.xpv[i] = Math.round(def.xp * pw * T.xp * Math.sqrt(rk) * xpM);
     this.scale[i] = def.scale * T.scale;
     if (this.kid[i]) {
@@ -417,6 +419,18 @@ export class Enemies {
   }
 
   // The difficulty changed: every enemy gets the new health and damage.
+  // the difficulty changed from a to b (CONFIG.difficulty.levels): every enemy by the numbers that applied to it
+  // (rank E enemies may have had the gentler `early` ones)
+  rescaleDiff(a, b) {
+    const num = (D, lv, k) => (D.early && lv < D.early.until ? D.early[k] : D[k]);
+    for (let i = 0; i < this.count; i++) {
+      const lv = this.lvl[i], hpR = num(b, lv, 'enemyHp') / num(a, lv, 'enemyHp'), dmgR = num(b, lv, 'enemyDamage') / num(a, lv, 'enemyDamage');
+      this.maxHp[i] = Math.round(this.maxHp[i] * hpR);
+      this.hp[i] = Math.min(this.maxHp[i], this.hp[i] * hpR);
+      this.dmg[i] *= dmgR;
+    }
+  }
+
   rescale(hpR, dmgR) {
     for (let i = 0; i < this.count; i++) {
       this.maxHp[i] = Math.round(this.maxHp[i] * hpR);

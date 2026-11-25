@@ -817,7 +817,7 @@ export class Screens {
     const tabs = (isNew ? ['world'] : []).concat(Object.keys(ED_TABS)).map((k) => `<button class="seg${tab === k ? ' on' : ''}" data-act="edTab" data-v="${k}">${t('edtab.' + k)}</button>`).join('');
     const rows = tab === 'world'
       ? `<label class="ed-name"><b>${t('new.name')}</b><input type="text" data-act="name" maxlength="${CONFIG.save.nameMaxLength}" value="${esc(this.ed.name)}" autocomplete="off" spellcheck="false"></label>
-        <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small></div>
+        <div class="ed-diff"><b>${t('set.difficulty')}</b><div class="segs">${diffSegs(this.ed.diff)}</div><small>${t('diff.' + this.ed.diff + '.desc')}</small>${this.ed.diff === 'extreme' ? `<small class="ed-warn">${t('diff.extreme.warn')}</small>` : ''}</div>
         <div class="ed-tut"><b>${t('new.tutorial')}</b><button class="seg${this.ed.tutorial ? ' on' : ''}" data-act="tutorial">${this.ed.tutorial ? t('set.on') : t('set.off')}</button><small>${t('new.tutorialHint')}</small></div>`
       : ED_TABS[tab].map((r) => this.edRow(r)).join('');
     return `<div class="ed">

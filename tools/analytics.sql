@@ -67,3 +67,12 @@ group by 1 order by 1;
 -- 11. new worlds: does anyone start over, and at what level did they leave the old one (the restart question)
 -- select props->>'worlds' as worlds_before, props->>'best' as best_level, count(*) as n
 -- from ev where name = 'world' and props->>'new' = '1' group by 1, 2 order by n desc;
+
+-- 10. rank trials: passes, failed tries and how long they take (events 'trial' and 'gate_leave' with tr = 1, from 25.11.)
+-- select coalesce(t.rank, l.ctx->>'rk') as rank,
+--        count(*) filter (where t.name = 'trial') as passed,
+--        count(*) filter (where l.name = 'gate_leave' and l.props->>'died' = '1') as died,
+--        round(avg((t.props->>'sec')::numeric)) as avg_sec_pass
+-- from (select *, props->>'rank' as rank from ev where name = 'trial') t
+-- full join (select * from ev where name = 'gate_leave' and props->>'tr' = '1') l on false
+-- group by 1 order by 1;

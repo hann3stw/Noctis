@@ -381,7 +381,9 @@ export class Gates {
     const gi = this.active;
     if (gi < 0) return;
     const game = this.game, P = game.player, E = game.enemies;
-    track('gate_leave', { died: toCamp ? 1 : 0, sec: Math.round((performance.now() - (this.t0 || performance.now())) / 1000) });
+    const lg = this.list[gi];
+    // tr / ab = rank trial / Abyss, st = the stage reached, so failed trials can be counted (tools/analytics.sql)
+    track('gate_leave', { died: toCamp ? 1 : 0, sec: Math.round((performance.now() - (this.t0 || performance.now())) / 1000), d: lg ? lg.diff : -1, tr: lg && lg.trial ? 1 : 0, ab: lg && lg.abyss ? 1 : 0, st: this.stageI || 0 });
     this.active = -1;
     this.exitOpen = false;
     this.exit.visible = false;
@@ -440,6 +442,7 @@ export class Gates {
     if (gate.keyRun || gate.duelRun) game.runes.find();
     this.exitOpen = true;
     if (gate.trial) {
+      track('trial', { rank: RANKS[game.rankIndex] || '', res: 'pass', sec: Math.round((performance.now() - (this.t0 || performance.now())) / 1000) });
       const ess = CONFIG.trial.essence * (game.rankIndex + 1);
       P.essence += ess;
       game.hud.toast(t('trial.passed') + ' · ' + t('toast.essence', { n: ess }));
