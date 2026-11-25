@@ -190,8 +190,8 @@ that went off, damage a shield really took …), each kind at most a few times p
 second. A long-term profile and a recent one (the last ~5 hours of active play
 in 30 slices of 10 minutes) are mixed 65 / 35. Pauses and menus do not count.
 With less than 10 minutes of play the values stay low. The affinities are in
-the Hero → Stats page; the evolution tree is behind **Class path** (Stats and
-Skills pages).
+the Hero → Stats page; the class part (progression A–M, evolutions, history) is
+folded into the **Path** tab.
 
 | Rank (level) | Step | What happens |
 |---|---|---|
@@ -214,6 +214,13 @@ for good (it is never offered, whatever the affinities say), and the same check
 (`specAllowed`) guards the offers, the class panel and the class change itself.
 The same goes for evolutions that are not playable yet: the class path shows only
 what can be taken now. The classes stay defined in `CONFIG.classes.list` for later.
+
+**One choice per rank-up.** At D, C and B the class choice (when one comes) is
+the choice; the Path pick of that rank is then taken for you (the card that fits
+your play best; a Respec Token can change it). At A, S and L every Path card
+also carries one of the two options of the class step of that rank, so one pick
+decides both. SS, SSS and M steps need no choice. A class step that no pick
+carries (older worlds, or a class taken later) waits in the Path tab.
 
 Steps A–M exist for all playable classes: Berserker, Stormcaller, Beastmaster,
 Sentinel, Warrior, Mage, Rogue, Ranger, Cleric and Necromancer. The hybrids
@@ -253,6 +260,33 @@ why and how they open (rank, class quest or loot).
   health and upgrades, saved apart from the army (`companion` in the save). It
   is never a shadow, never takes an army place and gets only companion bonuses.
   With a class of another line it rests; it comes back as it was.
+
+## The Path
+
+Every rank from D to M gives a Path pick (a "class" of the Path, built from a core).
+The Path tab shows the way from D to M (picks and class steps), the offer, what is
+in force and the class part.
+
+- **Thirteen cores.** From the start: Blade, Commander, Mage, Tank, Slayer, Delver
+  (as far as the class has them). Later: Predator, Blood, Elemental (rank C), Flow,
+  Sanctum, Fortune (rank B), Void (rank S). Each class has 7–10 cores that fit it.
+  Every core has bonuses, a class skill in three levels (the skill of the core of
+  the last pick is the one in force) and nine names.
+- **Offers with roles.** Deepen (the core of the last pick), Branch out (the core
+  picked least, or a core that just opened: "Newly found") and Wildcard (another
+  core). Two offers in a row are never the same three cores. The cards can be
+  rolled anew once per rank for essence (the first card stays).
+- **Special cards** on the Wildcard (each once, never the same kind twice in a
+  row): pacts (a strong bonus with a real cost), class cards (change the core
+  mechanic of the class line) and synergies (grow with the picks of another core).
+- **Keystones** at the 2nd, 4th, 6th and 8th pick of a core: something the core
+  does not give otherwise (an attack charge, healing per hit, army slots …).
+- **Combos**: two picks or more of two matching cores give a bonus on top (for
+  example Blade + Slayer: Executioner).
+- **Respec**: one Respec Token takes the last pick back; all picks cost two.
+  Class steps that came with a pick stay.
+- Values: `src/config.js` → `paths` (cores, keystones, combos, specials, reroll,
+  respecAll).
 
 ## Shadow army
 
