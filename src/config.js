@@ -237,7 +237,11 @@ export const CONFIG = {
       str: { damage: 0.03 }, // +3 % damage per point (adds up: 100 points = x4)
       agi: { speed: 0.008, reload: 0.015, dodge: 0.01 }, // +0.8 % speed, 1.5 % faster reload, 1 % shorter dodge cooldown
       vit: { hp: 0.04, regen: 0.0005 }, // +4 % health per point (adds up), regenerates 0.05 % of max health per second
-      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004, mageCooldown: 0.004 }, // +1 army slot per 2 points; arise chance +0.4 % (only classes with the army); shorter skill cooldowns +0.4 % (only the Mage)
+      // Intelligence: mana for everyone, and one bonus of the class line (game.intRole):
+      //   army: +1 army slot per 2 points and +0.4 % arise chance; mage: skill cooldowns +0.4 % quicker;
+      //   warrior: +0.6 % Rage gained; rogue: Combo Points last +0.03 s longer; cleric: +0.6 % Faith gained;
+      //   ranger: the companion +0.6 % damage and health; no class yet: only mana
+      int: { mana: 8, manaRegen: 0.2, slots: 0.5, arise: 0.004, mageCooldown: 0.004, rageGain: 0.006, comboTime: 0.03, faithGain: 0.006, companion: 0.006 },
       per: { crit: 0.008, critDamage: 0.015, drop: 0.02, armyRange: 0.25 }, // +0.8 % crit, +1.5 % crit damage, +2 % drops, +0.25 army hunt range
     },
     baseCrit: 0.05,

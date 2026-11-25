@@ -593,7 +593,7 @@ export class Menu {
   // ---- stats ------------------------------------------------------------------
   stats() {
     const P = this.game.player, K = CONFIG.progression.defenseK;
-    const rows = STAT_KEYS.map((k) => `<div class="s-row"><div><b>${t('stat.' + k)}</b><small>${t('stat.' + k + '.desc')}</small></div>
+    const rows = STAT_KEYS.map((k) => `<div class="s-row"><div><b>${t('stat.' + k)}</b><small>${t(k === 'int' ? 'stat.int.desc.' + this.game.intRole() : 'stat.' + k + '.desc')}</small></div>
       <span>${P.stats[k]}</span><button class="ap-btn" data-act="stat" data-stat="${k}"${P.points > 0 ? '' : ' disabled'}>+</button></div>`).join('') + this.masteryRows();
     const d = [
       ['hp', fmt(P.maxHp)], ['hpRegen', fmt(P.hpRegen)], ['mana', P.maxMana], ['manaRegen', P.manaRegen.toFixed(1)],

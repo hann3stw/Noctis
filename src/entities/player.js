@@ -275,7 +275,7 @@ export class Player {
     this.maxCharges = c.charges.max + b.charges;
     if (this.charges > this.maxCharges) this.charges = this.maxCharges;
     this.skillMult = 1 + b.skillDamage;
-    this.cdMult = 1 / (1 + b.cooldown + (this.uq.focus ? this.uq.focus.cooldown : 0) + (this.game.mech === 'mage' ? st.int * S.int.mageCooldown : 0)); // the Mage: Intelligence shortens skill cooldowns
+    this.cdMult = 1 / (1 + b.cooldown + (this.uq.focus ? this.uq.focus.cooldown : 0) + (this.game.intRole && this.game.intRole() === 'mage' ? st.int * S.int.mageCooldown : 0)); // the Mage: Intelligence shortens skill cooldowns
     this.ultRate = 1 + b.ultCharge;
     this.killHeal = b.killHeal;
     this.hitHeal = b.hitHeal;
@@ -285,8 +285,9 @@ export class Player {
     // the companion: its own bonuses; the mastery points a hunter of the Ranger line put into army damage / health
     // go to the companion (there is no army in that line), as they did when the companion was part of the army
     const ownComp = this.game.hasCompanion && this.game.hasCompanion();
-    this.companionDamage = b.companionDamage + (ownComp ? M.armyDamage * ms.armyDamage : 0);
-    this.companionHp = b.companionHp + (ownComp ? M.armyHp * ms.armyHp : 0);
+    const intComp = ownComp ? st.int * S.int.companion : 0; // Intelligence: a stronger companion
+    this.companionDamage = b.companionDamage + (ownComp ? M.armyDamage * ms.armyDamage : 0) + intComp;
+    this.companionHp = b.companionHp + (ownComp ? M.armyHp * ms.armyHp : 0) + intComp;
     this.model.setEquipment(this.equip);
     if (this.game.army) this.game.army.recalcAll();
   }
@@ -306,12 +307,13 @@ export class Player {
     if (this.game.mech !== 'rogue' || n <= 0 || (!force && this.cpCd > 0)) return;
     this.cpCd = 0.2;
     this.cp = Math.min(CONFIG.rogue.cpMax, this.cp + n);
-    this.cpT = CONFIG.rogue.cpTime;
+    this.cpT = CONFIG.rogue.cpTime + this.stats.int * CONFIG.progression.stats.int.comboTime; // Intelligence: they last longer
   }
 
   // the Cleric's Faith
   addFaith(n) {
     if (this.game.mech !== 'cleric' || n <= 0) return;
+    n *= 1 + this.stats.int * CONFIG.progression.stats.int.faithGain; // Intelligence: more Faith
     this.faith = Math.min(CONFIG.cleric.faithMax, this.faith + n);
   }
 
@@ -325,6 +327,7 @@ export class Player {
   // the Warrior's Rage
   addRage(n) {
     if (this.game.mech !== 'warrior' || n <= 0) return;
+    n *= 1 + this.stats.int * CONFIG.progression.stats.int.rageGain; // Intelligence: more Rage
     this.rage = Math.min(CONFIG.warrior.rageMax, this.rage + n);
   }
 

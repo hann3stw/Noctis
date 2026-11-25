@@ -655,11 +655,31 @@ export class Hud {
         el.classList.add('pop');
       }
       this.vStreak = n;
+      this.plT = 0; // the quests move under it at once
     }
     if (on) this.streakEl.style.setProperty('--left', String(Math.max(0, g.streakT / S.window)));
   }
 
+  // The kill streak and the daily quests sit right under the hunter's panel. The panel grows with the bars of the
+  // class (Rage, Arcane Charges, Faith, Bond, Momentum, Aegis ...), so their place is measured, not fixed.
+  placeLeft(dt) {
+    if ((this.plT = (this.plT || 0) - dt) > 0) return;
+    this.plT = 0.5;
+    const hud = this.root || this.qEl.parentElement, pp = hud && hud.querySelector('.panel-player');
+    if (!pp) return;
+    const base = hud.getBoundingClientRect(), r = pp.getBoundingClientRect();
+    if (!r.height) return;
+    const gap = Math.max(6, r.height * 0.06);
+    const top = Math.round(r.bottom - base.top + gap);
+    const streakOn = this.streakEl.classList.contains('on');
+    const sh = streakOn ? this.streakEl.getBoundingClientRect().height : 0;
+    const qTop = streakOn ? Math.round(top + sh + gap) : top;
+    if (top !== this.vStTop) { this.vStTop = top; this.streakEl.style.top = top + 'px'; }
+    if (qTop !== this.vQTop) { this.vQTop = qTop; this.qEl.style.top = qTop + 'px'; }
+  }
+
   updateQuests(dt) {
+    this.placeLeft(dt);
     this.qEl.classList.toggle('low', this.streakEl.classList.contains('on'));
     if ((this.qT -= dt) > 0) return;
     this.qT = 0.4;

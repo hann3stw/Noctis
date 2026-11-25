@@ -381,6 +381,15 @@ export class Game {
     return baseOf(this.mainClass);
   }
 
+  // what Intelligence does for this class besides mana (CONFIG.progression.stats.int): army | mage | warrior |
+  // rogue | cleric | ranger | none. The army classes all grow from the Necromancer, so their base is never another.
+  intRole() {
+    if (!this.mainClass) return 'none';
+    if (this.hasArmy()) return 'army';
+    const m = this.mech;
+    return ['mage', 'warrior', 'rogue', 'cleric', 'ranger'].includes(m) ? m : 'none';
+  }
+
   // the own mechanic of the class (core/classMechanics.js: berserkerMomentum, stormOverload, companionBond, aegis;
   // for the older classes the one of their base: rage, arcane ...). game.mech stays the base class.
   get classMechanic() {
