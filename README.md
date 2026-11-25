@@ -77,6 +77,12 @@ HTTPS (or localhost) for offline mode and installing.
   resolution (2240 x 1400, High), 82 draw calls, about 60 000 triangles.
   Enemies far away are not simulated, everything repeated is drawn with
   instancing and nothing is allocated per frame.
+- The hunter is built from many small parts; the rigid parts of every body group
+  are merged into one mesh when the model is made (`src/render/models/batch.js`):
+  38 meshes become 13. The hunter is drawn three times a frame (the scene, the
+  see-through outline and the sun's shadow), so this saves about 70 draw calls a
+  frame (measured: 240-280 down to 165-200 on High). Parts that move on their own
+  (flames, orbs, halo) and glowing parts stay separate.
 
 ## Controls
 

@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { baseOf } from '../../core/classes.js';
 import { RARITY_COLORS } from '../../core/items.js';
+import { batchTree } from './batch.js';
 
 function mat(color) {
   return new THREE.MeshLambertMaterial({ color, flatShading: true });
@@ -665,6 +666,9 @@ export function createPlayerModel(appearance, cls = '') {
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
+  // parts that are moved on their own stay separate meshes when the model is batched (see batchTree below)
+  let batching = false;
+  const keep = (o) => o === halo || o === clsOrb || o === aura || flames.includes(o) || orbs.includes(o);
   const SX = [0.88, 1, 1.13][A.build], SY = [0.93, 1, 1.07][A.height];
   body.scale.set(SX, SY, SX);
 
@@ -783,6 +787,7 @@ export function createPlayerModel(appearance, cls = '') {
     clsOrb = buildClassParts(id, clsHead, clsBody, clsFree);
     castShadows(clsHead);
     castShadows(clsBody);
+    if (batching) for (const g of [clsHead, clsBody, clsFree]) batchTree(g, keep); // fewer draw calls
     clsHead.visible = !helmetOn;
   }
   setClass(cls);
@@ -897,6 +902,10 @@ export function createPlayerModel(appearance, cls = '') {
   }
   let time = Math.random() * 10;
   castShadows(body);
+  // Fewer draw calls: the rigid parts of every group become one mesh (render/models/batch.js). The parts that
+  // move on their own (flames, orbs, the halo, the class orb, the aura) are kept apart.
+  batchTree(root, keep);
+  batching = true;
 
   // ---- equipment: rebuilt whenever it changes ---------------------------------
   let gear = []; // { group, parent }
@@ -904,6 +913,7 @@ export function createPlayerModel(appearance, cls = '') {
 
   function attach(parent, group) {
     castShadows(group);
+    batchTree(group, keep); // fewer draw calls (the parts of a weapon or armour piece in one mesh)
     parent.add(group);
     gear.push({ group, parent });
   }
