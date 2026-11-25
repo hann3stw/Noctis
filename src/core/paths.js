@@ -250,7 +250,40 @@ export class Paths {
     return this.sumOf(cls, stage, 'rule');
   }
 
-  // all bonuses of the picks (with the bonus of every pick); the army slots are whole
+  // ---- keystones and combos ------------------------------------------------------------------
+  // the keystones a core has reached with n picks: [{ core, at, bonus, rule }]
+  keystonesOf(core, n = this.coreCount(core)) {
+    return (C().keystones[core] || []).filter((k) => n >= k[0]).map((k) => ({ core, at: k[0], bonus: k[1] || {}, rule: k[2] || {} }));
+  }
+
+  // the keystone the next pick of a core would reach (or null)
+  nextKeystone(core) {
+    const n = this.coreCount(core) + 1, k = (C().keystones[core] || []).find((x) => x[0] === n);
+    return k ? { core, at: k[0], bonus: k[1] || {}, rule: k[2] || {} } : null;
+  }
+
+  // the combos in force: two picks or more of both of their cores
+  combos() {
+    const out = [];
+    for (const id in C().combos) { const k = C().combos[id]; if (k.cores.every((c) => this.coreCount(c) >= 2)) out.push(id); }
+    return out;
+  }
+
+  // the combo a pick of this core would complete (or '')
+  comboWith(core) {
+    const n = (c) => this.coreCount(c) + (c === core ? 1 : 0);
+    for (const id in C().combos) { const k = C().combos[id]; if (k.cores.includes(core) && k.cores.every((c) => n(c) >= 2) && !this.combos().includes(id)) return id; }
+    return '';
+  }
+
+  // all keystones in force
+  allKeystones() {
+    const out = [];
+    for (const core of new Set(this.chosen.map((c) => c.core))) out.push(...this.keystonesOf(core));
+    return out;
+  }
+
+  // all bonuses of the picks (with the bonus of every pick, the keystones and the combos); the army slots are whole
   totals() {
     const b = {}, pb = C().pickBonus;
     this.chosen.forEach((c, i) => {
@@ -258,6 +291,8 @@ export class Paths {
       for (const k in bo) b[k] = (b[k] || 0) + bo[k];
       for (const k in pb) b[k] = (b[k] || 0) + pb[k];
     });
+    for (const ks of this.allKeystones()) for (const k in ks.bonus) b[k] = (b[k] || 0) + ks.bonus[k];
+    for (const id of this.combos()) { const bo = C().combos[id].bonus; for (const k in bo) b[k] = (b[k] || 0) + bo[k]; }
     if (b.armySlots) b.armySlots = Math.round(b.armySlots);
     return b;
   }
@@ -276,6 +311,7 @@ export class Paths {
         const ro = this.rulesOf(c, this.stageOf(i));
         for (const k in ro) r[k] = (r[k] || 0) + ro[k];
       });
+      for (const ks of this.allKeystones()) for (const k in ks.rule) r[k] = (r[k] || 0) + ks.rule[k];
       this._rules = r;
       this.dirty = false;
     }

@@ -895,6 +895,36 @@ export const CONFIG = {
     skillStep: 3, // the class skill levels up (I-III) every this many picks of its core
     reroll: 150, // essence x (rank + 1) to roll the offer of a stage anew (once per stage)
     respecAll: 2, // Respec Tokens to take every pick back (one token takes back the last pick)
+    // Keystones: the 2nd, 4th, 6th and 8th pick of a core bring something the core does not give otherwise
+    // (an attack charge, healing per hit, army slots ...): [picks of the core, bonus, rule]
+    keystones: {
+      tank: [[2, { hitHeal: 0.0006 }], [4, { charges: 1 }], [6, { damageTaken: -0.03 }, { hpRegenMult: 0.1 }], [8, { hp: 0.15, killHeal: 0.01 }]],
+      blade: [[2, { reload: 0.05 }], [4, { charges: 1 }], [6, { crit: 0.03 }], [8, { damage: 0.12, speed: 0.03 }]],
+      commander: [[2, { armySlots: 1 }], [4, {}, { reviveCostMult: -0.15 }], [6, { armyHp: 0.15 }], [8, { armyDamage: 0.2, armySlots: 2 }]],
+      mage: [[2, {}, { killMana: 0.01 }], [4, { cooldown: 0.05 }], [6, { ultCharge: 0.1 }], [8, { skillDamage: 0.15, mana: 0.2 }]],
+      slayer: [[2, { ultCharge: 0.06 }], [4, { crit: 0.02, damage: 0.04 }], [6, {}, { selfXp: 0.05 }], [8, { damage: 0.15 }]],
+      delver: [[2, {}, { manaRegenMult: 0.08 }], [4, { speed: 0.03 }], [6, { hp: 0.08, damage: 0.05 }], [8, { killHeal: 0.01, charges: 1 }]],
+      predator: [[2, { speed: 0.02 }], [4, { companionDamage: 0.15, crit: 0.01 }], [6, {}, { selfXp: 0.05 }], [8, { damage: 0.12, crit: 0.02 }]],
+      blood: [[2, { killHeal: 0.006 }], [4, { hitHeal: 0.0008 }], [6, { damage: 0.08 }], [8, { hp: 0.12, damage: 0.08 }]],
+      elemental: [[2, {}, { killMana: 0.008 }], [4, { skillDamage: 0.08 }], [6, { cooldown: 0.05 }], [8, { skillDamage: 0.15, ultCharge: 0.08 }]],
+      flow: [[2, { reload: 0.05 }], [4, { charges: 1 }], [6, { speed: 0.04, cooldown: 0.04 }], [8, { crit: 0.03, reload: 0.08 }]],
+      sanctum: [[2, {}, { hpRegenMult: 0.1 }], [4, { damageTaken: -0.03 }], [6, { killHeal: 0.006 }], [8, { hp: 0.15, hitHeal: 0.0006 }]],
+      fortune: [[2, {}, { selfXp: 0.05 }], [4, { ultCharge: 0.05 }], [6, {}, { selfXp: 0.05 }], [8, { damage: 0.08, hp: 0.08 }]],
+      void: [[2, { skillDamage: 0.05 }], [4, {}, { manaRegenMult: 0.08 }], [6, { damage: 0.1, damageTaken: 0.02 }], [8, { damage: 0.15, skillDamage: 0.1 }]],
+    },
+    // Combos: two picks or more of both cores give this bonus on top (like the armour sets)
+    combos: {
+      executioner: { cores: ['blade', 'slayer'], bonus: { crit: 0.04, damage: 0.05 } },
+      juggernaut: { cores: ['tank', 'blood'], bonus: { hp: 0.1, killHeal: 0.005 } },
+      spellsword: { cores: ['blade', 'mage'], bonus: { skillDamage: 0.06, reload: 0.04 } },
+      warlord: { cores: ['commander', 'tank'], bonus: { armyHp: 0.12, hp: 0.05 } },
+      stormbringer: { cores: ['elemental', 'mage'], bonus: { skillDamage: 0.1, cooldown: 0.03 } },
+      windwalker: { cores: ['flow', 'predator'], bonus: { speed: 0.04, crit: 0.02 } },
+      pilgrim: { cores: ['sanctum', 'delver'], bonus: { hp: 0.08, killHeal: 0.004 } },
+      treasureHunter: { cores: ['fortune', 'delver'], bonus: { ultCharge: 0.05, damage: 0.04 } },
+      abyssWalker: { cores: ['void', 'delver'], bonus: { damage: 0.08, skillDamage: 0.05 } },
+      bloodHunter: { cores: ['blood', 'predator'], bonus: { damage: 0.06, killHeal: 0.004 } },
+    },
     live: ['thirdSlot', 'barracks', 'expeditions', 'duelArena', 'runeWorkshop', 'fortify', 'huntBoard', 'contracts'],
     cores: {
       blade: {

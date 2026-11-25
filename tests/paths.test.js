@@ -130,3 +130,50 @@ test('every core is complete: names, mod, skill text and numbers, only rules the
     for (const k in d.like) assert.ok(typeof d.like[k] === 'number', c);
   }
 });
+
+test('keystones come at the 2nd, 4th, 6th and 8th pick of a core and really change the numbers', () => {
+  const g = world('warrior');
+  const P = g.path;
+  P.chosen = [];
+  const add = (core, n) => { for (let k = 0; k < n; k++) P.chosen.push({ core, mod: '', rarity: 1 }); P.dirty = true; };
+  add('tank', 3);
+  assert.equal(P.totals().charges || 0, 0); // three Tank picks: no extra attack charge yet
+  assert.equal(P.keystonesOf('tank').length, 1);
+  add('tank', 1);
+  assert.equal(P.totals().charges, 1); // the fourth: Steady Arm
+  assert.ok(P.rules().hpRegenMult >= 0); // rules sum without errors
+  add('tank', 2);
+  assert.ok(P.rules().hpRegenMult >= 0.1); // the sixth: a rule
+  assert.equal(P.nextKeystone('tank'), null); // the 7th pick brings none
+  add('tank', 1);
+  assert.equal(P.nextKeystone('tank').at, 8); // the 8th does
+});
+
+test('combos need two picks of both cores and show on the card that completes them', () => {
+  const g = world('warrior');
+  const P = g.path;
+  P.chosen = [{ core: 'blade', mod: '', rarity: 1 }, { core: 'blade', mod: '', rarity: 1 }, { core: 'slayer', mod: '', rarity: 1 }];
+  P.dirty = true;
+  assert.deepEqual(P.combos(), []);
+  assert.equal(P.comboWith('slayer'), 'executioner');
+  const before = P.totals().crit || 0;
+  P.chosen.push({ core: 'slayer', mod: '', rarity: 1 }); P.dirty = true;
+  assert.deepEqual(P.combos(), ['executioner']);
+  assert.ok((P.totals().crit || 0) > before + 0.03);
+});
+
+test('every keystone and combo has a name and only known numbers', async () => {
+  const { t } = await import('../src/strings.js');
+  for (const core in CONFIG.paths.keystones) {
+    assert.ok(CONFIG.paths.cores[core], core);
+    for (const k of CONFIG.paths.keystones[core]) {
+      assert.notEqual(t('keystone.' + core + '.' + k[0]), 'keystone.' + core + '.' + k[0]);
+      assert.ok(Object.keys(k[1] || {}).length + Object.keys(k[2] || {}).length > 0, core + ' ' + k[0] + ' does nothing');
+    }
+  }
+  for (const c in CONFIG.paths.cores) assert.ok(CONFIG.paths.keystones[c], 'no keystones for ' + c);
+  for (const id in CONFIG.paths.combos) {
+    assert.notEqual(t('combo.' + id), 'combo.' + id);
+    for (const c of CONFIG.paths.combos[id].cores) assert.ok(CONFIG.paths.cores[c], id + ': ' + c);
+  }
+});

@@ -4348,3 +4348,13 @@ input.shake {
 .pa-reroll small, .pa-respec small { color: #b9add6; font-size: calc(var(--u) * 1.8); }
 .pa-offer { padding-top: calc(var(--u) * 1.2); }
 .pa-role.new { background: #ffd24a; color: #2a1a00; }
+/* ---- Path: keystones and combos ---- */
+.pa-ks { margin-top: calc(var(--u) * 0.5); padding: calc(var(--u) * 0.6) calc(var(--u) * 0.8); border-radius: calc(var(--u) * 1); background: rgba(111, 208, 255, 0.1); border: 1px solid rgba(111, 208, 255, 0.4); display: flex; flex-direction: column; gap: calc(var(--u) * 0.2); }
+.pa-ks small { color: #6fd0ff; font-size: calc(var(--u) * 1.7); }
+.pa-ks span { color: #e9ddff; font-size: calc(var(--u) * 1.8); }
+.pa-ks.combo { background: rgba(255, 138, 58, 0.1); border-color: rgba(255, 138, 58, 0.45); }
+.pa-ks.combo small { color: #ffb070; }
+.pa-dev { display: flex; flex-direction: column; gap: calc(var(--u) * 0.6); margin-top: calc(var(--u) * 0.8); }
+.pa-dev > div { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * 0.6); }
+.pa-dev small { color: #b9add6; font-size: calc(var(--u) * 1.9); min-width: calc(var(--u) * 12); }
+.pa-pill.combo { border-color: #ffb070; color: #ffd0a0; }
